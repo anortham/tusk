@@ -1,0 +1,22 @@
+{
+  "id": "1911ac0b-ea5a-4ea6-85a3-fbfde7aa332a",
+  "workspace_id": "test",
+  "title": "Test plan",
+  "description": "Test description",
+  "goals": [],
+  "success_criteria": [],
+  "steps": [],
+  "status": "draft",
+  "priority": "medium",
+  "tags": [],
+  "category": null,
+  "related_todo_ids": [],
+  "related_checkpoint_ids": [],
+  "estimated_duration": null,
+  "notes": null,
+  "created_at": "2025-09-12T16:30:52.818990Z",
+  "updated_at": null,
+  "started_at": null,
+  "completed_at": null,
+  "target_completion": null
+}

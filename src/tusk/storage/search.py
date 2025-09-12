@@ -1,0 +1,487 @@
+"""Whoosh-based search engine for Tusk memory."""
+
+from datetime import datetime, timezone
+import logging
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Union
+
+from whoosh import fields, index, qparser
+from whoosh.filedb.filestore import FileStorage
+from whoosh.qparser import MultifieldParser, QueryParser
+from whoosh.query import Query
+
+from ..config import TuskConfig
+from ..models import Checkpoint, Plan, Todo
+
+logger = logging.getLogger(__name__)
+
+
+class SearchResult:
+    """A search result with score and metadata."""
+    
+    def __init__(self, doc_id: str, doc_type: str, score: float, highlights: Dict[str, str]):
+        self.doc_id = doc_id
+        self.doc_type = doc_type  # 'checkpoint', 'todo', 'plan'
+        self.score = score
+        self.highlights = highlights  # Field -> highlighted text
+    
+    def __str__(self) -> str:
+        return f"{self.doc_type}:{self.doc_id} (score: {self.score:.2f})"
+
+
+class SearchEngine:
+    """Whoosh-based full-text search for Tusk memory."""
+    
+    def __init__(self, config: TuskConfig):
+        self.config = config
+        self.workspace_dir = config.get_workspace_dir()
+        self.index_dir = self.workspace_dir / "index"
+        self.index_dir.mkdir(parents=True, exist_ok=True)
+        
+        # Define schema
+        self.schema = fields.Schema(
+            # Document identification
+            doc_id=fields.ID(stored=True, unique=True),
+            doc_type=fields.ID(stored=True),  # checkpoint, todo, plan
+            
+            # Main content fields
+            title=fields.TEXT(stored=True, phrase=True),
+            content=fields.TEXT(stored=True),
+            description=fields.TEXT(stored=True),
+            
+            # Metadata fields
+            status=fields.ID(stored=True),
+            priority=fields.ID(stored=True),
+            tags=fields.KEYWORD(stored=True, commas=True),
+            
+            # Time-based fields
+            created_at=fields.DATETIME(stored=True),
+            updated_at=fields.DATETIME(stored=True),
+            
+            # Relationship fields
+            workspace_id=fields.ID(stored=True),
+            checkpoint_id=fields.ID(stored=True),
+            plan_id=fields.ID(stored=True),
+            
+            # File and context fields
+            active_files=fields.KEYWORD(stored=True, commas=True),
+            git_branch=fields.ID(stored=True),
+            
+            # Full search text (combination of all searchable content)
+            search_text=fields.TEXT,
+        )
+        
+        # Don't initialize index automatically for testing
+        self.ix = None
+    
+    def _ensure_index(self) -> None:
+        """Ensure the search index exists."""
+        try:
+            if index.exists_in(str(self.index_dir)):
+                self.ix = index.open_dir(str(self.index_dir))
+                logger.debug("Opened existing search index")
+            else:
+                self.ix = index.create_in(str(self.index_dir), self.schema)
+                logger.info("Created new search index")
+        except Exception as e:
+            logger.error(f"Error initializing search index: {e}")
+            # Create a new index as fallback
+            self.ix = index.create_in(str(self.index_dir), self.schema)
+    
+    def index_checkpoint(self, checkpoint: Checkpoint) -> bool:
+        """Index a checkpoint for search."""
+        if self.ix is None:
+            self._ensure_index()
+            
+        try:
+            writer = self.ix.writer()
+            
+            # Build search text
+            search_parts = [
+                checkpoint.description,
+                checkpoint.work_context or "",
+            ]
+            search_parts.extend(checkpoint.active_files)
+            search_parts.extend(checkpoint.tags)
+            
+            if checkpoint.git_branch:
+                search_parts.append(checkpoint.git_branch)
+            
+            # Add highlight content
+            for highlight in checkpoint.highlights:
+                search_parts.append(highlight.to_search_text())
+            
+            writer.add_document(
+                doc_id=checkpoint.id,
+                doc_type="checkpoint",
+                title=checkpoint.description[:100],  # First 100 chars as title
+                content=checkpoint.work_context or "",
+                description=checkpoint.description,
+                status="",  # Checkpoints don't have status
+                priority="",
+                tags=",".join(checkpoint.tags),
+                created_at=checkpoint.created_at,
+                updated_at=checkpoint.updated_at,
+                workspace_id=checkpoint.workspace_id,
+                checkpoint_id="",
+                plan_id="",
+                active_files=",".join(checkpoint.active_files),
+                git_branch=checkpoint.git_branch or "",
+                search_text=" ".join(filter(None, search_parts)),
+            )
+            
+            writer.commit()
+            logger.debug(f"Indexed checkpoint {checkpoint.id}")
+            return True
+        except Exception as e:
+            logger.error(f"Error indexing checkpoint {checkpoint.id}: {e}")
+            return False
+    
+    def index_todo(self, todo: Todo) -> bool:
+        """Index a todo for search."""
+        if self.ix is None:
+            self._ensure_index()
+            
+        try:
+            writer = self.ix.writer()
+            
+            search_parts = [
+                todo.content,
+                todo.active_form,
+                todo.status.value,
+                todo.priority.value,
+            ]
+            search_parts.extend(todo.tags)
+            
+            if todo.notes:
+                search_parts.append(todo.notes)
+            
+            writer.add_document(
+                doc_id=todo.id,
+                doc_type="todo",
+                title=todo.content,
+                content=todo.notes or "",
+                description=todo.content,
+                status=todo.status.value,
+                priority=todo.priority.value,
+                tags=",".join(todo.tags),
+                created_at=todo.created_at,
+                updated_at=todo.updated_at,
+                workspace_id=todo.workspace_id,
+                checkpoint_id=todo.checkpoint_id or "",
+                plan_id=todo.plan_id or "",
+                active_files="",
+                git_branch="",
+                search_text=" ".join(filter(None, search_parts)),
+            )
+            
+            writer.commit()
+            logger.debug(f"Indexed todo {todo.id}")
+            return True
+        except Exception as e:
+            logger.error(f"Error indexing todo {todo.id}: {e}")
+            return False
+    
+    def index_plan(self, plan: Plan) -> bool:
+        """Index a plan for search."""
+        if self.ix is None:
+            self._ensure_index()
+            
+        try:
+            writer = self.ix.writer()
+            
+            search_parts = [
+                plan.title,
+                plan.description,
+                plan.status.value,
+                plan.priority,
+            ]
+            search_parts.extend(plan.goals)
+            search_parts.extend(plan.success_criteria)
+            search_parts.extend(plan.tags)
+            
+            if plan.category:
+                search_parts.append(plan.category)
+            
+            if plan.notes:
+                search_parts.append(plan.notes)
+            
+            # Add step descriptions
+            for step in plan.steps:
+                search_parts.append(step.description)
+                if step.notes:
+                    search_parts.append(step.notes)
+            
+            writer.add_document(
+                doc_id=plan.id,
+                doc_type="plan",
+                title=plan.title,
+                content=plan.description,
+                description=plan.description,
+                status=plan.status.value,
+                priority=plan.priority,
+                tags=",".join(plan.tags),
+                created_at=plan.created_at,
+                updated_at=plan.updated_at,
+                workspace_id=plan.workspace_id,
+                checkpoint_id="",
+                plan_id="",
+                active_files="",
+                git_branch="",
+                search_text=" ".join(filter(None, search_parts)),
+            )
+            
+            writer.commit()
+            logger.debug(f"Indexed plan {plan.id}")
+            return True
+        except Exception as e:
+            logger.error(f"Error indexing plan {plan.id}: {e}")
+            return False
+    
+    def _index_document(
+        self,
+        doc_id: str,
+        doc_type: str,
+        content: str,
+        title: str,
+        tags: List[str],
+        workspace_id: str,
+        created_at: datetime,
+        **kwargs
+    ) -> bool:
+        """Generic document indexing method.
+        
+        This is a low-level method for testing and internal use.
+        Prefer using the type-specific methods (index_checkpoint, etc.) for production.
+        """
+        if self.ix is None:
+            self._ensure_index()
+            
+        try:
+            writer = self.ix.writer()
+            
+            # Build document with defaults
+            doc_fields = {
+                "doc_id": doc_id,
+                "doc_type": doc_type,
+                "title": title,
+                "content": content,
+                "description": kwargs.get("description", title),
+                "status": kwargs.get("status", ""),
+                "priority": kwargs.get("priority", ""),
+                "tags": ",".join(tags),
+                "created_at": created_at,
+                "updated_at": kwargs.get("updated_at", created_at),
+                "workspace_id": workspace_id,
+                "checkpoint_id": kwargs.get("checkpoint_id", ""),
+                "plan_id": kwargs.get("plan_id", ""),
+                "active_files": kwargs.get("active_files", ""),
+                "git_branch": kwargs.get("git_branch", ""),
+                "search_text": f"{title} {content} {' '.join(tags)}",
+            }
+            
+            writer.add_document(**doc_fields)
+            writer.commit()
+            
+            logger.debug(f"Indexed generic document {doc_id} of type {doc_type}")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Error indexing document {doc_id}: {e}")
+            return False
+
+    def remove_document(self, doc_id: str) -> bool:
+        """Remove a document from the index."""
+        if self.ix is None:
+            self._ensure_index()
+            
+        try:
+            writer = self.ix.writer()
+            writer.delete_by_term('doc_id', doc_id)
+            writer.commit()
+            logger.debug(f"Removed document {doc_id} from index")
+            return True
+        except Exception as e:
+            logger.error(f"Error removing document {doc_id}: {e}")
+            return False
+    
+    def delete_document(self, doc_id: str) -> bool:
+        """Alias for remove_document for backwards compatibility."""
+        return self.remove_document(doc_id)
+    
+    def search(
+        self,
+        query: str,
+        limit: int = 20,
+        doc_types: Optional[List[str]] = None,
+        highlight: bool = True,
+    ) -> List[SearchResult]:
+        """Search across all indexed content."""
+        if self.ix is None:
+            self._ensure_index()
+            
+        try:
+            with self.ix.searcher() as searcher:
+                # Create parser for multiple fields
+                parser = MultifieldParser(
+                    ["title", "content", "description", "search_text"],
+                    schema=self.ix.schema
+                )
+                
+                # Parse the query
+                parsed_query = parser.parse(query)
+                
+                # Add doc_type filter if specified
+                if doc_types:
+                    from whoosh.query import Or, Term
+                    type_query = Or([Term("doc_type", dt) for dt in doc_types])
+                    parsed_query = parsed_query & type_query
+                
+                # Execute search
+                results = searcher.search(parsed_query, limit=limit)
+                
+                if highlight:
+                    results.fragmenter.max_chars = 200
+                    results.fragmenter.surround = 50
+                
+                search_results = []
+                for hit in results:
+                    highlights = {}
+                    if highlight:
+                        for field_name in ["title", "content", "description"]:
+                            if field_name in hit:
+                                highlighted = hit.highlights(field_name)
+                                if highlighted:
+                                    highlights[field_name] = highlighted
+                    
+                    search_results.append(SearchResult(
+                        doc_id=hit['doc_id'],
+                        doc_type=hit['doc_type'],
+                        score=hit.score,
+                        highlights=highlights
+                    ))
+                
+                logger.debug(f"Search for '{query}' returned {len(search_results)} results")
+                return search_results
+        
+        except Exception as e:
+            logger.error(f"Error searching for '{query}': {e}")
+            return []
+    
+    def search_by_tags(self, tags: List[str], limit: int = 20) -> List[SearchResult]:
+        """Search by tags."""
+        if not tags:
+            return []
+        
+        # Build query for tags
+        tag_query = " OR ".join(f"tags:{tag}" for tag in tags)
+        return self.search(tag_query, limit=limit)
+    
+    def search_recent(
+        self, 
+        days: int = 7, 
+        limit: int = 20,
+        doc_types: Optional[List[str]] = None
+    ) -> List[SearchResult]:
+        """Search for recent documents."""
+        from datetime import datetime, timedelta
+        
+        try:
+            with self.ix.searcher() as searcher:
+                # Calculate date threshold
+                threshold = datetime.now(timezone.utc) - timedelta(days=days)
+                
+                # Build query
+                from whoosh.query import DateRange
+                query = DateRange("created_at", threshold, None)
+                
+                # Add doc_type filter if specified
+                if doc_types:
+                    from whoosh.query import Or, Term
+                    type_query = Or([Term("doc_type", dt) for dt in doc_types])
+                    query = query & type_query
+                
+                # Execute search, sorted by date
+                results = searcher.search(query, limit=limit, sortedby="created_at", reverse=True)
+                
+                search_results = []
+                for hit in results:
+                    search_results.append(SearchResult(
+                        doc_id=hit['doc_id'],
+                        doc_type=hit['doc_type'],
+                        score=hit.score,
+                        highlights={}
+                    ))
+                
+                return search_results
+        
+        except Exception as e:
+            logger.error(f"Error searching recent documents: {e}")
+            return []
+    
+    def get_suggestions(self, partial_query: str, limit: int = 10) -> List[str]:
+        """Get search suggestions based on partial query."""
+        try:
+            with self.ix.searcher() as searcher:
+                # Use the title field for suggestions
+                from whoosh.query import Prefix
+                query = Prefix("title", partial_query.lower())
+                
+                results = searcher.search(query, limit=limit)
+                suggestions = []
+                
+                for hit in results:
+                    title = hit.get('title', '')
+                    if title and title not in suggestions:
+                        suggestions.append(title)
+                
+                return suggestions
+        
+        except Exception as e:
+            logger.error(f"Error getting suggestions for '{partial_query}': {e}")
+            return []
+    
+    def optimize_index(self) -> bool:
+        """Optimize the search index for better performance."""
+        try:
+            writer = self.ix.writer()
+            writer.commit(optimize=True)
+            logger.info("Optimized search index")
+            return True
+        except Exception as e:
+            logger.error(f"Error optimizing index: {e}")
+            return False
+    
+    def get_index_stats(self) -> Dict[str, Any]:
+        """Get statistics about the search index."""
+        try:
+            with self.ix.searcher() as searcher:
+                stats = {
+                    "total_docs": searcher.doc_count(),
+                    "total_terms": len(list(searcher.lexicon("search_text"))),
+                    "index_size_mb": self._get_index_size_mb(),
+                }
+                
+                # Count by document type
+                for doc_type in ["checkpoint", "todo", "plan"]:
+                    from whoosh.query import Term
+                    query = Term("doc_type", doc_type)
+                    results = searcher.search(query, limit=None)
+                    stats[f"{doc_type}_count"] = len(results)
+                
+                return stats
+        
+        except Exception as e:
+            logger.error(f"Error getting index stats: {e}")
+            return {}
+    
+    def _get_index_size_mb(self) -> float:
+        """Calculate index size in MB."""
+        try:
+            total_size = 0
+            for file_path in self.index_dir.rglob("*"):
+                if file_path.is_file():
+                    total_size += file_path.stat().st_size
+            return total_size / (1024 * 1024)  # Convert to MB
+        except Exception:
+            return 0.0
