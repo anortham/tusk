@@ -41,7 +41,8 @@
       "Read(//c/source/MCP-VSCode-Bridge/**)",
       "mcp__tusk__save",
       "mcp__tusk__standup",
-      "mcp__codesearch__line_search"
+      "mcp__codesearch__line_search",
+      "mcp__codesearch__insert_at_line"
     ],
     "deny": [],
     "ask": []

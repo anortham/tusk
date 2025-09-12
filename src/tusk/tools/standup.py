@@ -1,6 +1,7 @@
 """Standup tool for work summaries and progress reports."""
 
 from datetime import timezone
+import json
 import logging
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional
@@ -45,12 +46,12 @@ class StandupTool(BaseTool):
                     include_todos=include_todos,
                 )
                 
-                # Format and return report
-                return self._format_standup_report(report_data, timeframe)
+                # Return structured data instead of formatted text
+                return self._build_standup_response(report_data, timeframe)
                 
             except Exception as e:
                 logger.error(f"Error generating standup: {e}")
-                return f"❌ Error generating standup report: {e}"
+                return {"error": f"Error generating standup report: {e}", "success": False}
         
         @mcp_server.tool
         async def daily_standup() -> str:
@@ -180,6 +181,102 @@ class StandupTool(BaseTool):
         }
         
         return data
+    
+    def _build_standup_response(self, data: Dict, timeframe: str) -> str:
+        """Build structured standup response as JSON."""
+        
+        # Convert datetime objects to ISO strings for JSON serialization
+        def serialize_datetime(obj):
+            if hasattr(obj, 'isoformat'):
+                return obj.isoformat()
+            return str(obj)
+        
+        # Build structured response
+        response = {
+            "success": True,
+            "timeframe": timeframe,
+            "workspace": data["workspace"],
+            "period_days": data["timeframe"]["days"],
+            "stats": data["stats"],
+            "completed": [],
+            "in_progress": [],
+            "planned": [],
+            "blockers": []
+        }
+        
+        # Add completed work
+        for checkpoint in data["checkpoints"]:
+            response["completed"].append({
+                "type": "checkpoint",
+                "time": serialize_datetime(checkpoint.created_at),
+                "description": checkpoint.description,
+                "highlights": [h.content[:100] for h in (checkpoint.highlights or [])][:2]
+            })
+        
+        for todo in data["todos"]["completed"]:
+            response["completed"].append({
+                "type": "todo",
+                "time": serialize_datetime(todo.completed_at),
+                "description": todo.content
+            })
+        
+        for plan, step in data["plans"]["completed_steps"]:
+            response["completed"].append({
+                "type": "plan_step",
+                "time": serialize_datetime(step.completed_at),
+                "description": f"{plan.title}: {step.description}"
+            })
+        
+        # Add in-progress work
+        active_todos = data["todos"]["active"]
+        in_progress = [t for t in active_todos if t.status.value == "in_progress"]
+        for todo in in_progress:
+            response["in_progress"].append({
+                "type": "todo",
+                "description": todo.content,
+                "status": todo.status.value
+            })
+        
+        # Add planned work (pending todos)
+        pending = [t for t in active_todos if t.status.value == "pending"]
+        for todo in pending[:5]:  # Limit to top 5
+            response["planned"].append({
+                "type": "todo", 
+                "description": todo.content
+            })
+        
+        # Add active plans
+        for plan in data["plans"]["active"]:
+            completed, total = data["plans"]["progress"][plan.id]
+            progress_pct = (completed / total * 100) if total > 0 else 0
+            next_steps = plan.get_next_steps(1)
+            
+            response["in_progress"].append({
+                "type": "plan",
+                "title": plan.title,
+                "progress": f"{completed}/{total} ({progress_pct:.0f}%)",
+                "next_step": next_steps[0].description if next_steps else None
+            })
+        
+        # Add blockers
+        blocked_todos = [t for t in active_todos if t.status.value == "blocked"]
+        for todo in blocked_todos:
+            blocker_reason = None
+            if todo.notes and "blocked:" in todo.notes.lower():
+                lines = todo.notes.split('\n')
+                for line in lines:
+                    if line.lower().startswith('blocked:'):
+                        blocker_reason = line
+                        break
+            
+            response["blockers"].append({
+                "type": "todo",
+                "description": todo.content,
+                "reason": blocker_reason
+            })
+        
+        # Return as JSON string
+        return json.dumps(response, indent=2)
     
     def _format_standup_report(self, data: Dict, timeframe: str) -> str:
         """Format standup report output."""

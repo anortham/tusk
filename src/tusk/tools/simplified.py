@@ -441,6 +441,7 @@ class SimplifiedTools:
     
     async def _generate_daily_standup(self) -> str:
         """Daily standup implementation."""
+        import json
         from .standup import StandupTool
         standup_tool = StandupTool(self.server)
         
@@ -456,8 +457,88 @@ class SimplifiedTools:
                 include_todos=True,
             )
             
-            # Format and return report
-            return standup_tool._format_standup_report(report_data, "daily")
+            # Get structured response and parse it
+            json_response = standup_tool._build_standup_response(report_data, "daily")
+            standup_data = json.loads(json_response)
+            
+            # Format for display
+            return self._format_standup_display(standup_data)
             
         except Exception as e:
             return f"Γ¥î Error generating standup report: {e}"
+    def _format_standup_display(self, standup_data: dict) -> str:
+        """Format structured standup data for clean display."""
+        
+        if not standup_data.get("success", True):
+            return f"Γ¥î {standup_data.get('error', 'Unknown error in standup')}"
+        
+        stats = standup_data.get("stats", {})
+        timeframe = standup_data.get("timeframe", "daily").title()
+        
+        # Header
+        result = f"≡ƒôè **{timeframe} Standup Report** - {standup_data.get('workspace', 'Unknown')}\\n\\n"
+        
+        # Quick stats
+        result += f"**≡ƒôê Quick Stats:**\\n"
+        result += f"- ≡ƒôÜ Checkpoints: {stats.get('checkpoints_created', 0)}\\n"
+        result += f"- Γ£à Todos completed: {stats.get('todos_completed', 0)}\\n"
+        result += f"- ≡ƒô¥ Active todos: {stats.get('active_todos', 0)}\\n"
+        result += f"- ≡ƒÜÇ Active plans: {stats.get('active_plans', 0)}\\n\\n"
+        
+        # Completed work
+        completed = standup_data.get("completed", [])
+        if completed:
+        if completed:
+            result += f"**Γ£à Completed Work ({len(completed)}):**\\n"
+            for item in completed[:5]:  # Limit for readability
+                icon = {"checkpoint": "≡ƒôÜ", "todo": "Γ£à", "plan_step": "≡ƒÄ»"}.get(item["type"], "≡ƒôä")
+                time_str = item.get("time", "").split("T")[1][:5] if "T" in item.get("time", "") else ""
+                if time_str:
+                    result += f"- [{time_str}] {icon} {item['description']}\\n"
+                else:
+                    result += f"- {icon} {item['description']}\\n"
+                
+                # Show highlights for checkpoints
+                if item["type"] == "checkpoint" and item.get("highlights"):
+                    for highlight in item["highlights"][:1]:
+                        result += f"  ≡ƒÆí {highlight[:80]}...\\n"
+            result += "\\n"
+        # In progress work
+        in_progress = standup_data.get("in_progress", [])
+        if in_progress:
+            result += f"**≡ƒöä In Progress ({len(in_progress)}):**\\n"
+            for item in in_progress:
+                if item["type"] == "todo":
+                    result += f"- Γ£à {item['description']}\\n"
+                elif item["type"] == "plan":
+                    result += f"- ≡ƒôï **{item['title']}** ({item['progress']})\\n"
+                    if item.get("next_step"):
+                        result += f"  ≡ƒÄ» Next: {item['next_step']}\\n"
+            result += "\\n"
+        
+        # Planned work
+        planned = standup_data.get("planned", [])
+        if planned:
+            result += f"**ΓÅ│ Planned ({len(planned)}):**\\n"
+            for item in planned[:3]:  # Show top 3
+                result += f"- {item['description']}\\n"
+            if len(planned) > 3:
+                result += f"- ... and {len(planned) - 3} more\\n"
+            result += "\\n"
+        
+        # Blockers
+        blockers = standup_data.get("blockers", [])
+        if blockers:
+            result += f"**≡ƒÜ½ Blockers ({len(blockers)}):**\\n"
+            for item in blockers:
+                result += f"- {item['description']}\\n"
+                if item.get("reason"):
+                    result += f"  *{item['reason']}*\\n"
+            result += "\\n"
+        
+        # If nothing to report
+        if not completed and not in_progress and not planned:
+            result += "≡ƒÆ¡ **Quiet period** - No significant activity to report.\\n"
+            result += "Consider creating a checkpoint or todo to track your work!\\n"
+        
+        return result
