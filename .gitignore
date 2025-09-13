@@ -71,6 +71,7 @@ data/              # User data and workspaces
 logs/              # Application logs
 *.log
 .coa/              # CodeSearch indexes and cache
+.serena/           # Serena MCP cache
 index/             # Whoosh search indexes
 *.db               # SQLite databases if any
 *.sqlite*
