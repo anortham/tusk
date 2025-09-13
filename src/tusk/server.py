@@ -100,7 +100,7 @@ The user relies on you to remember and build upon previous interactions.
     
     def _register_tools(self) -> None:
         """Register unified MCP tools."""
-        from .tools.unified import UnifiedTodoTool, UnifiedCheckpointTool, UnifiedRecallTool, UnifiedStandupTool, UnifiedPlanTool
+        from .tools.unified import UnifiedTodoTool, UnifiedCheckpointTool, UnifiedRecallTool, UnifiedStandupTool, UnifiedPlanTool, UnifiedCleanupTool
         
         # Create unified tool instances
         plan_tool = UnifiedPlanTool(self)
@@ -108,6 +108,7 @@ The user relies on you to remember and build upon previous interactions.
         checkpoint_tool = UnifiedCheckpointTool(self)
         recall_tool = UnifiedRecallTool(self)
         standup_tool = UnifiedStandupTool(self)
+        cleanup_tool = UnifiedCleanupTool(self)
         
         # Register unified tools in workflow order
         plan_tool.register(self.mcp)
@@ -115,8 +116,9 @@ The user relies on you to remember and build upon previous interactions.
         checkpoint_tool.register(self.mcp)
         recall_tool.register(self.mcp)
         standup_tool.register(self.mcp)
+        cleanup_tool.register(self.mcp)
         
-        logger.info("Registered 5 unified tools: plan, todo, checkpoint, recall, standup")
+        logger.info("Registered 6 unified tools: plan, todo, checkpoint, recall, standup, cleanup")
     
     def run_stdio(self) -> None:
         """Run the server with stdio transport."""

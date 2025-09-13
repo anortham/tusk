@@ -32,10 +32,10 @@ class UnifiedTodoTool(BaseTool):
             """Manage tasks efficiently with one simple tool.
             
             Args:
-                action: What to do - "add", "list", "start", "complete", "search"
+                action: What to do - "add", "list", "start", "complete", "update", "search"
                 task: Task content (for add action)
-                task_id: Task ID (for start/complete actions)
-                status: New status (for update actions)
+                task_id: Task ID (for start/complete/update actions)
+                status: New status (for update action - "pending", "in_progress", "completed")
                 query: Search query (for search action)
                 limit: Max results (for list/search actions)
             
@@ -44,6 +44,7 @@ class UnifiedTodoTool(BaseTool):
                 todo(action="list")
                 todo(action="start", task_id="abc123")
                 todo(action="complete", task_id="abc123")
+                todo(action="update", task_id="abc123", status="in_progress")
                 todo(action="search", query="bug", limit=5)
             """
             try:
@@ -55,12 +56,14 @@ class UnifiedTodoTool(BaseTool):
                     return await self._start_task(task_id)
                 elif action == "complete":
                     return await self._complete_task(task_id)
+                elif action == "update":
+                    return await self._update_task(task_id, status)
                 elif action == "search":
                     return await self._search_tasks(query, limit)
                 else:
                     return json.dumps({
                         "success": False,
-                        "error": f"Unknown action: {action}. Use: add, list, start, complete, search"
+                        "error": f"Unknown action: {action}. Use: add, list, start, complete, update, search"
                     }, ensure_ascii=False, indent=2)
                     
             except Exception as e:
@@ -258,6 +261,72 @@ class UnifiedTodoTool(BaseTool):
                 },
                 "message": f"Completed: {todo.content}",
                 "celebration": "Great job! The task is now done."
+            }, ensure_ascii=False, indent=2)
+        else:
+            return json.dumps({
+                "success": False,
+                "error": "Failed to update task"
+            }, ensure_ascii=False, indent=2)
+    
+    async def _update_task(self, task_id: Optional[str], status: Optional[str]) -> str:
+        """Update a task's status."""
+        if not task_id:
+            return json.dumps({
+                "success": False,
+                "error": "Task ID is required for update action"
+            }, ensure_ascii=False, indent=2)
+        
+        if not status:
+            return json.dumps({
+                "success": False,
+                "error": "Status is required for update action"
+            }, ensure_ascii=False, indent=2)
+        
+        # Validate status
+        from ..models.todo import TodoStatus
+        try:
+            new_status = TodoStatus(status.lower())
+        except ValueError:
+            return json.dumps({
+                "success": False,
+                "error": f"Invalid status: {status}. Valid values: pending, in_progress, completed"
+            }, ensure_ascii=False, indent=2)
+        
+        todo = self.todo_storage.load(task_id)
+        if not todo:
+            return json.dumps({
+                "success": False,
+                "error": f"Task {task_id} not found"
+            }, ensure_ascii=False, indent=2)
+        
+        old_status = todo.status
+        
+        # Update the status using the appropriate method
+        if new_status == TodoStatus.IN_PROGRESS:
+            todo.mark_in_progress()
+        elif new_status == TodoStatus.COMPLETED:
+            todo.mark_completed()
+        elif new_status == TodoStatus.PENDING:
+            # Reset to pending
+            todo.status = TodoStatus.PENDING
+            todo.started_at = None
+            todo.completed_at = None
+            todo.updated_at = datetime.now(timezone.utc)
+        
+        if self.todo_storage.save(todo):
+            self.search_engine.index_todo(todo)
+            
+            return json.dumps({
+                "success": True,
+                "action": "task_updated",
+                "task": {
+                    "id": todo.id,
+                    "content": todo.content,
+                    "old_status": old_status.value,
+                    "new_status": todo.status.value,
+                    "updated_at": todo.updated_at.strftime("%Y-%m-%d %H:%M") if todo.updated_at else None
+                },
+                "message": f"Updated task status from {old_status.value} to {todo.status.value}"
             }, ensure_ascii=False, indent=2)
         else:
             return json.dumps({
@@ -580,7 +649,8 @@ class UnifiedRecallTool(BaseTool):
         from datetime import timedelta
         
         context = {
-            "workspace": "",
+            "project_id": self.config.get_current_project_id(),
+            "project_path": self.config.get_current_project_path(),
             "recall_time": datetime.now(timezone.utc),
             "filter_applied": bool(session_id or git_branch),
             "checkpoints": [],
@@ -654,7 +724,8 @@ class UnifiedRecallTool(BaseTool):
         from ..models.todo import TodoStatus
         return json.dumps({
             "success": True,
-            "workspace": context["workspace"],
+            "project_id": context["project_id"],
+            "project_path": context["project_path"],
             "recall_time": context["recall_time"].strftime("%Y-%m-%d %H:%M"),
             "filter_applied": context["filter_applied"],
             "summary": context["summary"],
@@ -1362,6 +1433,13 @@ class UnifiedPlanTool(BaseTool):
             "total_results": len(plans_data),
             "plans": plans_data
         }, ensure_ascii=False, indent=2)
+
+
+class UnifiedCleanupTool(BaseTool):
+    """Unified system cleanup tool."""
+    
+    def register(self, mcp_server) -> None:
+        """Register the unified cleanup tool."""
         
         @mcp_server.tool
         async def cleanup(

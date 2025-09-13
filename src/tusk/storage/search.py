@@ -607,7 +607,6 @@ class SearchEngine:
             with self.ix.searcher() as searcher:
                 stats = {
                     "total_docs": searcher.doc_count(),
-                    "total_terms": len(list(searcher.lexicon("search_text"))),
                     "index_size_mb": self._get_index_size_mb(),
                 }
                 

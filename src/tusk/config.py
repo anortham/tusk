@@ -70,14 +70,14 @@ class TuskConfig(BaseModel):
         return cls(
             server_name=os.getenv("TUSK_SERVER_NAME", "Tusk"),
             storage_mode=os.getenv("TUSK_STORAGE_MODE", "global"),
-            data_dir=Path(data_dir) if data_dir else None,
+            data_dir=Path(data_dir).expanduser() if data_dir else None,
             search_enabled=os.getenv("TUSK_SEARCH_ENABLED", "true").lower() == "true",
             max_search_results=int(os.getenv("TUSK_MAX_SEARCH_RESULTS", "50")),
             default_checkpoint_ttl=os.getenv("TUSK_DEFAULT_TTL", "7d"),
             max_highlights_per_checkpoint=int(os.getenv("TUSK_MAX_HIGHLIGHTS", "10")),
             enable_transformations=os.getenv("TUSK_TRANSFORMATIONS", "true").lower() == "true",
             log_level=os.getenv("TUSK_LOG_LEVEL", "INFO"),
-            log_dir=Path(log_dir) if log_dir else None,
+            log_dir=Path(log_dir).expanduser() if log_dir else None,
             auto_detect_project=os.getenv("TUSK_AUTO_DETECT_PROJECT", "true").lower() == "true",
         )
     
