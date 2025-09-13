@@ -70,8 +70,9 @@ Thumbs.db
 data/              # User data and workspaces
 logs/              # Application logs
 *.log
-.coa/              # CodeSearch indexes and cache
+.coa/
 .serena/           # Serena MCP cache
+.serena/*          # All contents of .serena directory
 index/             # Whoosh search indexes
 *.db               # SQLite databases if any
 *.sqlite*
@@ -85,3 +86,4 @@ temp/
 # Configuration overrides
 config.local.json
 .env.local
+.claude/settings.local.json
