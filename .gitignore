@@ -66,9 +66,9 @@ venv.bak/
 ehthumbs.db
 Thumbs.db
 
-# Tusk-specific
-data/              # User data and workspaces
-logs/              # Application logs
+# Tusk-specific  
+# Note: Data is now stored in ~/.coa/tusk/ instead of local directories
+# These patterns are kept for backward compatibility and local overrides
 *.log
 .coa/
 .serena/           # Serena MCP cache

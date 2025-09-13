@@ -42,7 +42,7 @@ You can configure Tusk using environment variables:
 ```bash
 # Basic configuration
 export TUSK_WORKSPACE="my_project"           # Default workspace name
-export TUSK_DATA_DIR="/path/to/tusk/data"    # Data storage directory
+export TUSK_DATA_DIR="~/.coa/tusk"          # Data storage directory (default: ~/.coa/tusk)
 export TUSK_LOG_LEVEL="INFO"                 # Logging level
 export TUSK_EXPERTISE_LEVEL="beginner"       # Tool complexity level
 
@@ -67,7 +67,7 @@ Add Tusk to your Claude Desktop MCP servers configuration:
       "args": ["-m", "src.tusk.server"],
       "env": {
         "TUSK_WORKSPACE": "default",
-        "TUSK_DATA_DIR": "C:/source/tusk/data"
+        "TUSK_DATA_DIR": "~/.coa/tusk"
       }
     }
   }
@@ -151,7 +151,7 @@ Should create your first todo.
 After installation and first use, Tusk creates this structure:
 
 ```
-data/
+~/.coa/tusk/
 ├── {workspace_name}/
 │   ├── checkpoints/
 │   │   └── {date}/
@@ -197,7 +197,7 @@ tusk-server
 
 ### Getting Help
 
-- Check the logs in `logs/tusk_{workspace}.log`
+- Check the logs in `~/.coa/tusk/logs/tusk_{workspace}.log`
 - Run tests to verify installation: `pytest -v`
 - Create an issue at https://github.com/anortham/tusk/issues
 

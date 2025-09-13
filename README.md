@@ -35,7 +35,7 @@ Tusk is a Python-based MCP (Model Context Protocol) server that provides persist
 
 ## Architecture
 
-- **Storage**: JSON files organized by workspace with Whoosh full-text search
+- **Storage**: JSON files in ~/.coa/tusk/ organized by workspace with Whoosh full-text search
 - **Framework**: FastMCP 2.0 with Tool Transformation for adaptive interfaces
 - **Models**: Pydantic data models with validation
 - **Search**: Whoosh for powerful full-text search and fuzzy matching

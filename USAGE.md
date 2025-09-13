@@ -316,10 +316,10 @@ Your data is stored in human-readable JSON:
 
 ```bash
 # Backup workspace
-cp -r data/my_workspace /backup/location/
+cp -r ~/.coa/tusk/my_workspace /backup/location/
 
 # Migrate between systems
-rsync -av data/ other_machine:/tusk/data/
+rsync -av ~/.coa/tusk/ other_machine:~/.coa/tusk/
 ```
 
 ## Best Practices
@@ -428,6 +428,6 @@ This workflow ensures continuity across sessions and provides rich context for f
 ## Getting Help
 
 - Use `--help` with any command for detailed usage
-- Check logs for debugging: `logs/tusk_{workspace}.log`
+- Check logs for debugging: `~/.coa/tusk/logs/tusk_{workspace}.log`
 - All data is in JSON format for transparency
 - Report issues at https://github.com/anortham/tusk/issues

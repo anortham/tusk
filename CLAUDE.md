@@ -16,7 +16,7 @@ Tusk is a Python-based MCP server providing **persistent memory** for AI agents 
 - **Human-readable** JSON files organized by workspace
 - **Full-text search** with Whoosh (pure Python)
 - **No database** required - just files
-- **Portable** - copy data/ folder anywhere
+- **Portable** - copy ~/.coa/tusk/ folder anywhere
 
 ### Data Models (Pydantic)
 - `Checkpoint`: Work context snapshots with highlights
@@ -39,7 +39,7 @@ src/tusk/
 
 ### Data Storage Structure
 ```
-data/
+~/.coa/tusk/
 └── {workspace_name}/
     ├── checkpoints/{date}/{id}.json
     ├── todos/todos.json
@@ -78,7 +78,7 @@ expert_checkpoint = checkpoint_create  # Original with all options
 ```
 
 ### Error Handling
-- Use structured logging to logs/ directory
+- Use structured logging to ~/.coa/tusk/logs/ directory
 - Graceful degradation when search fails
 - Clear error messages for users
 - Automatic recovery for corrupted files
