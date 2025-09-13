@@ -1,5 +1,5 @@
 ---
-allowed-tools: mcp__tusk__search
+allowed-tools: mcp__tusk__checkpoint, mcp__tusk__todo, mcp__tusk__plan
 description: Search all your work data across sessions
 argument-hint: <query> [scope]
 ---
@@ -7,25 +7,22 @@ argument-hint: <query> [scope]
 $if($ARGUMENTS)
 Search Tusk memory for: "$ARGUMENTS"
 
-This will search across all your persistent data:
-- **Checkpoints:** Work sessions and progress milestones
-- **Todos:** Current and completed tasks
-- **Plans:** Project plans and implementation details
-- **Discoveries:** Technical insights and decisions
+This will use the search actions on the unified tools:
+- **Checkpoints:** `checkpoint(action="search", query="$ARGUMENTS")`
+- **Todos:** `todo(action="search", query="$ARGUMENTS")`
+- **Plans:** `plan(action="search", query="$ARGUMENTS")`
 
 The search will return relevant results with scores and allow you to quickly find information from previous sessions.
 
 $else
-Search your persistent Tusk memory across all sessions.
+Search your persistent Tusk memory across all sessions using the unified tools.
 
 Usage: `/search <query> [scope]`
 
 Examples:
-- `/search "authentication bug"` - Find work related to auth issues
-- `/search "API refactor" checkpoints` - Search only checkpoints
-- `/search "user login" todos` - Find login-related tasks
+- `/search "authentication bug"` - Search across all data types
+- `/search "API refactor"` - Find work related to API changes
+- `/search "user login"` - Find login-related content
 
-Scopes: `all` (default), `checkpoints`, `todos`, `plans`
-
-This helps you quickly find relevant context from previous work sessions.
+This uses the search actions on `checkpoint()`, `todo()`, and `plan()` tools to find relevant context.
 $endif

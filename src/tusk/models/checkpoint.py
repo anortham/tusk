@@ -42,7 +42,18 @@ class Checkpoint(BaseModel):
     # Identity
     id: str = Field(default_factory=generate_id, description="Unique checkpoint ID")
     
-    workspace_id: str = Field(description="ID of the workspace this checkpoint belongs to")
+    workspace_id: str = Field(default="", description="ID of the workspace this checkpoint belongs to (deprecated)")
+    
+    # Project tracking
+    project_id: str = Field(
+        default="",
+        description="ID of the project this checkpoint belongs to"
+    )
+    
+    project_path: str = Field(
+        default="",
+        description="Full path to the project directory"
+    )
     
     session_id: Optional[str] = Field(
         default=None,

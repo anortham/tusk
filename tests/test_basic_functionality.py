@@ -21,7 +21,6 @@ def temp_config():
         config = TuskConfig(
             data_dir=Path(temp_dir) / "data",
             log_dir=Path(temp_dir) / "logs",
-            current_workspace="test_workspace",
         )
         config.ensure_directories()
         yield config
@@ -36,7 +35,6 @@ class TestCheckpointStorage:
         
         # Create checkpoint
         checkpoint = Checkpoint(
-            workspace_id="test_workspace",
             description="Test checkpoint",
             work_context="Working on unit tests",
             active_files=["test_file.py"],
@@ -71,8 +69,7 @@ class TestCheckpointStorage:
         checkpoints = []
         for i in range(3):
             checkpoint = Checkpoint(
-                workspace_id="test_workspace",
-                description=f"Test checkpoint {i+1}",
+                    description=f"Test checkpoint {i+1}",
             )
             checkpoints.append(checkpoint)
             storage.save(checkpoint)
@@ -95,7 +92,6 @@ class TestTodoStorage:
         
         # Create todo
         todo = Todo(
-            workspace_id="test_workspace",
             content="Write unit tests",
             active_form="Writing unit tests",
             priority=TodoPriority.HIGH,
@@ -121,7 +117,6 @@ class TestTodoStorage:
         
         # Create todo
         todo = Todo(
-            workspace_id="test_workspace",
             content="Test status transitions",
             active_form="Testing status transitions",
         )
@@ -152,10 +147,10 @@ class TestTodoStorage:
         storage = TodoStorage(temp_config)
         
         # Create todos with different statuses
-        todo1 = Todo(workspace_id="test_workspace", content="Pending task", active_form="Working on pending")
-        todo2 = Todo(workspace_id="test_workspace", content="Active task", active_form="Working on active")
+        todo1 = Todo(content="Pending task", active_form="Working on pending")
+        todo2 = Todo(content="Active task", active_form="Working on active")
         todo2.mark_in_progress()
-        todo3 = Todo(workspace_id="test_workspace", content="Done task", active_form="Working on done")
+        todo3 = Todo(content="Done task", active_form="Working on done")
         todo3.mark_completed()
         
         # Save all
@@ -187,7 +182,6 @@ class TestPlanStorage:
         
         # Create plan
         plan = Plan(
-            workspace_id="test_workspace",
             title="Test Plan",
             description="A plan for testing the plan storage",
             goals=["Goal 1", "Goal 2"],
@@ -217,7 +211,6 @@ class TestPlanStorage:
         
         # Create plan with steps
         plan = Plan(
-            workspace_id="test_workspace",
             title="Progress Test Plan",
             description="Testing progress calculation",
         )
@@ -255,7 +248,6 @@ class TestPlanStorage:
         
         # Create draft plan
         plan = Plan(
-            workspace_id="test_workspace",
             title="Activation Test Plan",
             description="Testing plan activation",
         )
@@ -282,10 +274,10 @@ class TestModelValidation:
         """Test checkpoint model validation."""
         # Valid checkpoint
         checkpoint = Checkpoint(
-            workspace_id="test",
+            workspace_id="",
             description="Valid checkpoint",
         )
-        assert checkpoint.workspace_id == "test"
+        assert checkpoint.workspace_id == ""
         assert checkpoint.description == "Valid checkpoint"
         assert len(checkpoint.highlights) == 0
         assert len(checkpoint.active_files) == 0
@@ -304,12 +296,12 @@ class TestModelValidation:
         """Test todo model validation."""
         # Valid todo
         todo = Todo(
-            workspace_id="test",
+            workspace_id="",
             content="Test todo",
             active_form="Testing todo",
         )
         
-        assert todo.workspace_id == "test"
+        assert todo.workspace_id == ""
         assert todo.content == "Test todo"
         assert todo.status == TodoStatus.PENDING
         assert todo.priority == TodoPriority.MEDIUM
@@ -324,12 +316,12 @@ class TestModelValidation:
         """Test plan model validation."""
         # Valid plan
         plan = Plan(
-            workspace_id="test",
+            workspace_id="",
             title="Test Plan", 
             description="Test description",
         )
         
-        assert plan.workspace_id == "test"
+        assert plan.workspace_id == ""
         assert plan.title == "Test Plan"
         assert plan.status == PlanStatus.DRAFT
         assert len(plan.steps) == 0

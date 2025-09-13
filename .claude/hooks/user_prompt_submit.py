@@ -118,7 +118,8 @@ def save_plan_context(prompt: str, plan_elements: Dict[str, List[str]], session_
         
         from tusk.server import TuskServer
         from tusk.config import TuskConfig
-        from tusk.models.checkpoint import Checkpoint, Highlight, HighlightCategory
+        from tusk.models.checkpoint import Checkpoint
+        from tusk.models.highlight import Highlight, HighlightCategory
         
         async def save_context():
             config = TuskConfig.from_env()
@@ -128,7 +129,7 @@ def save_plan_context(prompt: str, plan_elements: Dict[str, List[str]], session_
             description = "Plan mode discussion captured"
             
             checkpoint = Checkpoint(
-                workspace_id=config.current_workspace,
+                workspace_id="",
                 description=description,
                 work_context=f"Plan discussion context:\\n\\n{prompt[:500]}...",
                 session_id=session_id,
@@ -161,7 +162,7 @@ def save_plan_context(prompt: str, plan_elements: Dict[str, List[str]], session_
             checkpoint.highlights = highlights
             
             # Set TTL for plan checkpoints (7 days)
-            checkpoint.set_ttl(7 * 24 * 60 * 60)  # 7 days
+            checkpoint.set_ttl("7d")  # 7 days
             
             # Save checkpoint
             if server.checkpoint_storage.save(checkpoint):
@@ -193,7 +194,7 @@ def main():
         # Extract prompt and session info
         prompt = input_data.get('prompt', '')
         session_id = input_data.get('session_id', 'unknown')
-        timestamp = input_data.get('timestamp', datetime.now().isoformat())
+        timestamp = input_data.get('timestamp', datetime.now(timezone.utc).isoformat())
         
         if not prompt:
             sys.exit(0)  # Nothing to process
@@ -205,12 +206,18 @@ def main():
         is_plan_discussion = detector.is_plan_mode(prompt)
         
         if args.verbose and is_plan_discussion:
-            print(f"🎯 Plan mode discussion detected (session: {session_id[:8]}...)")
+            try:
+                print(f"🎯 Plan mode discussion detected (session: {session_id[:8]}...)")
+            except UnicodeEncodeError:
+                print(f"[PLAN] Plan mode discussion detected (session: {session_id[:8]}...)")
         
         # Process plan mode discussions
         if is_plan_discussion and args.capture_plans:
             if args.verbose:
-                print("📋 Extracting plan elements...")
+                try:
+                    print("📋 Extracting plan elements...")
+                except UnicodeEncodeError:
+                    print("[EXTRACT] Extracting plan elements...")
             
             plan_elements = detector.extract_plan_elements(prompt)
             
@@ -219,20 +226,31 @@ def main():
             
             if has_content:
                 if args.verbose:
-                    print(f"📝 Found {len(plan_elements['steps'])} steps, "
-                          f"{len(plan_elements['decisions'])} decisions, "
-                          f"{len(plan_elements['discoveries'])} discoveries")
+                    try:
+                        print(f"📝 Found {len(plan_elements['steps'])} steps, "
+                              f"{len(plan_elements['decisions'])} decisions, "
+                              f"{len(plan_elements['discoveries'])} discoveries")
+                    except UnicodeEncodeError:
+                        print(f"[FOUND] {len(plan_elements['steps'])} steps, "
+                              f"{len(plan_elements['decisions'])} decisions, "
+                              f"{len(plan_elements['discoveries'])} discoveries")
                 
                 success = save_plan_context(prompt, plan_elements, session_id)
                 
                 if args.verbose:
                     if success:
-                        print("✅ Plan context saved to checkpoint")
+                        try:
+                            print("✅ Plan context saved to checkpoint")
+                        except UnicodeEncodeError:
+                            print("[SUCCESS] Plan context saved to checkpoint")
                     else:
-                        print("❌ Failed to save plan context")
+                        try:
+                            print("❌ Failed to save plan context")
+                        except UnicodeEncodeError:
+                            print("[ERROR] Failed to save plan context")
         
         # Log the event
-        log_dir = Path("logs")
+        log_dir = Path(".coa") / "tusk" / "logs"
         log_dir.mkdir(parents=True, exist_ok=True)
         
         log_entry = {

@@ -17,6 +17,8 @@ class HighlightCategory(str, Enum):
     ERROR = "error"
     REFACTOR = "refactor"
     TODO = "todo"
+    PLAN_STEP = "plan_step"
+    DISCOVERY = "discovery"
     GENERAL = "general"
 
 

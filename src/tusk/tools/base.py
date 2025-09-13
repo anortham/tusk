@@ -24,5 +24,5 @@ class BaseTool(ABC):
         pass
     
     def get_current_workspace(self) -> str:
-        """Get the current workspace ID."""
-        return self.config.current_workspace
+        """Get the current workspace ID (deprecated - returns empty string)."""
+        return ""

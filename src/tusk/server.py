@@ -29,6 +29,13 @@ class TuskServer:
         self.plan_storage = PlanStorage(self.config)
         self.search_engine = SearchEngine(self.config)
         
+        # Clean up any stale lock files on startup
+        try:
+            if self.search_engine.cleanup_locks(force=False):
+                logger.info("Cleaned up stale search index lock files on startup")
+        except Exception as e:
+            logger.warning(f"Failed to cleanup lock files on startup: {e}")
+        
         # Create FastMCP server with behavioral instructions
         instructions = self._get_instructions()
         self.mcp = FastMCP(
@@ -39,81 +46,77 @@ class TuskServer:
         # Register tools based on expertise level
         self._register_tools()
         
-        logger.info(f"Tusk server initialized for workspace: {self.config.current_workspace}")
+        logger.info("Tusk server initialized")
     
     def _get_instructions(self) -> str:
         """Get behavioral instructions for Claude."""
-        return f"""
+        return """
 Tusk MCP Server - Persistent Memory for AI Agents
 
-Workspace: {self.config.current_workspace}
-Expertise Level: {self.config.expertise_level}
+5 CORE TOOLS - COMPLETE WORKFLOW:
+1. plan(action="create|list|activate|complete|add_step", title="...", description="...") - START HERE for complex tasks
+2. todo(action="add|list|start|complete|search", task="...", task_id="...", query="...") - Break plans into actionable items
+3. checkpoint(action="save|list|search", description="...", query="...") - Save progress milestones
+4. recall(context="recent|week|session|branch", days_back=7, session_id="...", git_branch="...") - Restore previous context
+5. standup(timeframe="daily|weekly|custom", days_back=1) - Report on work done
+
+WORKFLOW: Plan first → Create todos → Execute → Checkpoint progress → Recall/Standup
 
 CORE BEHAVIORAL DIRECTIVES:
 
-1. SESSION CONTINUITY:
+1. PLAN-FIRST APPROACH:
+   - ALWAYS start complex tasks with plan(action="create") to break down work
+   - Get user alignment on approach before diving into implementation  
+   - Use plans to coordinate multi-step projects across sessions
+   - Convert plan steps into specific todos for execution
+
+2. SESSION CONTINUITY:
    - ALWAYS use 'recall' at session start to restore context
-   - Maintain awareness of previous work, decisions, and progress
+   - Check for active plans and incomplete todos before starting new work
+   - Maintain awareness of previous decisions and progress
    - Never start fresh without checking existing context
 
-2. PERSISTENT STATE MANAGEMENT:
-   - Create checkpoints when completing significant work or making key decisions
+3. PERSISTENT STATE MANAGEMENT:
+   - Create checkpoints when completing significant work or reaching milestones
    - Extract and track actionable items as todos automatically
-   - Maintain todos across sessions for continuity
+   - Link todos to plans for better organization and context
+   - Maintain plans and todos across sessions for long-term continuity
 
-3. DECISION LOGIC:
-   - Use recall_quick for recent context (default)
-   - Use full recall when user indicates broader investigation needed
-   - Use specific filters (session_id, git_branch) when context suggests focused work
-   - Automatically save progress when transitioning between major tasks
+4. STRUCTURED WORKFLOW:
+   - Use plan → todo → execute → checkpoint → recall/standup cycle
+   - Break large plans into manageable steps before starting work
+   - Save progress checkpoints at natural stopping points
+   - Use standup to review and report on completed work
 
-4. SEARCH-FIRST APPROACH:
-   - All data is full-text searchable - use search tools when user asks about specific topics
+5. SEARCH-FIRST APPROACH:
+   - All data is full-text searchable - use search actions when user asks about specific topics
    - Prefer search over browsing when looking for specific information
-   - Search across checkpoints, todos, and plans for comprehensive results
-
-5. PROACTIVE CONTEXT PRESERVATION:
-   - Save checkpoints before major context switches
-   - Create todos for incomplete items mentioned in conversation
-   - Update task status (start/complete) as work progresses
+   - Search across plans, checkpoints, and todos for comprehensive results
+   - Use search to find related work before creating new plans
 
 REMEMBER: Your role is to maintain persistent context and continuity across sessions.
 The user relies on you to remember and build upon previous interactions.
         """.strip()
     
     def _register_tools(self) -> None:
-        """Register MCP tools based on configuration."""
-        if self.config.expertise_level == "beginner":
-            # Register simplified tools for beginners (7 core tools)
-            from .tools.simplified import SimplifiedTools
-            simplified_tools = SimplifiedTools(self)
-            simplified_tools.register_simplified_tools(self.mcp)
-            logger.info("Registered 7 simplified tools for beginner mode")
-            
-        else:
-            # Register expert tools for advanced users
-            from .tools import (
-                CheckpointTool,
-                PlanTool, 
-                RecallTool,
-                StandupTool,
-                TodoTool,
-            )
-            
-            # Create tool instances
-            checkpoint_tool = CheckpointTool(self)
-            todo_tool = TodoTool(self)
-            plan_tool = PlanTool(self)
-            recall_tool = RecallTool(self)
-            standup_tool = StandupTool(self)
-            
-            # Register expert tools
-            checkpoint_tool.register(self.mcp)
-            todo_tool.register(self.mcp)
-            plan_tool.register(self.mcp)
-            recall_tool.register(self.mcp)
-            standup_tool.register(self.mcp)
-            logger.info("Registered expert tools with full functionality")
+        """Register unified MCP tools."""
+        from .tools.unified import UnifiedTodoTool, UnifiedCheckpointTool, UnifiedRecallTool, UnifiedStandupTool, UnifiedPlanTool
+        
+        # Create unified tool instances
+        plan_tool = UnifiedPlanTool(self)
+        todo_tool = UnifiedTodoTool(self)
+        checkpoint_tool = UnifiedCheckpointTool(self)
+        recall_tool = UnifiedRecallTool(self)
+        standup_tool = UnifiedStandupTool(self)
+        
+        # Register unified tools in workflow order
+        plan_tool.register(self.mcp)
+        todo_tool.register(self.mcp)
+        checkpoint_tool.register(self.mcp)
+        recall_tool.register(self.mcp)
+        standup_tool.register(self.mcp)
+        
+        logger.info("Registered 5 unified tools: plan, todo, checkpoint, recall, standup")
     
     def run_stdio(self) -> None:
         """Run the server with stdio transport."""
@@ -126,9 +129,8 @@ The user relies on you to remember and build upon previous interactions.
         await self.mcp.run(transport="sse", host=host, port=port)
     
     def get_workspace_stats(self) -> Dict[str, Any]:
-        """Get statistics about the current workspace."""
+        """Get statistics about the current data."""
         return {
-            "workspace": self.config.current_workspace,
             "checkpoints": self.checkpoint_storage.count(),
             "todos": self.todo_storage.count(),
             "plans": self.plan_storage.count(),
@@ -148,7 +150,8 @@ The user relies on you to remember and build upon previous interactions.
 def setup_logging(config: TuskConfig) -> None:
     """Set up logging configuration."""
     # Create logs directory
-    config.log_dir.mkdir(parents=True, exist_ok=True)
+    log_dir = config.get_log_dir()
+    log_dir.mkdir(parents=True, exist_ok=True)
     
     # Configure root logger
     logging.basicConfig(
@@ -157,7 +160,7 @@ def setup_logging(config: TuskConfig) -> None:
         handlers=[
             logging.StreamHandler(sys.stderr),
             logging.FileHandler(
-                config.log_dir / f"tusk_{config.current_workspace}.log",
+                log_dir / "tusk.log",
                 encoding='utf-8'
             )
         ]

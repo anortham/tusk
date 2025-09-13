@@ -38,7 +38,18 @@ class Todo(BaseModel):
     # Identity
     id: str = Field(default_factory=generate_todo_id, description="Unique todo ID")
     
-    workspace_id: str = Field(description="ID of the workspace this todo belongs to")
+    workspace_id: str = Field(default="", description="ID of the workspace this todo belongs to (deprecated)")
+    
+    # Project tracking
+    project_id: str = Field(
+        default="",
+        description="ID of the project this todo belongs to"
+    )
+    
+    project_path: str = Field(
+        default="",
+        description="Full path to the project directory"
+    )
     
     # Content
     content: str = Field(description="What needs to be done")

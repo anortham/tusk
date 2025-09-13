@@ -21,7 +21,6 @@ def temp_config():
         config = TuskConfig(
             data_dir=Path(temp_dir) / "data",
             log_dir=Path(temp_dir) / "logs",
-            current_workspace="test_workspace",
         )
         config.ensure_directories()
         yield config
@@ -39,7 +38,6 @@ def search_engine(temp_config):
 def sample_checkpoint():
     """Create a sample checkpoint for testing."""
     return Checkpoint(
-        workspace_id="test_workspace",
         description="Fixed critical bug in authentication system",
         work_context="Working on user login improvements",
         active_files=["auth.py", "user_model.py"],
@@ -51,7 +49,6 @@ def sample_checkpoint():
 def sample_todo():
     """Create a sample todo for testing."""
     return Todo(
-        workspace_id="test_workspace",
         content="Write comprehensive unit tests",
         active_form="Writing comprehensive unit tests",
         priority=TodoPriority.HIGH,
@@ -63,7 +60,6 @@ def sample_todo():
 def sample_plan():
     """Create a sample plan for testing."""
     plan = Plan(
-        workspace_id="test_workspace",
         title="API Refactoring Project",
         description="Refactor the REST API for better performance and maintainability",
         goals=["Improve performance", "Better error handling", "Cleaner code"],
@@ -84,7 +80,7 @@ class TestSearchEngineInitialization:
         search_engine = SearchEngine(temp_config)
         
         assert search_engine.config == temp_config
-        assert search_engine.index_dir == temp_config.data_dir / temp_config.current_workspace / "index"
+        assert search_engine.index_dir == temp_config.data_dir / "index"
         assert search_engine.ix is None  # Not initialized yet
     
     def test_initialize_creates_index(self, temp_config):
@@ -213,7 +209,6 @@ class TestSearchEngineQuerying:
         # Index multiple documents
         for i in range(10):
             checkpoint = Checkpoint(
-                workspace_id="test_workspace",
                 description=f"Test checkpoint number {i}",
             )
             search_engine.index_checkpoint(checkpoint)
@@ -230,15 +225,12 @@ class TestSearchEngineQuerying:
         """Test that search results are ranked by relevance."""
         # Create documents with different levels of relevance
         highly_relevant = Checkpoint(
-            workspace_id="test_workspace",
             description="Python testing framework unittest pytest",
         )
         moderately_relevant = Checkpoint(
-            workspace_id="test_workspace", 
             description="Working on Python code with some testing",
         )
         less_relevant = Checkpoint(
-            workspace_id="test_workspace",
             description="General development work on various projects",
         )
         
@@ -273,7 +265,6 @@ class TestSearchEngineAdvanced:
         """Test searching for recent documents."""
         # Create documents with different timestamps
         old_checkpoint = Checkpoint(
-            workspace_id="test_workspace",
             description="Old checkpoint from long ago",
         )
         # Manually set an old timestamp
@@ -281,7 +272,6 @@ class TestSearchEngineAdvanced:
         old_checkpoint.created_at = old_timestamp
         
         recent_checkpoint = Checkpoint(
-            workspace_id="test_workspace",
             description="Recent checkpoint from today",
         )
         
@@ -458,20 +448,17 @@ class TestSearchEngineIntegration:
         # Create a realistic set of documents
         documents = [
             Checkpoint(
-                workspace_id="test_workspace",
                 description="Fixed authentication bug in user login system",
                 work_context="Working on security improvements for the web application",
                 tags=["security", "bugfix", "authentication"]
             ),
             Todo(
-                workspace_id="test_workspace", 
                 content="Write integration tests for the authentication API",
                 active_form="Writing integration tests for authentication API",
                 priority=TodoPriority.HIGH,
                 tags=["testing", "authentication", "api"]
             ),
             Plan(
-                workspace_id="test_workspace",
                 title="Security Audit Project",
                 description="Comprehensive security audit of the authentication system",
                 goals=["Find vulnerabilities", "Fix security issues", "Improve authentication"],
@@ -506,56 +493,5 @@ class TestSearchEngineIntegration:
         # Should rank the checkpoint higher due to exact phrase match
         assert bug_results[0].doc_id == documents[0].id
     
-    def test_workspace_isolation(self, temp_config):
-        """Test that different workspaces are properly isolated."""
-        # Create search engines for different workspaces
-        config1 = TuskConfig(
-            data_dir=temp_config.data_dir,
-            log_dir=temp_config.log_dir,
-            current_workspace="workspace1"
-        )
-        config1.ensure_directories()
-        
-        config2 = TuskConfig(
-            data_dir=temp_config.data_dir,
-            log_dir=temp_config.log_dir,
-            current_workspace="workspace2"
-        )
-        config2.ensure_directories()
-        
-        search1 = SearchEngine(config1)
-        search1._ensure_index()
-        
-        search2 = SearchEngine(config2)
-        search2._ensure_index()
-        
-        # Add document to workspace1
-        checkpoint1 = Checkpoint(
-            workspace_id="workspace1",
-            description="Document in workspace 1",
-        )
-        search1.index_checkpoint(checkpoint1)
-        
-        # Add document to workspace2
-        checkpoint2 = Checkpoint(
-            workspace_id="workspace2", 
-            description="Document in workspace 2",
-        )
-        search2.index_checkpoint(checkpoint2)
-        
-        # Each workspace should only see its own documents
-        results1 = search1.search("Document", limit=5)
-        results2 = search2.search("Document", limit=5)
-        
-        assert len(results1) >= 1
-        assert len(results2) >= 1
-        
-        # Workspace 1 should not see workspace 2's document
-        workspace1_doc_ids = [r.doc_id for r in results1]
-        assert checkpoint1.id in workspace1_doc_ids
-        assert checkpoint2.id not in workspace1_doc_ids
-        
-        # Workspace 2 should not see workspace 1's document
-        workspace2_doc_ids = [r.doc_id for r in results2]
-        assert checkpoint2.id in workspace2_doc_ids
-        assert checkpoint1.id not in workspace2_doc_ids
+    # Note: Workspace isolation test removed since workspaces are no longer a concept
+    # All data is now stored in a single project-based location

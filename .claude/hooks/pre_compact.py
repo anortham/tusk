@@ -61,14 +61,14 @@ def quick_checkpoint(trigger_type: str) -> bool:
             description = f"Pre-compaction checkpoint ({trigger_type})"
             
             checkpoint = Checkpoint(
-                workspace_id=config.current_workspace,
+                workspace_id="",
                 description=description,
                 work_context="Automatically saved before compaction to preserve context",
-                session_id=f"pre_compact_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
+                session_id=f"pre_compact_{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')}",
             )
             
             # Set shorter TTL for pre-compaction checkpoints (24 hours)
-            checkpoint.set_ttl(24 * 60 * 60)  # 24 hours in seconds
+            checkpoint.set_ttl("24h")  # 24 hours
             
             # Save checkpoint
             if server.checkpoint_storage.save(checkpoint):
@@ -118,16 +118,22 @@ def main():
             
             if args.verbose:
                 if success:
-                    print("✅ Checkpoint saved successfully")
+                    try:
+                        print("✅ Checkpoint saved successfully")
+                    except UnicodeEncodeError:
+                        print("[SUCCESS] Checkpoint saved successfully")
                 else:
-                    print("❌ Failed to save checkpoint")
+                    try:
+                        print("❌ Failed to save checkpoint")
+                    except UnicodeEncodeError:
+                        print("[ERROR] Failed to save checkpoint")
         
         # Log the event (basic logging)
-        log_dir = Path("logs")
+        log_dir = Path(".coa") / "tusk" / "logs"
         log_dir.mkdir(parents=True, exist_ok=True)
         
         log_entry = {
-            "timestamp": datetime.now().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             "event": "pre_compact",
             "trigger": trigger,
             "session_id": session_id,

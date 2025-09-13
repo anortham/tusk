@@ -27,14 +27,14 @@ class TestDatetimeConsistency:
     def temp_config(self):
         """Create a temporary config for testing."""
         with tempfile.TemporaryDirectory() as temp_dir:
-            config = TuskConfig(workspace_name="test", data_dir=Path(temp_dir))
+            config = TuskConfig(data_dir=Path(temp_dir) / "data", log_dir=Path(temp_dir) / "logs")
+            config.ensure_directories()
             yield config
     
     def test_model_creation_timezone_aware(self):
         """Test that all models create timezone-aware datetimes by default."""
         # Test Checkpoint
         checkpoint = Checkpoint(
-            workspace_id="test",
             description="Test checkpoint"
         )
         assert checkpoint.created_at.tzinfo is not None, "Checkpoint.created_at should be timezone-aware"
@@ -42,7 +42,6 @@ class TestDatetimeConsistency:
         
         # Test Todo
         todo = Todo(
-            workspace_id="test",
             content="Test todo",
             active_form="Testing todo"
         )
@@ -51,7 +50,6 @@ class TestDatetimeConsistency:
         
         # Test Plan
         plan = Plan(
-            workspace_id="test",
             title="Test plan",
             description="Test plan description"
         )
@@ -62,18 +60,15 @@ class TestDatetimeConsistency:
         """Test that saving and loading preserves timezone information."""
         # Create models with timezone-aware datetimes
         checkpoint = Checkpoint(
-            workspace_id="test",
             description="Test checkpoint for roundtrip"
         )
         
         todo = Todo(
-            workspace_id="test", 
             content="Test todo",
             active_form="Testing todo"
         )
         
         plan = Plan(
-            workspace_id="test",
             title="Test plan",
             description="Test plan description"
         )
@@ -114,7 +109,6 @@ class TestDatetimeConsistency:
         checkpoints = []
         for i in range(3):
             checkpoint = Checkpoint(
-                workspace_id="test",
                 description=f"Checkpoint {i}"
             )
             # Manually adjust created_at for testing
@@ -144,7 +138,6 @@ class TestDatetimeConsistency:
         
         for i in range(5):
             checkpoint = Checkpoint(
-                workspace_id="test",
                 description=f"Daily checkpoint {i}"
             )
             checkpoint.created_at = base_time - timedelta(days=i)
@@ -175,8 +168,8 @@ class TestDatetimeConsistency:
         # Create test data with different timestamps
         base_time = datetime.now(timezone.utc)
         
-        checkpoint = Checkpoint(workspace_id="test", description="Test checkpoint")
-        todo = Todo(workspace_id="test", content="Test todo", active_form="Testing")
+        checkpoint = Checkpoint(description="Test checkpoint")
+        todo = Todo(content="Test todo", active_form="Testing")
         
         # Manually set different creation times to test filtering
         checkpoint.created_at = base_time - timedelta(days=1)
@@ -213,9 +206,9 @@ class TestDatetimeConsistency:
     
     def test_cross_model_datetime_comparisons(self, temp_config):
         """Test comparing datetimes between different model types."""
-        checkpoint = Checkpoint(workspace_id="test", description="Test")
-        todo = Todo(workspace_id="test", content="Test", active_form="Testing")
-        plan = Plan(workspace_id="test", title="Test", description="Test")
+        checkpoint = Checkpoint(description="Test")
+        todo = Todo(content="Test", active_form="Testing")
+        plan = Plan(title="Test", description="Test")
         
         # Save and reload to simulate real usage
         checkpoint_storage = CheckpointStorage(temp_config)
@@ -253,7 +246,6 @@ class TestDatetimeConsistency:
     def test_json_file_timezone_format(self, temp_config):
         """Test that JSON files contain explicit timezone information."""
         checkpoint = Checkpoint(
-            workspace_id="test",
             description="Test timezone in JSON"
         )
         
@@ -279,7 +271,6 @@ class TestDatetimeConsistency:
     def test_todo_status_transitions_preserve_timezone(self, temp_config):
         """Test that todo status changes preserve timezone info."""
         todo = Todo(
-            workspace_id="test",
             content="Test todo transitions",
             active_form="Testing transitions"
         )

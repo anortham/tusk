@@ -26,9 +26,9 @@ Generate a standup report from Tusk memory showing:
 - Context for continued work
 
 $if($1)
-Show standup for timeframe: $1 (recent/weekly/monthly)
+Generate standup using `standup(timeframe="$1")` for timeframe: $1 (daily/weekly/custom)
 $else
-Show recent standup (last 2 days)
+Generate recent standup using `standup(timeframe="daily")` (last day)
 $endif
 
 This uses your persistent Tusk memory to provide context across sessions and gives a comprehensive view of your development progress.

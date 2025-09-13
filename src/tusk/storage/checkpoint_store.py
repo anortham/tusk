@@ -24,12 +24,12 @@ class CheckpointStorage(BaseStorage[Checkpoint]):
     def _get_date_dir(self, date: datetime) -> Path:
         """Get the date-based directory for a checkpoint."""
         date_str = date.strftime("%Y-%m-%d")
-        return self.workspace_dir / self.get_storage_subdir() / date_str
+        return self.data_dir / self.get_storage_subdir() / date_str
     
     def _get_file_path(self, item_id: str) -> Path:
         """Get file path for checkpoint - requires loading to get date."""
         # First try to find the file in any date directory
-        storage_dir = self.workspace_dir / self.get_storage_subdir()
+        storage_dir = self.data_dir / self.get_storage_subdir()
         
         for date_dir in storage_dir.iterdir():
             if date_dir.is_dir():
@@ -71,7 +71,7 @@ class CheckpointStorage(BaseStorage[Checkpoint]):
     ) -> List[Checkpoint]:
         """List checkpoints within a date range."""
         checkpoints = []
-        storage_dir = self.workspace_dir / self.get_storage_subdir()
+        storage_dir = self.data_dir / self.get_storage_subdir()
         
         if not storage_dir.exists():
             return checkpoints
@@ -146,7 +146,7 @@ class CheckpointStorage(BaseStorage[Checkpoint]):
     def cleanup_expired(self) -> int:
         """Remove expired checkpoints."""
         removed_count = 0
-        storage_dir = self.workspace_dir / self.get_storage_subdir()
+        storage_dir = self.data_dir / self.get_storage_subdir()
         
         if not storage_dir.exists():
             return 0
@@ -181,7 +181,7 @@ class CheckpointStorage(BaseStorage[Checkpoint]):
     def list_ids(self) -> List[str]:
         """List all checkpoint IDs across all date directories."""
         ids = []
-        storage_dir = self.workspace_dir / self.get_storage_subdir()
+        storage_dir = self.data_dir / self.get_storage_subdir()
         
         if not storage_dir.exists():
             return ids

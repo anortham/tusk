@@ -62,7 +62,18 @@ class Plan(BaseModel):
     # Identity
     id: str = Field(default_factory=generate_plan_id, description="Unique plan ID")
     
-    workspace_id: str = Field(description="ID of the workspace this plan belongs to")
+    workspace_id: str = Field(default="", description="ID of the workspace this plan belongs to (deprecated)")
+    
+    # Project tracking
+    project_id: str = Field(
+        default="",
+        description="ID of the project this plan belongs to"
+    )
+    
+    project_path: str = Field(
+        default="",
+        description="Full path to the project directory"
+    )
     
     # Core content
     title: str = Field(description="Title of the plan")

@@ -215,11 +215,11 @@ def main():
             print("\\nUse Tusk commands to keep your memory system up to date!")
         
         # Log the completion detection
-        log_dir = Path("logs")
+        log_dir = Path(".coa") / "tusk" / "logs"
         log_dir.mkdir(parents=True, exist_ok=True)
         
         log_entry = {
-            "timestamp": datetime.now().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             "event": "stop_hook_completion_detection",
             "session_id": session_id,
             "completion_detected": completion_detected,

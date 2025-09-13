@@ -1,5 +1,5 @@
 ---
-allowed-tools: mcp__tusk__save
+allowed-tools: mcp__tusk__checkpoint
 description: Save current work state as a checkpoint
 argument-hint: [description]
 ---
@@ -7,12 +7,12 @@ argument-hint: [description]
 $if($ARGUMENTS)
 Save checkpoint: $ARGUMENTS
 
-Create a checkpoint to preserve your current work context, progress, and any key decisions or discoveries.
+This will use `checkpoint(action="save", description="$ARGUMENTS")` to preserve your current work context, progress, and key decisions.
 
 This checkpoint will be searchable and can be recalled in future sessions to restore context.
 
 $else
-Save a checkpoint of your current work progress.
+Save a checkpoint using `checkpoint(action="save", description="...")`.
 
 Please describe what you've been working on or what significant progress/decisions should be captured.
 

@@ -1,5 +1,5 @@
 ---
-allowed-tools: mcp__tusk__todo, mcp__tusk__complete
+allowed-tools: mcp__tusk__todo
 description: Show current todos or manage task list
 argument-hint: [add "task" | complete <id> | list]
 ---
@@ -7,31 +7,28 @@ argument-hint: [add "task" | complete <id> | list]
 $if($1 == "add")
 Add new todo: $2
 
-This will create a persistent todo that survives across Claude Code sessions.
-
-The task will be tracked in your Tusk memory and can be completed later with `/todos complete <id>`.
+This will use `todo(action="add", task="$2")` to create a persistent todo that survives across Claude Code sessions.
 
 $elif($1 == "complete")
 Mark todo as completed: $2
 
-This will mark the specified todo ID as completed and update your task tracking.
+This will use `todo(action="complete", task_id="$2")` to mark the specified todo as completed.
 
 $elif($1 == "list" || !$1)
-Show your current todo list from Tusk memory.
+Show your current todo list using `todo(action="list")`.
 
 This includes:
 - **In Progress:** Tasks you're actively working on
 - **Pending:** Tasks ready to be picked up
-- **Recently Completed:** Tasks finished in recent sessions
 
 Use `/todos add "description"` to add new tasks or `/todos complete <id>` to mark tasks as done.
 
 $else
-Manage your persistent todo list:
+Manage your persistent todo list using the unified `todo()` tool:
 
-- `/todos list` - Show current todos
-- `/todos add "task description"` - Add new task
-- `/todos complete <todo-id>` - Mark task as completed
+- `/todos list` - Show current todos with `todo(action="list")`
+- `/todos add "task description"` - Add new task with `todo(action="add", task="...")`
+- `/todos complete <todo-id>` - Mark task as completed with `todo(action="complete", task_id="...")`
 
 All todos persist across Claude Code sessions and help maintain continuity in your work.
 $endif

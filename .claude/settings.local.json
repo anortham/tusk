@@ -17,34 +17,65 @@
       "Bash(pip install:*)",
       "Bash(timeout 5 python:*)",
       "Bash(tusk-server:*)",
-      "mcp__tusk__recall_quick",
       "mcp__tusk__recall",
-      "mcp__tusk__add_task",
-      "mcp__tusk__list_tasks",
-      "mcp__tusk__complete_task",
-      "mcp__tusk__save_progress",
+      "mcp__tusk__todo",
+      "mcp__tusk__checkpoint",
       "mcp__codesearch__directory_search",
       "Bash(pytest:*)",
-      "mcp__tusk__start_task",
+      "mcp__tusk__plan",
       "mcp__codesearch__search_and_replace",
       "Bash(find:*)",
       "Bash(sed:*)",
       "mcp__codesearch__get_symbols_overview",
-      "mcp__tusk__recall_session",
+      "mcp__tusk__standup",
       "Bash(sort:*)",
       "Bash(timeout 10 python:*)",
       "mcp__codesearch__goto_definition",
       "Bash(pkill:*)",
-      "mcp__tusk__list_recent_saves",
       "mcp__codesearch__replace_lines",
       "Read(//c/source/claude-code-hooks-mastery/**)",
       "Read(//c/source/MCP-VSCode-Bridge/**)",
-      "mcp__tusk__save",
-      "mcp__tusk__standup",
       "mcp__codesearch__line_search",
-      "mcp__codesearch__insert_at_line"
+      "mcp__codesearch__insert_at_line",
+      "Read(//c/source/COA Goldfish MCP/COA.Goldfish.McpServer/**)",
+      "mcp__serena__activate_project",
+      "mcp__serena__check_onboarding_performed",
+      "Bash(chcp 65001)",
+      "Bash(tree:*)"
     ],
     "deny": [],
     "ask": []
+  },
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python .claude/hooks/user_prompt_submit.py"
+          }
+        ]
+      }
+    ],
+    "PreCompact": [
+      {
+        "hooks": [
+          {
+            "type": "command", 
+            "command": "python .claude/hooks/pre_compact.py"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python .claude/hooks/stop.py"
+          }
+        ]
+      }
+    ]
   }
 }

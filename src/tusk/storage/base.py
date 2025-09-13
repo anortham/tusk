@@ -23,7 +23,7 @@ class BaseStorage(Generic[T], ABC):
     def __init__(self, config: TuskConfig, model_class: Type[T]):
         self.config = config
         self.model_class = model_class
-        self.workspace_dir = config.get_workspace_dir()
+        self.data_dir = config.get_data_dir()
         self._ensure_directories()
     
     @abstractmethod
@@ -33,12 +33,12 @@ class BaseStorage(Generic[T], ABC):
     
     def _ensure_directories(self) -> None:
         """Ensure storage directories exist."""
-        storage_dir = self.workspace_dir / self.get_storage_subdir()
+        storage_dir = self.data_dir / self.get_storage_subdir()
         storage_dir.mkdir(parents=True, exist_ok=True)
     
     def _get_file_path(self, item_id: str) -> Path:
         """Get the file path for an item."""
-        storage_dir = self.workspace_dir / self.get_storage_subdir()
+        storage_dir = self.data_dir / self.get_storage_subdir()
         return storage_dir / f"{item_id}.json"
     
     def _read_json_file(self, file_path: Path) -> Optional[Dict[str, Any]]:
@@ -147,7 +147,7 @@ class BaseStorage(Generic[T], ABC):
     
     def list_ids(self) -> List[str]:
         """List all item IDs."""
-        storage_dir = self.workspace_dir / self.get_storage_subdir()
+        storage_dir = self.data_dir / self.get_storage_subdir()
         
         if not storage_dir.exists():
             return []

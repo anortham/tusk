@@ -18,17 +18,17 @@ class TodoStorage:
     
     def __init__(self, config: TuskConfig):
         self.config = config
-        self.workspace_dir = config.get_workspace_dir()
+        self.data_dir = config.get_data_dir()
         self._ensure_directories()
     
     def _ensure_directories(self) -> None:
         """Ensure storage directories exist."""
-        todos_dir = self.workspace_dir / "todos"
+        todos_dir = self.data_dir / "todos"
         todos_dir.mkdir(parents=True, exist_ok=True)
     
     def _get_todos_file(self) -> Path:
         """Get the todos file path."""
-        return self.workspace_dir / "todos" / "todos.json"
+        return self.data_dir / "todos" / "todos.json"
     
     def _load_todos_file(self) -> Dict[str, Dict]:
         """Load all todos from the JSON file."""
@@ -242,7 +242,7 @@ class TodoStorage:
                         todo.mark_blocked()
                     else:
                         todo.status = new_status
-                        todo.updated_at = todo.created_at.__class__.utcnow()
+                        todo.updated_at = datetime.now(timezone.utc)
                     
                     todos_data[todo_id] = todo.model_dump(mode='json')
                     updated_count += 1

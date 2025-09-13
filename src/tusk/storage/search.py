@@ -2,6 +2,8 @@
 
 from datetime import datetime, timezone
 import logging
+import random
+import time
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 
@@ -9,6 +11,7 @@ from whoosh import fields, index, qparser
 from whoosh.filedb.filestore import FileStorage
 from whoosh.qparser import MultifieldParser, QueryParser
 from whoosh.query import Query
+from whoosh.writing import LockError
 
 from ..config import TuskConfig
 from ..models import Checkpoint, Plan, Todo
@@ -34,8 +37,8 @@ class SearchEngine:
     
     def __init__(self, config: TuskConfig):
         self.config = config
-        self.workspace_dir = config.get_workspace_dir()
-        self.index_dir = self.workspace_dir / "index"
+        self.data_dir = config.get_data_dir()
+        self.index_dir = self.data_dir / "index"
         self.index_dir.mkdir(parents=True, exist_ok=True)
         
         # Define schema
@@ -63,6 +66,10 @@ class SearchEngine:
             checkpoint_id=fields.ID(stored=True),
             plan_id=fields.ID(stored=True),
             
+            # Project tracking fields
+            project_id=fields.ID(stored=True),
+            project_path=fields.TEXT(stored=True),
+            
             # File and context fields
             active_files=fields.KEYWORD(stored=True, commas=True),
             git_branch=fields.ID(stored=True),
@@ -74,9 +81,26 @@ class SearchEngine:
         # Don't initialize index automatically for testing
         self.ix = None
     
+    def _cleanup_stale_locks(self) -> None:
+        """Remove stale lock files from the index directory."""
+        try:
+            for lock_file in self.index_dir.glob("*LOCK*"):
+                if lock_file.is_file():
+                    # Check if lock file is old (older than 5 minutes)
+                    import time
+                    file_age = time.time() - lock_file.stat().st_mtime
+                    if file_age > 300:  # 5 minutes in seconds
+                        lock_file.unlink()
+                        logger.info(f"Removed stale lock file: {lock_file.name}")
+        except Exception as e:
+            logger.warning(f"Error cleaning up lock files: {e}")
+    
     def _ensure_index(self) -> None:
         """Ensure the search index exists."""
         try:
+            # Clean up any stale lock files first
+            self._cleanup_stale_locks()
+            
             if index.exists_in(str(self.index_dir)):
                 self.ix = index.open_dir(str(self.index_dir))
                 logger.debug("Opened existing search index")
@@ -85,15 +109,42 @@ class SearchEngine:
                 logger.info("Created new search index")
         except Exception as e:
             logger.error(f"Error initializing search index: {e}")
-            # Create a new index as fallback
-            self.ix = index.create_in(str(self.index_dir), self.schema)
+            # Try cleaning locks and creating new index as fallback
+            try:
+                self._cleanup_stale_locks()
+                self.ix = index.create_in(str(self.index_dir), self.schema)
+                logger.info("Created new index after cleanup")
+            except Exception as fallback_error:
+                logger.error(f"Failed to create fallback index: {fallback_error}")
+                self.ix = None
+    
+    def _safe_write(self, write_func, max_retries: int = 3) -> bool:
+        """Safely write to index with retry logic for concurrent access."""
+        for attempt in range(max_retries):
+            try:
+                if self.ix is None:
+                    self._ensure_index()
+                
+                return write_func()
+                
+            except LockError:
+                if attempt < max_retries - 1:
+                    # Exponential backoff with jitter
+                    delay = 0.1 * (2 ** attempt) + random.uniform(0, 0.05)
+                    time.sleep(delay)
+                    logger.debug(f"Index write conflict, retrying in {delay:.2f}s")
+                else:
+                    logger.warning("Failed to write to index after retries")
+                    return False
+            except Exception as e:
+                logger.error(f"Error during index write: {e}")
+                return False
+        
+        return False
     
     def index_checkpoint(self, checkpoint: Checkpoint) -> bool:
         """Index a checkpoint for search."""
-        if self.ix is None:
-            self._ensure_index()
-            
-        try:
+        def _write():
             writer = self.ix.writer()
             
             # Build search text
@@ -123,6 +174,8 @@ class SearchEngine:
                 created_at=checkpoint.created_at,
                 updated_at=checkpoint.updated_at,
                 workspace_id=checkpoint.workspace_id,
+                project_id=checkpoint.project_id,
+                project_path=checkpoint.project_path,
                 checkpoint_id="",
                 plan_id="",
                 active_files=",".join(checkpoint.active_files),
@@ -133,16 +186,12 @@ class SearchEngine:
             writer.commit()
             logger.debug(f"Indexed checkpoint {checkpoint.id}")
             return True
-        except Exception as e:
-            logger.error(f"Error indexing checkpoint {checkpoint.id}: {e}")
-            return False
+        
+        return self._safe_write(_write)
     
     def index_todo(self, todo: Todo) -> bool:
         """Index a todo for search."""
-        if self.ix is None:
-            self._ensure_index()
-            
-        try:
+        def _write():
             writer = self.ix.writer()
             
             search_parts = [
@@ -168,6 +217,8 @@ class SearchEngine:
                 created_at=todo.created_at,
                 updated_at=todo.updated_at,
                 workspace_id=todo.workspace_id,
+                project_id=todo.project_id,
+                project_path=todo.project_path,
                 checkpoint_id=todo.checkpoint_id or "",
                 plan_id=todo.plan_id or "",
                 active_files="",
@@ -178,32 +229,27 @@ class SearchEngine:
             writer.commit()
             logger.debug(f"Indexed todo {todo.id}")
             return True
-        except Exception as e:
-            logger.error(f"Error indexing todo {todo.id}: {e}")
-            return False
+        
+        return self._safe_write(_write)
     
     def index_plan(self, plan: Plan) -> bool:
         """Index a plan for search."""
-        if self.ix is None:
-            self._ensure_index()
-            
-        try:
+        def _write():
             writer = self.ix.writer()
             
             search_parts = [
                 plan.title,
                 plan.description,
                 plan.status.value,
-                plan.priority,
             ]
             search_parts.extend(plan.goals)
             search_parts.extend(plan.success_criteria)
             search_parts.extend(plan.tags)
             
-            if plan.category:
+            if hasattr(plan, 'category') and plan.category:
                 search_parts.append(plan.category)
             
-            if plan.notes:
+            if hasattr(plan, 'notes') and plan.notes:
                 search_parts.append(plan.notes)
             
             # Add step descriptions
@@ -219,11 +265,13 @@ class SearchEngine:
                 content=plan.description,
                 description=plan.description,
                 status=plan.status.value,
-                priority=plan.priority,
+                priority="",  # Plans don't have priority in current model
                 tags=",".join(plan.tags),
                 created_at=plan.created_at,
                 updated_at=plan.updated_at,
                 workspace_id=plan.workspace_id,
+                project_id=plan.project_id,
+                project_path=plan.project_path,
                 checkpoint_id="",
                 plan_id="",
                 active_files="",
@@ -234,9 +282,8 @@ class SearchEngine:
             writer.commit()
             logger.debug(f"Indexed plan {plan.id}")
             return True
-        except Exception as e:
-            logger.error(f"Error indexing plan {plan.id}: {e}")
-            return False
+        
+        return self._safe_write(_write)
     
     def _index_document(
         self,
@@ -368,6 +415,84 @@ class SearchEngine:
             logger.error(f"Error searching for '{query}': {e}")
             return []
     
+    def search_cross_project(
+        self,
+        query: str = "*",
+        limit: int = 50,
+        doc_types: Optional[List[str]] = None,
+        project_ids: Optional[List[str]] = None,
+        days_back: Optional[int] = None,
+        highlight: bool = True,
+    ) -> List[SearchResult]:
+        """Search across projects with optional filtering."""
+        if self.ix is None:
+            self._ensure_index()
+            
+        try:
+            with self.ix.searcher() as searcher:
+                # Start with base query
+                if query == "*" or not query:
+                    from whoosh.query import Every
+                    parsed_query = Every()
+                else:
+                    # Create parser for multiple fields
+                    parser = MultifieldParser(
+                        ["title", "content", "description", "search_text"],
+                        schema=self.ix.schema
+                    )
+                    parsed_query = parser.parse(query)
+                
+                # Add doc_type filter if specified
+                if doc_types:
+                    from whoosh.query import Or, Term
+                    type_query = Or([Term("doc_type", dt) for dt in doc_types])
+                    parsed_query = parsed_query & type_query
+                
+                # Add project filter if specified
+                if project_ids:
+                    from whoosh.query import Or, Term
+                    project_query = Or([Term("project_id", pid) for pid in project_ids])
+                    parsed_query = parsed_query & project_query
+                
+                # Add date filter if specified
+                if days_back:
+                    from datetime import datetime, timedelta
+                    from whoosh.query import DateRange
+                    threshold = datetime.now(timezone.utc) - timedelta(days=days_back)
+                    date_query = DateRange("created_at", threshold, None)
+                    parsed_query = parsed_query & date_query
+                
+                # Execute search, sorted by date (newest first)
+                results = searcher.search(parsed_query, limit=limit, sortedby="created_at", reverse=True)
+                
+                if highlight and query != "*":
+                    results.fragmenter.max_chars = 200
+                    results.fragmenter.surround = 50
+                
+                search_results = []
+                for hit in results:
+                    highlights = {}
+                    if highlight and query != "*":
+                        for field_name in ["title", "content", "description"]:
+                            if field_name in hit:
+                                highlighted = hit.highlights(field_name)
+                                if highlighted:
+                                    highlights[field_name] = highlighted
+                    
+                    search_results.append(SearchResult(
+                        doc_id=hit['doc_id'],
+                        doc_type=hit['doc_type'],
+                        score=hit.score,
+                        highlights=highlights
+                    ))
+                
+                logger.debug(f"Cross-project search for '{query}' returned {len(search_results)} results")
+                return search_results
+        
+        except Exception as e:
+            logger.error(f"Error in cross-project search for '{query}': {e}")
+            return []
+    
     def search_by_tags(self, tags: List[str], limit: int = 20) -> List[SearchResult]:
         """Search by tags."""
         if not tags:
@@ -387,6 +512,12 @@ class SearchEngine:
         from datetime import datetime, timedelta
         
         try:
+            if self.ix is None:
+                self._ensure_index()
+            
+            if self.ix is None:
+                return []
+                
             with self.ix.searcher() as searcher:
                 # Calculate date threshold
                 threshold = datetime.now(timezone.utc) - timedelta(days=days)
@@ -422,6 +553,12 @@ class SearchEngine:
     def get_suggestions(self, partial_query: str, limit: int = 10) -> List[str]:
         """Get search suggestions based on partial query."""
         try:
+            if self.ix is None:
+                self._ensure_index()
+            
+            if self.ix is None:
+                return []
+                
             with self.ix.searcher() as searcher:
                 # Use the title field for suggestions
                 from whoosh.query import Prefix
@@ -444,6 +581,12 @@ class SearchEngine:
     def optimize_index(self) -> bool:
         """Optimize the search index for better performance."""
         try:
+            if self.ix is None:
+                self._ensure_index()
+            
+            if self.ix is None:
+                return False
+                
             writer = self.ix.writer()
             writer.commit(optimize=True)
             logger.info("Optimized search index")
@@ -455,6 +598,12 @@ class SearchEngine:
     def get_index_stats(self) -> Dict[str, Any]:
         """Get statistics about the search index."""
         try:
+            if self.ix is None:
+                self._ensure_index()
+            
+            if self.ix is None:
+                return {}
+                
             with self.ix.searcher() as searcher:
                 stats = {
                     "total_docs": searcher.doc_count(),
@@ -485,3 +634,34 @@ class SearchEngine:
             return total_size / (1024 * 1024)  # Convert to MB
         except Exception:
             return 0.0
+    
+    def cleanup_locks(self, force: bool = False) -> bool:
+        """Manually clean up lock files.
+        
+        Args:
+            force: If True, remove all lock files regardless of age.
+                  If False, only remove files older than 5 minutes.
+        
+        Returns:
+            True if any locks were removed, False otherwise.
+        """
+        removed_any = False
+        try:
+            for lock_file in self.index_dir.glob("*LOCK*"):
+                if lock_file.is_file():
+                    should_remove = force
+                    if not force:
+                        # Check if lock file is old
+                        import time
+                        file_age = time.time() - lock_file.stat().st_mtime
+                        should_remove = file_age > 300  # 5 minutes
+                    
+                    if should_remove:
+                        lock_file.unlink()
+                        logger.info(f"Removed lock file: {lock_file.name}")
+                        removed_any = True
+            
+            return removed_any
+        except Exception as e:
+            logger.error(f"Error cleaning up lock files: {e}")
+            return False
