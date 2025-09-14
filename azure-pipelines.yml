@@ -160,10 +160,17 @@ stages:
             displayName: "Calculate version number"
             name: VersionStep
 
-          - task: UsePythonVersion@0
-            inputs:
-              versionSpec: '$(python.version)'
-            displayName: 'Use Python $(python.version)'
+          # Skip UsePythonVersion - use agent's installed Python 3.12
+          # - task: UsePythonVersion@0
+          #   inputs:
+          #     versionSpec: '$(python.version)'
+          #   displayName: 'Use Python $(python.version)'
+
+          - script: |
+              python --version
+              python -c "import sys; print('Python executable:', sys.executable)"
+              pip --version
+            displayName: 'Verify Python installation'
 
           - script: |
               python -m pip install --upgrade pip build twine
@@ -231,10 +238,16 @@ stages:
       - job: IntegrationJob
         displayName: 'Run Integration Tests'
         steps:
-          - task: UsePythonVersion@0
-            inputs:
-              versionSpec: '$(pythonVersion)'
-            displayName: 'Use Python $(pythonVersion)'
+          # Skip UsePythonVersion - use agent's installed Python
+          # - task: UsePythonVersion@0
+          #   inputs:
+          #     versionSpec: '$(pythonVersion)'
+          #   displayName: 'Use Python $(pythonVersion)'
+
+          - script: |
+              python --version
+              python -c "import sys; print('Python executable:', sys.executable)"
+            displayName: 'Verify Python installation'
 
           - script: |
               python -m pip install --upgrade pip
