@@ -1,6 +1,7 @@
 """Storage for plan data."""
 
 import logging
+from typing import Any
 
 from ..models.plan import Plan, PlanStatus
 from .base import BaseStorage
@@ -68,7 +69,7 @@ class PlanStorage(BaseStorage[Plan]):
         all_plans = self.load_all()
         return [plan for plan in all_plans if plan.related_checkpoint_ids]
 
-    def get_summary_stats(self) -> dict:
+    def get_summary_stats(self) -> dict[str, Any]:
         """Get summary statistics about plans."""
         all_plans = self.load_all()
 
@@ -90,9 +91,9 @@ class PlanStorage(BaseStorage[Plan]):
 
         # Calculate overall progress percentage
         if stats["total_steps"] > 0:
-            stats["progress_percentage"] = (stats["completed_steps"] / stats["total_steps"]) * 100
+            stats["progress_percentage"] = int((stats["completed_steps"] / stats["total_steps"]) * 100)
         else:
-            stats["progress_percentage"] = 0.0
+            stats["progress_percentage"] = 0
 
         return stats
 
@@ -109,7 +110,7 @@ class PlanStorage(BaseStorage[Plan]):
 
         return completed_plan_ids
 
-    def get_next_actionable_steps(self, limit: int = 10) -> list[tuple[Plan, list]]:
+    def get_next_actionable_steps(self, limit: int = 10) -> list[tuple[Plan, list[Any]]]:
         """Get next actionable steps from all active plans."""
         active_plans = self.find_active()
         plan_steps = []

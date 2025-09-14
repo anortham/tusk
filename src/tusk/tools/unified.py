@@ -3,6 +3,9 @@
 import json
 import logging
 from datetime import UTC, datetime
+from typing import Any
+
+from ..models.types import utc_now
 
 from ..models.checkpoint import Checkpoint
 from ..models.plan import Plan, PlanStatus, PlanStep
@@ -85,7 +88,7 @@ class UnifiedTaskTool(BaseTool):
         project_id = self.config.get_current_project_id()
         project_path = self.config.get_current_project_path()
 
-        task = Task(
+        task_obj = Task(
             workspace_id="",
             project_id=project_id,
             project_path=project_path,
@@ -95,29 +98,28 @@ class UnifiedTaskTool(BaseTool):
             status=TaskStatus.PENDING,
         )
 
-        if self.task_storage.save(task):
-            self.search_engine.index_task(task)
-            logger.info(f"Created task {task.id}")
+        if self.task_storage.save(task_obj):
+            self.search_engine.index_task(task_obj)
+            logger.info(f"Created task {task_obj.id}")
 
             return json.dumps(
                 {
                     "success": True,
                     "action": "task_added",
                     "task": {
-                        "id": task.id,
-                        "content": task.content,
-                        "priority": task.priority.value,
-                        "status": task.status.value,
-                        "created_at": task.created_at.strftime("%Y-%m-%d %H:%M"),
+                        "id": task_obj.id,
+                        "content": task_obj.content,
+                        "priority": task_obj.priority.value,
+                        "status": task_obj.status.value,
+                        "created_at": task_obj.created_at.strftime("%Y-%m-%d %H:%M"),
                     },
-                    "message": f"Added task: {task.content}",
+                    "message": f"Added task: {task_obj.content}",
                 },
                 ensure_ascii=False,
                 indent=2,
             )
         else:
             return json.dumps({"success": False, "error": "Failed to add task"}, ensure_ascii=False, indent=2)
-
     async def _list_tasks(self, limit: int) -> str:
         """List active tasks."""
         active_tasks = self.task_storage.get_active_tasks()[:limit]
@@ -331,7 +333,7 @@ class UnifiedTaskTool(BaseTool):
             task.status = TaskStatus.PENDING
             task.started_at = None
             task.completed_at = None
-            task.updated_at = datetime.now(UTC)
+            task.updated_at = utc_now()
 
         if self.task_storage.save(task):
             self.search_engine.index_task(task)
@@ -466,7 +468,7 @@ class UnifiedCheckpointTool(BaseTool):
             project_id=project_id,
             project_path=project_path,
             description=description,
-            session_id=f"session_{datetime.now(UTC).strftime('%Y%m%d_%H%M%S')}",
+            session_id=f"session_{utc_now().strftime('%Y%m%d_%H%M%S')}",
         )
 
         checkpoint.set_ttl(self.config.default_checkpoint_ttl)
@@ -680,14 +682,14 @@ class UnifiedRecallTool(BaseTool):
         include_checkpoints: bool,
         session_id: str | None = None,
         git_branch: str | None = None,
-    ) -> dict:
+    ) -> dict[str, Any]:
         """Build the context information for recall."""
         from datetime import timedelta
 
         context = {
             "project_id": self.config.get_current_project_id(),
             "project_path": self.config.get_current_project_path(),
-            "recall_time": datetime.now(UTC),
+            "recall_time": utc_now(),
             "filter_applied": bool(session_id or git_branch),
             "checkpoints": [],
             "tasks": [],
@@ -696,7 +698,7 @@ class UnifiedRecallTool(BaseTool):
         }
 
         # Calculate time range
-        end_date = datetime.now(UTC)
+        end_date = utc_now()
         start_date = end_date - timedelta(days=days_back)
 
         # Get checkpoints
@@ -754,7 +756,7 @@ class UnifiedRecallTool(BaseTool):
 
         return context
 
-    def _build_recall_response(self, context: dict) -> str:
+    def _build_recall_response(self, context: dict[str, Any]) -> str:
         """Build JSON response for recall context."""
         from ..models.task import TaskStatus
 
@@ -862,7 +864,7 @@ class UnifiedStandupTool(BaseTool):
         days_back: int,
         include_completed: bool,
         project_ids: list[str] | None = None,
-    ) -> dict:
+    ) -> dict[str, Any]:
         """Build standup report data using cross-project search."""
         # Use search engine for cross-project aggregation
         search_results = self.search_engine.search_cross_project(
@@ -873,9 +875,9 @@ class UnifiedStandupTool(BaseTool):
         )
 
         # Group results by type and project
-        checkpoints_by_project = {}
-        tasks_by_project = {}
-        plans_by_project = {}
+        checkpoints_by_project: dict[str, list[Any]] = {}
+        tasks_by_project: dict[str, list[Any]] = {}
+        plans_by_project: dict[str, list[Any]] = {}
 
         # Get actual objects from search results
         for result in search_results:
@@ -932,7 +934,7 @@ class UnifiedStandupTool(BaseTool):
             "total_projects": len(set(list(checkpoints_by_project.keys()) + list(tasks_by_project.keys()) + list(plans_by_project.keys()))),
         }
 
-    def _build_standup_response(self, data: dict, timeframe: str) -> str:
+    def _build_standup_response(self, data: dict[str, Any], timeframe: str) -> str:
         """Build JSON response for cross-project standup report."""
         from ..models.task import TaskStatus
 
@@ -1217,7 +1219,7 @@ class UnifiedPlanTool(BaseTool):
             )
 
         plan.status = PlanStatus.ACTIVE
-        plan.updated_at = datetime.now(UTC)
+        plan.updated_at = utc_now()
 
         if self.plan_storage.save(plan):
             self.search_engine.index_plan(plan)
@@ -1284,13 +1286,13 @@ class UnifiedPlanTool(BaseTool):
             )
 
         plan.status = PlanStatus.COMPLETED
-        plan.updated_at = datetime.now(UTC)
+        plan.updated_at = utc_now()
 
         # Mark all steps as completed
         for step in plan.steps:
             if not step.completed:
                 step.completed = True
-                step.completed_at = datetime.now(UTC)
+                step.completed_at = utc_now()
 
         if self.plan_storage.save(plan):
             self.search_engine.index_plan(plan)
@@ -1343,7 +1345,7 @@ class UnifiedPlanTool(BaseTool):
         new_step = PlanStep(description=step_description, completed=False)
 
         plan.steps.append(new_step)
-        plan.updated_at = datetime.now(UTC)
+        plan.updated_at = utc_now()
 
         if self.plan_storage.save(plan):
             self.search_engine.index_plan(plan)
@@ -1417,8 +1419,8 @@ class UnifiedPlanTool(BaseTool):
             )
 
         target_step.completed = True
-        target_step.completed_at = datetime.now(UTC)
-        target_plan.updated_at = datetime.now(UTC)
+        target_step.completed_at = utc_now()
+        target_plan.updated_at = utc_now()
 
         if self.plan_storage.save(target_plan):
             self.search_engine.index_plan(target_plan)

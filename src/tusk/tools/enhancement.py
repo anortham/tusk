@@ -14,7 +14,7 @@ class ToolEnhancer:
     """Enhances FastMCP tools with rich parameter descriptions from docstrings."""
 
     @staticmethod
-    def enhance_tool_parameters(func: Callable, existing_schema: dict[str, Any]) -> dict[str, Any]:
+    def enhance_tool_parameters(func: Callable[..., Any], existing_schema: dict[str, Any]) -> dict[str, Any]:
         """
         Enhance tool parameter schema with descriptions from docstring.
 
@@ -60,7 +60,7 @@ class ToolEnhancer:
             return existing_schema
 
     @staticmethod
-    def enhance_tool_description(func: Callable, existing_description: str) -> str:
+    def enhance_tool_description(func: Callable[..., Any], existing_description: str) -> str:
         """
         Enhance tool description with return information from docstring.
 
@@ -121,7 +121,7 @@ def enhanced_tool(server_instance):
             return "result"
     """
 
-    def decorator(func: Callable) -> Callable:
+    def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
         # Get the original FastMCP tool decorator
         original_tool_decorator = server_instance.tool
 

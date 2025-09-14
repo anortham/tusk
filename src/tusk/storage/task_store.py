@@ -32,7 +32,7 @@ class TaskStorage:
         """Get the tasks file path."""
         return self.data_dir / "tasks" / "tasks.json"
 
-    def _load_tasks_file(self) -> dict[str, dict]:
+    def _load_tasks_file(self) -> dict[str, dict[str, Any]]:
         """Load all tasks from the JSON file."""
         tasks_file = self._get_tasks_file()
 
@@ -50,7 +50,7 @@ class TaskStorage:
             logger.error(f"Error reading tasks file: {e}")
             return {}
 
-    def _save_tasks_file(self, tasks_data: dict[str, dict]) -> bool:
+    def _save_tasks_file(self, tasks_data: dict[str, dict[str, Any]]) -> bool:
         """Save all tasks to the JSON file."""
         tasks_file = self._get_tasks_file()
 

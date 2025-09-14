@@ -133,7 +133,7 @@ class TuskConfig(BaseModel):
 
         try:
             with open(registry_path, encoding="utf-8") as f:
-                return json.load(f)  # type: ignore[no-any-return]
+                return json.load(f)
         except (OSError, json.JSONDecodeError):
             return {}
 
