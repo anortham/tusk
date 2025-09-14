@@ -40,7 +40,7 @@ pool:
 
 variables:
   buildConfiguration: "Release"
-  pythonVersion: "3.11"
+  pythonVersion: "3.12"
   # Base version for Tusk MCP - v0.1.0
   majorVersion: 0
   minorVersion: 1
@@ -65,8 +65,6 @@ stages:
 
         strategy:
           matrix:
-            Python311:
-              python.version: '3.11'
             Python312:
               python.version: '3.12'
 
@@ -216,10 +214,10 @@ stages:
               Write-Host "Updated pyproject.toml version to: $version"
               python -m build
             displayName: 'Build Python package'
-            condition: eq(variables['python.version'], '3.11')
+            condition: eq(variables['python.version'], '3.12')
 
           - task: PublishBuildArtifacts@1
-            condition: eq(variables['python.version'], '3.11')
+            condition: eq(variables['python.version'], '3.12')
             inputs:
               pathtoPublish: 'dist'
               artifactName: 'python-packages'
