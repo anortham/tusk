@@ -2,23 +2,34 @@
 
 import json
 import logging
-from datetime import UTC, datetime
-from typing import Any
-
-from ..models.types import utc_now
+from typing import Any, TypedDict
 
 from ..models.checkpoint import Checkpoint
 from ..models.plan import Plan, PlanStatus, PlanStep
 from ..models.task import Task, TaskPriority, TaskStatus
+from ..models.types import utc_now
 from .base import BaseTool
 
 logger = logging.getLogger(__name__)
 
 
+class RecallContext(TypedDict):
+    """Type definition for recall context."""
+
+    project_id: str
+    project_path: str
+    recall_time: Any  # datetime
+    filter_applied: bool
+    checkpoints: list[Any]
+    tasks: list[Any]
+    plans: list[Any]
+    summary: dict[str, Any]
+
+
 class UnifiedTaskTool(BaseTool):
     """Unified task tool - handles all task operations via action parameter."""
 
-    def register(self, mcp_server) -> None:
+    def register(self, mcp_server) -> None:  # type: ignore[no-untyped-def]
         """Register the unified task tool."""
 
         @mcp_server.tool
@@ -120,6 +131,7 @@ class UnifiedTaskTool(BaseTool):
             )
         else:
             return json.dumps({"success": False, "error": "Failed to add task"}, ensure_ascii=False, indent=2)
+
     async def _list_tasks(self, limit: int) -> str:
         """List active tasks."""
         active_tasks = self.task_storage.get_active_tasks()[:limit]
@@ -406,7 +418,7 @@ class UnifiedTaskTool(BaseTool):
 class UnifiedCheckpointTool(BaseTool):
     """Unified checkpoint tool."""
 
-    def register(self, mcp_server) -> None:
+    def register(self, mcp_server) -> None:  # type: ignore[no-untyped-def]
         """Register the unified checkpoint tool."""
 
         @mcp_server.tool
@@ -589,7 +601,7 @@ class UnifiedCheckpointTool(BaseTool):
 class UnifiedRecallTool(BaseTool):
     """Unified recall tool."""
 
-    def register(self, mcp_server) -> None:
+    def register(self, mcp_server) -> None:  # type: ignore[no-untyped-def]
         """Register the unified recall tool."""
 
         @mcp_server.tool
@@ -682,11 +694,11 @@ class UnifiedRecallTool(BaseTool):
         include_checkpoints: bool,
         session_id: str | None = None,
         git_branch: str | None = None,
-    ) -> dict[str, Any]:
+    ) -> RecallContext:
         """Build the context information for recall."""
         from datetime import timedelta
 
-        context = {
+        context: RecallContext = {
             "project_id": self.config.get_current_project_id(),
             "project_path": self.config.get_current_project_path(),
             "recall_time": utc_now(),
@@ -756,7 +768,7 @@ class UnifiedRecallTool(BaseTool):
 
         return context
 
-    def _build_recall_response(self, context: dict[str, Any]) -> str:
+    def _build_recall_response(self, context: RecallContext) -> str:
         """Build JSON response for recall context."""
         from ..models.task import TaskStatus
 
@@ -818,7 +830,7 @@ class UnifiedRecallTool(BaseTool):
 class UnifiedStandupTool(BaseTool):
     """Unified standup tool."""
 
-    def register(self, mcp_server) -> None:
+    def register(self, mcp_server) -> None:  # type: ignore[no-untyped-def]
         """Register the unified standup tool."""
 
         @mcp_server.tool
@@ -1017,7 +1029,7 @@ class UnifiedStandupTool(BaseTool):
 class UnifiedPlanTool(BaseTool):
     """Unified plan tool - the starting point for complex multi-step work."""
 
-    def register(self, mcp_server) -> None:
+    def register(self, mcp_server) -> None:  # type: ignore[no-untyped-def]
         """Register the unified plan tool."""
 
         @mcp_server.tool
@@ -1510,7 +1522,7 @@ class UnifiedPlanTool(BaseTool):
 class UnifiedCleanupTool(BaseTool):
     """Unified system cleanup tool."""
 
-    def register(self, mcp_server) -> None:
+    def register(self, mcp_server) -> None:  # type: ignore[no-untyped-def]
         """Register the unified cleanup tool."""
 
         @mcp_server.tool

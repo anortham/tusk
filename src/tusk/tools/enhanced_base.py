@@ -2,7 +2,7 @@
 
 import inspect
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import docstring_parser
 from fastmcp.utilities.logging import get_logger
@@ -25,7 +25,7 @@ class EnhancedBaseTool(ABC):
         self.search_engine = server.search_engine
 
     @abstractmethod
-    def register(self, mcp_server) -> None:
+    def register(self, mcp_server: Any) -> None:
         """Register this tool's functions with the MCP server."""
         pass
 
@@ -33,7 +33,7 @@ class EnhancedBaseTool(ABC):
         """Get the current workspace ID (deprecated - returns empty string)."""
         return ""
 
-    def enhance_registered_tools(self, mcp_server, tool_names: list[str]) -> None:
+    def enhance_registered_tools(self, mcp_server: Any, tool_names: list[str]) -> None:
         """
         Enhance registered tools with rich parameter descriptions from docstrings.
 
@@ -76,7 +76,7 @@ class EnhancedBaseTool(ABC):
         if enhanced_count > 0:
             logger.info(f"Enhanced {enhanced_count} tools with rich parameter descriptions")
 
-    def _enhance_parameter_schema(self, func, existing_schema: dict) -> dict:
+    def _enhance_parameter_schema(self, func: Any, existing_schema: dict[str, Any]) -> dict[str, Any]:
         """Enhance parameter schema with docstring descriptions."""
         try:
             # Get the function's docstring
@@ -115,7 +115,7 @@ class EnhancedBaseTool(ABC):
             logger.warning(f"Failed to enhance parameters for {func.__name__}: {e}")
             return existing_schema
 
-    def _enhance_description(self, func, existing_description: str) -> str:
+    def _enhance_description(self, func: Any, existing_description: str) -> str:
         """Enhance tool description with return information from docstring."""
         try:
             # Get the function's docstring

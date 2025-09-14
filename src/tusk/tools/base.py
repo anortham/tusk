@@ -19,7 +19,7 @@ class BaseTool(ABC):
         self.search_engine = server.search_engine
 
     @abstractmethod
-    def register(self, mcp_server) -> None:
+    def register(self, mcp_server) -> None:  # type: ignore[no-untyped-def]
         """Register this tool's functions with the MCP server."""
         pass
 

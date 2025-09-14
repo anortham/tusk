@@ -5,7 +5,7 @@ import logging
 from abc import ABC, abstractmethod
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Generic, TypeVar
+from typing import Any, Generic, Protocol, TypeVar, cast
 
 import portalocker
 from pydantic import BaseModel
@@ -13,6 +13,13 @@ from pydantic import BaseModel
 from ..config import TuskConfig
 
 logger = logging.getLogger(__name__)
+
+
+class Identifiable(Protocol):
+    """Protocol for objects that have an id attribute."""
+
+    id: str
+
 
 T = TypeVar("T", bound=BaseModel)
 
@@ -51,7 +58,7 @@ class BaseStorage(Generic[T], ABC):
                 # Use shared lock for reading
                 portalocker.lock(f, portalocker.LOCK_SH)
                 try:
-                    return json.load(f)
+                    return cast(dict[str, Any], json.load(f))
                 finally:
                     portalocker.unlock(f)
         except (OSError, json.JSONDecodeError) as e:
@@ -107,8 +114,11 @@ class BaseStorage(Generic[T], ABC):
     def save(self, item: T) -> bool:
         """Save an item."""
         try:
-            # Get ID from the item
-            item_id = item.id
+            # Get ID from the item - all our models have id fields
+            item_id = getattr(item, "id", None)
+            if not item_id:
+                logger.error(f"Item {item} does not have an id field")
+                return False
             file_path = self._get_file_path(item_id)
 
             # Convert to dict and save

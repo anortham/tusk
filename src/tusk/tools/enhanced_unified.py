@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 class EnhancedUnifiedTaskTool(BaseTool):
     """Enhanced unified task tool with rich parameter descriptions."""
 
-    def register(self, mcp_server) -> None:
+    def register(self, mcp_server) -> None:  # type: ignore[no-untyped-def]
         """Register the enhanced unified task tool."""
 
         @mcp_server.tool
@@ -73,12 +73,12 @@ class EnhancedUnifiedTaskTool(BaseTool):
                     tool = mcp_server._tool_manager._tools["task"]
 
                     # Enhance parameters
-                    if hasattr(tool, "parameters"):
-                        tool.parameters = ToolEnhancer.enhance_tool_parameters(task, tool.parameters)
+                    if hasattr(tool, "parameters") and hasattr(tool, "func"):
+                        tool.parameters = ToolEnhancer.enhance_tool_parameters(tool.func, tool.parameters)
 
                     # Enhance description
-                    if hasattr(tool, "description"):
-                        tool.description = ToolEnhancer.enhance_tool_description(task, tool.description or "")
+                    if hasattr(tool, "description") and hasattr(tool, "func"):
+                        tool.description = ToolEnhancer.enhance_tool_description(tool.func, tool.description or "")
 
             try:
                 if action == "add":
@@ -403,7 +403,7 @@ class EnhancedUnifiedTaskTool(BaseTool):
             )
 
         # Search tasks
-        search_results = self.search_engine.search_tasks(query, limit=limit)
+        search_results = self.search_engine.search(query, limit=limit, doc_types=["task"])
 
         if not search_results:
             return json.dumps(
@@ -421,22 +421,27 @@ class EnhancedUnifiedTaskTool(BaseTool):
         # Format results
         formatted_results = []
         for result in search_results:
+            # Load the actual task object from the search result
+            task = self.task_storage.load(result.doc_id)
+            if not task:
+                continue
+
             task_data = {
-                "id": result.id,
-                "content": result.content,
-                "status": result.status.value,
-                "priority": result.priority.value,
-                "created_at": result.created_at.strftime("%Y-%m-%d %H:%M"),
-                "project_id": result.project_id,
-                "relevance": "High",  # Could add scoring later
+                "id": task.id,
+                "content": task.content,
+                "status": task.status.value,
+                "priority": task.priority.value,
+                "created_at": task.created_at.strftime("%Y-%m-%d %H:%M"),
+                "project_id": task.project_id,
+                "relevance": f"{result.score:.2f}",  # Use actual search score
             }
 
-            if result.status == TaskStatus.IN_PROGRESS and result.started_at:
-                task_data["started_at"] = result.started_at.strftime("%Y-%m-%d %H:%M")
-                task_data["active_form"] = result.active_form
+            if task.status == TaskStatus.IN_PROGRESS and task.started_at:
+                task_data["started_at"] = task.started_at.strftime("%Y-%m-%d %H:%M")
+                task_data["active_form"] = task.active_form
 
-            if result.status == TaskStatus.COMPLETED and result.completed_at:
-                task_data["completed_at"] = result.completed_at.strftime("%Y-%m-%d %H:%M")
+            if task.status == TaskStatus.COMPLETED and task.completed_at:
+                task_data["completed_at"] = task.completed_at.strftime("%Y-%m-%d %H:%M")
 
             formatted_results.append(task_data)
 

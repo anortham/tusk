@@ -3,7 +3,7 @@
 import json
 import os
 from pathlib import Path
-from typing import Literal
+from typing import Literal, cast
 
 from pydantic import BaseModel, Field
 
@@ -133,7 +133,7 @@ class TuskConfig(BaseModel):
 
         try:
             with open(registry_path, encoding="utf-8") as f:
-                return json.load(f)
+                return cast(dict[str, str], json.load(f))
         except (OSError, json.JSONDecodeError):
             return {}
 

@@ -3,6 +3,7 @@
 import logging
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import Any
 
 from ..models.checkpoint import Checkpoint
 from .base import BaseStorage
@@ -13,7 +14,7 @@ logger = logging.getLogger(__name__)
 class CheckpointStorage(BaseStorage[Checkpoint]):
     """Storage for checkpoints with date-based directory organization."""
 
-    def __init__(self, config):
+    def __init__(self, config: Any) -> None:
         super().__init__(config, Checkpoint)
 
     def get_storage_subdir(self) -> str:

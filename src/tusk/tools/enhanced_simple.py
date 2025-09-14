@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 class EnhancedUnifiedTaskTool(EnhancedBaseTool):
     """Enhanced unified task tool with rich parameter descriptions."""
 
-    def register(self, mcp_server) -> None:
+    def register(self, mcp_server) -> None:  # type: ignore[no-untyped-def]
         """Register the enhanced unified task tool."""
 
         @mcp_server.tool
@@ -84,7 +84,7 @@ class EnhancedUnifiedTaskTool(EnhancedBaseTool):
         project_id = self.config.get_current_project_id()
         project_path = self.config.get_current_project_path()
 
-        task = Task(
+        task_obj = Task(
             workspace_id="",
             project_id=project_id,
             project_path=project_path,
@@ -94,20 +94,20 @@ class EnhancedUnifiedTaskTool(EnhancedBaseTool):
             status=TaskStatus.PENDING,
         )
 
-        if self.task_storage.save(task):
-            self.search_engine.index_task(task)
-            logger.info(f"Created task {task.id}")
+        if self.task_storage.save(task_obj):
+            self.search_engine.index_task(task_obj)
+            logger.info(f"Created task {task_obj.id}")
 
             return json.dumps(
                 {
                     "success": True,
                     "action": "task_added",
                     "task": {
-                        "id": task.id,
+                        "id": task_obj.id,
                         "content": task,
-                        "priority": task.priority.value,
-                        "status": task.status.value,
-                        "created_at": task.created_at.strftime("%Y-%m-%d %H:%M"),
+                        "priority": task_obj.priority.value,
+                        "status": task_obj.status.value,
+                        "created_at": task_obj.created_at.strftime("%Y-%m-%d %H:%M"),
                     },
                     "message": f"Added task: {task}",
                 },
@@ -363,7 +363,7 @@ class EnhancedUnifiedTaskTool(EnhancedBaseTool):
             )
 
         # Search tasks
-        search_results = self.search_engine.search_tasks(query, limit=limit)
+        search_results = self.search_engine.search(query, limit=limit, doc_types=["task"])
 
         if not search_results:
             return json.dumps(
@@ -381,22 +381,27 @@ class EnhancedUnifiedTaskTool(EnhancedBaseTool):
         # Format results
         formatted_results = []
         for result in search_results:
+            # Load the actual task object from the search result
+            task = self.task_storage.load(result.doc_id)
+            if not task:
+                continue
+
             task_data = {
-                "id": result.id,
-                "content": result.content,
-                "status": result.status.value,
-                "priority": result.priority.value,
-                "created_at": result.created_at.strftime("%Y-%m-%d %H:%M"),
-                "project_id": result.project_id,
-                "relevance": "High",  # Could add scoring later
+                "id": task.id,
+                "content": task.content,
+                "status": task.status.value,
+                "priority": task.priority.value,
+                "created_at": task.created_at.strftime("%Y-%m-%d %H:%M"),
+                "project_id": task.project_id,
+                "relevance": f"{result.score:.2f}",  # Use actual search score
             }
 
-            if result.status == TaskStatus.IN_PROGRESS and result.started_at:
-                task_data["started_at"] = result.started_at.strftime("%Y-%m-%d %H:%M")
-                task_data["active_form"] = result.active_form
+            if task.status == TaskStatus.IN_PROGRESS and task.started_at:
+                task_data["started_at"] = task.started_at.strftime("%Y-%m-%d %H:%M")
+                task_data["active_form"] = task.active_form
 
-            if result.status == TaskStatus.COMPLETED and result.completed_at:
-                task_data["completed_at"] = result.completed_at.strftime("%Y-%m-%d %H:%M")
+            if task.status == TaskStatus.COMPLETED and task.completed_at:
+                task_data["completed_at"] = task.completed_at.strftime("%Y-%m-%d %H:%M")
 
             formatted_results.append(task_data)
 

@@ -109,12 +109,17 @@ class SearchEngine:
                 logger.error(f"Failed to create fallback index: {fallback_error}")
                 self.ix = None
 
-    def _safe_write(self, write_func, max_retries: int = 3) -> bool:
+    def _safe_write(self, write_func, max_retries: int = 3) -> bool:  # type: ignore[no-untyped-def]
         """Safely write to index with retry logic for concurrent access."""
         for attempt in range(max_retries):
             try:
                 if self.ix is None:
                     self._ensure_index()
+
+                # If index is still None after initialization attempt, fail gracefully
+                if self.ix is None:
+                    logger.error("Search index initialization failed")
+                    return False
 
                 return write_func()
 
@@ -136,7 +141,9 @@ class SearchEngine:
     def index_checkpoint(self, checkpoint: Checkpoint) -> bool:
         """Index a checkpoint for search."""
 
-        def _write():
+        def _write():  # type: ignore[no-untyped-def]
+            # At this point, _safe_write guarantees ix is not None
+            assert self.ix is not None
             writer = self.ix.writer()
 
             # Build search text
@@ -184,7 +191,9 @@ class SearchEngine:
     def index_task(self, task: Task) -> bool:
         """Index a task for search."""
 
-        def _write():
+        def _write():  # type: ignore[no-untyped-def]
+            # At this point, _safe_write guarantees ix is not None
+            assert self.ix is not None
             writer = self.ix.writer()
 
             search_parts = [
@@ -228,7 +237,9 @@ class SearchEngine:
     def index_plan(self, plan: Plan) -> bool:
         """Index a plan for search."""
 
-        def _write():
+        def _write():  # type: ignore[no-untyped-def]
+            # At this point, _safe_write guarantees ix is not None
+            assert self.ix is not None
             writer = self.ix.writer()
 
             search_parts = [
@@ -279,7 +290,7 @@ class SearchEngine:
 
         return self._safe_write(_write)
 
-    def _index_document(
+    def _index_document(  # type: ignore[no-untyped-def]
         self,
         doc_id: str,
         doc_type: str,
@@ -297,6 +308,11 @@ class SearchEngine:
         """
         if self.ix is None:
             self._ensure_index()
+
+        # If index is still None after initialization attempt, fail gracefully
+        if self.ix is None:
+            logger.error("Search index initialization failed")
+            return False
 
         try:
             writer = self.ix.writer()
@@ -336,6 +352,11 @@ class SearchEngine:
         if self.ix is None:
             self._ensure_index()
 
+        # If index is still None after initialization attempt, fail gracefully
+        if self.ix is None:
+            logger.error("Search index initialization failed")
+            return False
+
         try:
             writer = self.ix.writer()
             writer.delete_by_term("doc_id", doc_id)
@@ -361,10 +382,15 @@ class SearchEngine:
         if self.ix is None:
             self._ensure_index()
 
+        # If index is still None after initialization attempt, return empty results
+        if self.ix is None:
+            logger.error("Search index initialization failed")
+            return []
+
         try:
             with self.ix.searcher() as searcher:
                 # Create parser for multiple fields
-                parser = MultifieldParser(["title", "content", "description", "search_text"], schema=self.ix.schema)
+                parser = MultifieldParser(["title", "content", "description", "search_text"], schema=self.schema)
 
                 # Parse the query
                 parsed_query = parser.parse(query)
@@ -422,6 +448,11 @@ class SearchEngine:
         if self.ix is None:
             self._ensure_index()
 
+        # If index is still None after initialization attempt, return empty results
+        if self.ix is None:
+            logger.error("Search index initialization failed")
+            return []
+
         try:
             with self.ix.searcher() as searcher:
                 # Start with base query
@@ -431,7 +462,7 @@ class SearchEngine:
                     parsed_query = Every()
                 else:
                     # Create parser for multiple fields
-                    parser = MultifieldParser(["title", "content", "description", "search_text"], schema=self.ix.schema)
+                    parser = MultifieldParser(["title", "content", "description", "search_text"], schema=self.schema)
                     parsed_query = parser.parse(query)
 
                 # Add doc_type filter if specified

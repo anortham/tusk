@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 class EnhancedUnifiedCheckpointTool(EnhancedBaseTool):
     """Enhanced unified checkpoint tool with rich parameter descriptions."""
 
-    def register(self, mcp_server) -> None:
+    def register(self, mcp_server) -> None:  # type: ignore[no-untyped-def]
         """Register the enhanced unified checkpoint tool."""
 
         @mcp_server.tool
@@ -82,7 +82,7 @@ class EnhancedUnifiedCheckpointTool(EnhancedBaseTool):
             if not project_path or not os.path.exists(project_path):
                 return None, None
 
-            def run_git_subprocess():
+            def run_git_subprocess():  # type: ignore[no-untyped-def]
                 """Run git commands in a separate thread to avoid AsyncIO deadlock."""
                 try:
                     # Get current branch
@@ -134,7 +134,7 @@ class EnhancedUnifiedCheckpointTool(EnhancedBaseTool):
             if not project_path or not os.path.exists(project_path):
                 return []
 
-            def run_file_detection():
+            def run_file_detection():  # type: ignore[no-untyped-def]
                 """Run file detection in a separate thread to avoid AsyncIO deadlock."""
                 try:
                     # Get files modified in last commit
@@ -166,7 +166,7 @@ class EnhancedUnifiedCheckpointTool(EnhancedBaseTool):
             # Run in thread pool to avoid AsyncIO deadlock
             try:
                 files = await asyncio.wait_for(asyncio.to_thread(run_file_detection), timeout=4.0)  # Overall timeout
-                return files
+                return files  # type: ignore[no-any-return]
             except TimeoutError:
                 logger.debug("File detection timeout - operations took too long")
                 return []
@@ -357,7 +357,7 @@ class EnhancedUnifiedCheckpointTool(EnhancedBaseTool):
 class EnhancedUnifiedRecallTool(EnhancedBaseTool):
     """Enhanced unified recall tool with rich parameter descriptions."""
 
-    def register(self, mcp_server) -> None:
+    def register(self, mcp_server) -> None:  # type: ignore[no-untyped-def]
         """Register the enhanced unified recall tool."""
 
         @mcp_server.tool
@@ -524,7 +524,7 @@ class EnhancedUnifiedRecallTool(EnhancedBaseTool):
 class EnhancedUnifiedPlanTool(EnhancedBaseTool):
     """Enhanced unified plan tool with rich parameter descriptions."""
 
-    def register(self, mcp_server) -> None:
+    def register(self, mcp_server) -> None:  # type: ignore[no-untyped-def]
         """Register the enhanced unified plan tool."""
 
         @mcp_server.tool
@@ -799,7 +799,7 @@ class EnhancedUnifiedPlanTool(EnhancedBaseTool):
 class EnhancedUnifiedStandupTool(EnhancedBaseTool):
     """Enhanced unified standup tool with rich parameter descriptions."""
 
-    def register(self, mcp_server) -> None:
+    def register(self, mcp_server) -> None:  # type: ignore[no-untyped-def]
         """Register the enhanced unified standup tool."""
 
         @mcp_server.tool

@@ -99,7 +99,7 @@ class ToolEnhancer:
             return existing_description
 
 
-def enhanced_tool(server_instance):
+def enhanced_tool(server_instance: Any) -> Callable[[Callable[..., Any]], Callable[..., Any]]:
     """
     Decorator factory that creates an enhanced tool decorator.
 
@@ -126,7 +126,7 @@ def enhanced_tool(server_instance):
         original_tool_decorator = server_instance.tool
 
         # Create enhanced version
-        def enhanced_decorator(enhanced_func):
+        def enhanced_decorator(enhanced_func: Callable[..., Any]) -> Callable[..., Any]:
             # Apply the original FastMCP decorator first
             registered_func = original_tool_decorator(enhanced_func)
 
@@ -151,7 +151,7 @@ def enhanced_tool(server_instance):
             except Exception as e:
                 logger.error(f"Failed to enhance tool {enhanced_func.__name__}: {e}")
 
-            return registered_func
+            return registered_func  # type: ignore[no-any-return]
 
         return enhanced_decorator(func)
 

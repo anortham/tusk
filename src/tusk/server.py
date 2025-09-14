@@ -155,7 +155,8 @@ Every checkpoint saved, task completed, and plan executed builds lasting progres
     async def run_sse(self, host: str = "localhost", port: int = 3001) -> None:
         """Run the server with SSE transport."""
         logger.info(f"Starting Tusk server with SSE transport on {host}:{port}")
-        await self.mcp.run(transport="sse", host=host, port=port)
+        # MyPy thinks run() doesn't return a value, but it's actually an async method
+        await self.mcp.run(transport="sse", host=host, port=port)  # type: ignore[func-returns-value]
 
     def get_workspace_stats(self) -> dict[str, Any]:
         """Get statistics about the current data."""

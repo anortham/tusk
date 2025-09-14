@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 class PlanStorage(BaseStorage[Plan]):
     """Storage for plans."""
 
-    def __init__(self, config):
+    def __init__(self, config: Any) -> None:
         super().__init__(config, Plan)
 
     def get_storage_subdir(self) -> str:
@@ -143,7 +143,7 @@ class PlanStorage(BaseStorage[Plan]):
                 matching_plans.append(plan)
 
         # Sort by relevance (simple: title matches first, then description)
-        def relevance_score(plan):
+        def relevance_score(plan: Plan) -> int:
             score = 0
             if query_lower in plan.title.lower():
                 score += 10

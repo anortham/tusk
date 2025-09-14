@@ -4,7 +4,7 @@ import json
 import logging
 from datetime import datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 import portalocker
 
@@ -43,7 +43,7 @@ class TaskStorage:
             with open(tasks_file, encoding="utf-8") as f:
                 portalocker.lock(f, portalocker.LOCK_SH)
                 try:
-                    return json.load(f)
+                    return cast(dict[str, dict[str, Any]], json.load(f))
                 finally:
                     portalocker.unlock(f)
         except (OSError, json.JSONDecodeError) as e:
