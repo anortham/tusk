@@ -145,9 +145,7 @@ Every checkpoint saved, task completed, and plan executed builds lasting progres
         standup_tool.register(self.mcp)
         # cleanup_tool.register(self.mcp)  # Hidden during testing period
 
-        logger.info(
-            "Registered 5 enhanced unified tools with rich parameter descriptions: plan, task, checkpoint, recall, standup"
-        )
+        logger.info("Registered 5 enhanced unified tools with rich parameter descriptions: plan, task, checkpoint, recall, standup")
 
     def run_stdio(self) -> None:
         """Run the server with stdio transport."""

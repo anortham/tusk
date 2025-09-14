@@ -435,9 +435,7 @@ class TestUnifiedPlanTool:
 
         plan_func = mock_mcp.registered_tools["plan"]
 
-        result = await plan_func(
-            action="create", title="Test Plan", description="A comprehensive test plan"
-        )
+        result = await plan_func(action="create", title="Test Plan", description="A comprehensive test plan")
 
         response = json.loads(result)
         assert response["success"] is True
@@ -505,24 +503,18 @@ class TestUnifiedPlanTool:
         plan_func = mock_mcp.registered_tools["plan"]
 
         # Step 1: Create a plan
-        result = await plan_func(
-            action="create", title="Workflow Test Plan", description="Testing complete workflow"
-        )
+        result = await plan_func(action="create", title="Workflow Test Plan", description="Testing complete workflow")
         response = json.loads(result)
         plan_id = response["plan"]["id"]
 
         # Step 2: Add steps to the plan
-        result = await plan_func(
-            action="add_step", plan_id=plan_id, step_description="First step of the plan"
-        )
+        result = await plan_func(action="add_step", plan_id=plan_id, step_description="First step of the plan")
         response = json.loads(result)
         assert response["success"] is True
         assert response["action"] == "step_added"
         step1_id = response["step"]["id"]
 
-        result = await plan_func(
-            action="add_step", plan_id=plan_id, step_description="Second step of the plan"
-        )
+        result = await plan_func(action="add_step", plan_id=plan_id, step_description="Second step of the plan")
         response = json.loads(result)
         step2_id = response["step"]["id"]
 
@@ -606,9 +598,7 @@ class TestUnifiedPlanTool:
         assert "not found" in response["error"]
 
         # Try to add step to nonexistent plan
-        result = await plan_func(
-            action="add_step", plan_id="nonexistent", step_description="Test step"
-        )
+        result = await plan_func(action="add_step", plan_id="nonexistent", step_description="Test step")
         response = json.loads(result)
         assert response["success"] is False
         assert "not found" in response["error"]
@@ -693,9 +683,7 @@ class TestToolIntegration:
         plan_id = response["plan"]["id"]
 
         # Step 2: Add steps to the plan
-        await plan_func(
-            action="add_step", plan_id=plan_id, step_description="Create a todo for testing"
-        )
+        await plan_func(action="add_step", plan_id=plan_id, step_description="Create a todo for testing")
 
         # Step 3: Activate the plan
         await plan_func(action="activate", plan_id=plan_id)

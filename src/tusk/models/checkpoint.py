@@ -43,23 +43,17 @@ class Checkpoint(BaseModel):
     # Identity
     id: str = Field(default_factory=generate_id, description="Unique checkpoint ID")
 
-    workspace_id: str = Field(
-        default="", description="ID of the workspace this checkpoint belongs to (deprecated)"
-    )
+    workspace_id: str = Field(default="", description="ID of the workspace this checkpoint belongs to (deprecated)")
 
     # Project tracking
     project_id: str = Field(default="", description="ID of the project this checkpoint belongs to")
 
     project_path: str = Field(default="", description="Full path to the project directory")
 
-    session_id: str | None = Field(
-        default=None, description="Session ID when this checkpoint was created"
-    )
+    session_id: str | None = Field(default=None, description="Session ID when this checkpoint was created")
 
     # Core content
-    description: str = Field(
-        description="Human-readable description of what's happening in this checkpoint"
-    )
+    description: str = Field(description="Human-readable description of what's happening in this checkpoint")
 
     work_context: str | None = Field(
         default=None,
@@ -67,23 +61,15 @@ class Checkpoint(BaseModel):
     )
 
     # File tracking
-    active_files: list[str] = Field(
-        default_factory=list, description="List of files that were actively being worked on"
-    )
+    active_files: list[str] = Field(default_factory=list, description="List of files that were actively being worked on")
 
     # Highlights and key moments
-    highlights: list[Highlight] = Field(
-        default_factory=list, description="Important moments, decisions, or discoveries"
-    )
+    highlights: list[Highlight] = Field(default_factory=list, description="Important moments, decisions, or discoveries")
 
     # Version control context
-    git_branch: str | None = Field(
-        default=None, description="Git branch when checkpoint was created"
-    )
+    git_branch: str | None = Field(default=None, description="Git branch when checkpoint was created")
 
-    git_commit: str | None = Field(
-        default=None, description="Git commit hash when checkpoint was created"
-    )
+    git_commit: str | None = Field(default=None, description="Git commit hash when checkpoint was created")
 
     # Metadata
     is_global: bool = Field(
@@ -94,17 +80,11 @@ class Checkpoint(BaseModel):
     tags: list[str] = Field(default_factory=list, description="Tags for organization and filtering")
 
     # Timestamps
-    created_at: TZAwareDatetime = Field(
-        default_factory=utc_now, description="When this checkpoint was created"
-    )
+    created_at: TZAwareDatetime = Field(default_factory=utc_now, description="When this checkpoint was created")
 
-    updated_at: TZAwareDatetime | None = Field(
-        default=None, description="When this checkpoint was last updated"
-    )
+    updated_at: TZAwareDatetime | None = Field(default=None, description="When this checkpoint was last updated")
 
-    ttl_expiry: TZAwareDatetime | None = Field(
-        default=None, description="When this checkpoint should expire and be cleaned up"
-    )
+    ttl_expiry: TZAwareDatetime | None = Field(default=None, description="When this checkpoint should expire and be cleaned up")
 
     def set_ttl(self, ttl_str: str) -> None:
         """Set TTL expiry based on string like '7d', '1h', etc."""

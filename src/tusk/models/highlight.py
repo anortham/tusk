@@ -36,13 +36,9 @@ class Highlight(BaseModel):
 
     content: str = Field(description="The highlight content - what happened or was decided")
 
-    category: HighlightCategory = Field(
-        default=HighlightCategory.GENERAL, description="Category of the highlight"
-    )
+    category: HighlightCategory = Field(default=HighlightCategory.GENERAL, description="Category of the highlight")
 
-    importance: HighlightImportance = Field(
-        default=HighlightImportance.MEDIUM, description="How important this highlight is"
-    )
+    importance: HighlightImportance = Field(default=HighlightImportance.MEDIUM, description="How important this highlight is")
 
     timestamp: datetime = Field(
         default_factory=lambda: datetime.now(UTC),
@@ -54,9 +50,7 @@ class Highlight(BaseModel):
     tags: list[str] = Field(default_factory=list, description="Tags for organization and search")
 
     # Relationships
-    related_files: list[str] = Field(
-        default_factory=list, description="Files related to this highlight"
-    )
+    related_files: list[str] = Field(default_factory=list, description="Files related to this highlight")
 
     related_task_id: str | None = Field(default=None, description="ID of related task item")
 

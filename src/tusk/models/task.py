@@ -38,9 +38,7 @@ class Task(BaseModel):
     # Identity
     id: str = Field(default_factory=generate_task_id, description="Unique task ID")
 
-    workspace_id: str = Field(
-        default="", description="ID of the workspace this task belongs to (deprecated)"
-    )
+    workspace_id: str = Field(default="", description="ID of the workspace this task belongs to (deprecated)")
 
     # Project tracking
     project_id: str = Field(default="", description="ID of the project this task belongs to")
@@ -50,11 +48,7 @@ class Task(BaseModel):
     # Content
     content: str = Field(description="What needs to be done")
 
-    active_form: str = Field(
-        description=(
-            "Present continuous form for when this task is in progress " "(e.g., 'Running tests')"
-        )
-    )
+    active_form: str = Field(description=("Present continuous form for when this task is in progress " "(e.g., 'Running tests')"))
 
     # Status and priority
     status: TaskStatus = Field(default=TaskStatus.PENDING, description="Current status")
@@ -65,45 +59,27 @@ class Task(BaseModel):
     tags: list[str] = Field(default_factory=list, description="Tags for organization")
 
     # Relationships
-    checkpoint_id: str | None = Field(
-        default=None, description="ID of the checkpoint where this task was created"
-    )
+    checkpoint_id: str | None = Field(default=None, description="ID of the checkpoint where this task was created")
 
-    parent_task_id: str | None = Field(
-        default=None, description="ID of parent task if this is a subtask"
-    )
+    parent_task_id: str | None = Field(default=None, description="ID of parent task if this is a subtask")
 
     plan_id: str | None = Field(default=None, description="ID of the plan this task belongs to")
 
     # Metadata
-    notes: str | None = Field(
-        default=None, description="Additional notes or context about this task"
-    )
+    notes: str | None = Field(default=None, description="Additional notes or context about this task")
 
-    estimated_duration: str | None = Field(
-        default=None, description="Estimated time to complete (e.g., '30m', '2h', '1d')"
-    )
+    estimated_duration: str | None = Field(default=None, description="Estimated time to complete (e.g., '30m', '2h', '1d')")
 
     # Timestamps
-    created_at: TZAwareDatetime = Field(
-        default_factory=utc_now, description="When this task was created"
-    )
+    created_at: TZAwareDatetime = Field(default_factory=utc_now, description="When this task was created")
 
-    updated_at: TZAwareDatetime | None = Field(
-        default=None, description="When this task was last updated"
-    )
+    updated_at: TZAwareDatetime | None = Field(default=None, description="When this task was last updated")
 
-    started_at: TZAwareDatetime | None = Field(
-        default=None, description="When work on this task was started"
-    )
+    started_at: TZAwareDatetime | None = Field(default=None, description="When work on this task was started")
 
-    completed_at: TZAwareDatetime | None = Field(
-        default=None, description="When this task was completed"
-    )
+    completed_at: TZAwareDatetime | None = Field(default=None, description="When this task was completed")
 
-    due_date: TZAwareDatetime | None = Field(
-        default=None, description="When this task should be completed by"
-    )
+    due_date: TZAwareDatetime | None = Field(default=None, description="When this task should be completed by")
 
     def mark_in_progress(self) -> None:
         """Mark this task as in progress."""

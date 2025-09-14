@@ -16,7 +16,7 @@ class TZAwareDatetime(datetime):
     """
 
     @classmethod
-    def __get_pydantic_core_schema__(cls, source_type, handler):
+    def __get_pydantic_core_schema__(cls, source_type: Any, handler: Any) -> core_schema.CoreSchema:
         """Pydantic v2 core schema for custom datetime validation."""
 
         def validate_datetime(value: Any) -> datetime:

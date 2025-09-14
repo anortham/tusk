@@ -163,9 +163,7 @@ class TestCrossProjectFunctionality:
             search_engine.index_checkpoint(checkpoint)
 
         # Search only project-a
-        results = search_engine.search_cross_project(
-            query="Important work", project_ids=["project-a"], limit=50
-        )
+        results = search_engine.search_cross_project(query="Important work", project_ids=["project-a"], limit=50)
 
         # Should only find items from project-a
         assert len(results) == 1
@@ -193,9 +191,7 @@ class TestCrossProjectFunctionality:
             search_engine.index_checkpoint(checkpoint)
 
         # Search only project-a and project-c (exclude project-b)
-        results = search_engine.search_cross_project(
-            query="Checkpoint", project_ids=["project-a", "project-c"], limit=50
-        )
+        results = search_engine.search_cross_project(query="Checkpoint", project_ids=["project-a", "project-c"], limit=50)
 
         # Should find 2 items (project-a and project-c)
         assert len(results) == 2
@@ -279,9 +275,7 @@ class TestCrossProjectFunctionality:
         assert loaded_registry == registry
 
         # Test registering current project using patch at the class level
-        with patch(
-            "src.tusk.config.TuskConfig.get_current_project_id", return_value="test-project"
-        ):
+        with patch("src.tusk.config.TuskConfig.get_current_project_id", return_value="test-project"):
             with patch(
                 "src.tusk.config.TuskConfig.get_current_project_path",
                 return_value="/path/to/test-project",
@@ -335,9 +329,7 @@ class TestCrossProjectFunctionality:
             search_engine.index_plan(plan)
 
         # Search for recent work across all projects (simulating standup)
-        results = search_engine.search_cross_project(
-            query="*", days_back=1, limit=100  # Get everything  # Last day
-        )
+        results = search_engine.search_cross_project(query="*", days_back=1, limit=100)  # Get everything  # Last day
 
         # Should find items from all 3 projects
         assert len(results) == 9  # 3 projects × 3 items each
@@ -378,12 +370,10 @@ class TestCrossProjectFunctionality:
                 web_project_results.append((result, item))
 
         # Should find exactly 3 items from project-web
-        assert (
-            len(web_project_results) == 3
-        ), f"Expected 3 web project items but found {len(web_project_results)}"
+        assert len(web_project_results) == 3, f"Expected 3 web project items but found {len(web_project_results)}"
 
         # Verify all found items are from project-web
-        for result, item in web_project_results:
+        for _result, item in web_project_results:
             assert item.project_id == "project-web"
 
         # Test that standup can aggregate specific types across projects

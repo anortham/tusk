@@ -62,11 +62,9 @@ class CheckpointStorage(BaseStorage[Checkpoint]):
             logger.error(f"Error saving checkpoint: {e}")
             return False
 
-    def list_by_date_range(
-        self, start_date: datetime | None = None, end_date: datetime | None = None
-    ) -> list[Checkpoint]:
+    def list_by_date_range(self, start_date: datetime | None = None, end_date: datetime | None = None) -> list[Checkpoint]:
         """List checkpoints within a date range."""
-        checkpoints = []
+        checkpoints: list[Checkpoint] = []
         storage_dir = self.data_dir / self.get_storage_subdir()
 
         if not storage_dir.exists():
@@ -170,7 +168,7 @@ class CheckpointStorage(BaseStorage[Checkpoint]):
 
     def list_ids(self) -> list[str]:
         """List all checkpoint IDs across all date directories."""
-        ids = []
+        ids: list[str] = []
         storage_dir = self.data_dir / self.get_storage_subdir()
 
         if not storage_dir.exists():

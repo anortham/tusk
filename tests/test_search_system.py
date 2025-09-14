@@ -149,9 +149,7 @@ class TestSearchEngineIndexing:
         assert len(results) >= 1
         assert any(r.doc_id == sample_plan.id for r in results)
 
-    def test_index_multiple_documents(
-        self, search_engine, sample_checkpoint, sample_task, sample_plan
-    ):
+    def test_index_multiple_documents(self, search_engine, sample_checkpoint, sample_task, sample_plan):
         """Test indexing multiple different document types."""
         # Index all documents
         assert search_engine.index_checkpoint(sample_checkpoint)

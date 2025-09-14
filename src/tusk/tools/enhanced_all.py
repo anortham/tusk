@@ -114,9 +114,7 @@ class EnhancedUnifiedCheckpointTool(EnhancedBaseTool):
 
             # Run in thread pool to avoid AsyncIO deadlock
             try:
-                branch, commit = await asyncio.wait_for(
-                    asyncio.to_thread(run_git_subprocess), timeout=5.0  # Overall timeout
-                )
+                branch, commit = await asyncio.wait_for(asyncio.to_thread(run_git_subprocess), timeout=5.0)  # Overall timeout
                 return branch, commit
             except TimeoutError:
                 logger.debug("Git info timeout - operations took too long")
@@ -126,9 +124,7 @@ class EnhancedUnifiedCheckpointTool(EnhancedBaseTool):
             logger.debug(f"Could not get git info: {e}")
             return None, None
 
-    async def _get_recently_modified_files_safe(
-        self, project_path: str, max_files: int = 20
-    ) -> list[str]:
+    async def _get_recently_modified_files_safe(self, project_path: str, max_files: int = 20) -> list[str]:
         """Get recently modified files safely using thread pool to avoid AsyncIO deadlock."""
         try:
             import asyncio
@@ -169,9 +165,7 @@ class EnhancedUnifiedCheckpointTool(EnhancedBaseTool):
 
             # Run in thread pool to avoid AsyncIO deadlock
             try:
-                files = await asyncio.wait_for(
-                    asyncio.to_thread(run_file_detection), timeout=4.0  # Overall timeout
-                )
+                files = await asyncio.wait_for(asyncio.to_thread(run_file_detection), timeout=4.0)  # Overall timeout
                 return files
             except TimeoutError:
                 logger.debug("File detection timeout - operations took too long")
@@ -262,9 +256,7 @@ class EnhancedUnifiedCheckpointTool(EnhancedBaseTool):
                 indent=2,
             )
         else:
-            return json.dumps(
-                {"success": False, "error": "Failed to save progress"}, ensure_ascii=False, indent=2
-            )
+            return json.dumps({"success": False, "error": "Failed to save progress"}, ensure_ascii=False, indent=2)
 
     async def _list_checkpoints(self, limit: int) -> str:
         """List recent checkpoints."""
@@ -423,17 +415,13 @@ class EnhancedUnifiedRecallTool(EnhancedBaseTool):
         cutoff_date = datetime.now(UTC) - timedelta(days=2)
 
         # Get recent checkpoints
-        recent_checkpoints = [
-            cp for cp in self.checkpoint_storage.list_recent(10) if cp.created_at >= cutoff_date
-        ]
+        recent_checkpoints = [cp for cp in self.checkpoint_storage.list_recent(10) if cp.created_at >= cutoff_date]
 
         # Get active tasks
         active_tasks = self.task_storage.get_active_tasks()[:5]
 
         # Get recent plans
-        recent_plans = [
-            plan for plan in self.plan_storage.find_recent(5) if plan.created_at >= cutoff_date
-        ]
+        recent_plans = [plan for plan in self.plan_storage.find_recent(5) if plan.created_at >= cutoff_date]
 
         return json.dumps(
             {
@@ -444,9 +432,7 @@ class EnhancedUnifiedRecallTool(EnhancedBaseTool):
                     "checkpoints_count": len(recent_checkpoints),
                     "active_tasks": len(active_tasks),
                     "recent_plans": len(recent_plans),
-                    "context_available": len(recent_checkpoints) > 0
-                    or len(active_tasks) > 0
-                    or len(recent_plans) > 0,
+                    "context_available": len(recent_checkpoints) > 0 or len(active_tasks) > 0 or len(recent_plans) > 0,
                 },
                 "checkpoints": [
                     {
@@ -475,11 +461,7 @@ class EnhancedUnifiedRecallTool(EnhancedBaseTool):
                     }
                     for plan in recent_plans
                 ],
-                "message": (
-                    "Recent context loaded successfully"
-                    if (recent_checkpoints or active_tasks or recent_plans)
-                    else "No recent context found"
-                ),
+                "message": ("Recent context loaded successfully" if (recent_checkpoints or active_tasks or recent_plans) else "No recent context found"),
             },
             ensure_ascii=False,
             indent=2,
@@ -653,9 +635,7 @@ class EnhancedUnifiedPlanTool(EnhancedBaseTool):
                 indent=2,
             )
         else:
-            return json.dumps(
-                {"success": False, "error": "Failed to create plan"}, ensure_ascii=False, indent=2
-            )
+            return json.dumps({"success": False, "error": "Failed to create plan"}, ensure_ascii=False, indent=2)
 
     async def _list_plans(self, limit: int) -> str:
         """List recent plans."""
@@ -690,9 +670,7 @@ class EnhancedUnifiedPlanTool(EnhancedBaseTool):
                     "progress": {
                         "total_steps": total_steps,
                         "completed_steps": completed_steps,
-                        "progress_percent": (
-                            (completed_steps / total_steps * 100) if total_steps > 0 else 0
-                        ),
+                        "progress_percent": ((completed_steps / total_steps * 100) if total_steps > 0 else 0),
                     },
                 }
             )
@@ -825,9 +803,7 @@ class EnhancedUnifiedStandupTool(EnhancedBaseTool):
         """Register the enhanced unified standup tool."""
 
         @mcp_server.tool
-        async def standup(
-            timeframe: str = "daily", include_completed: bool = True, days_back: int = 1
-        ) -> str:
+        async def standup(timeframe: str = "daily", include_completed: bool = True, days_back: int = 1) -> str:
             """Generate a quick standup report of your recent work.
 
             Provides structured progress summaries for team updates, reflection, or tracking accomplishments across projects.
@@ -871,9 +847,7 @@ class EnhancedUnifiedStandupTool(EnhancedBaseTool):
         # Get today's work
         recent_checkpoints = []
         if include_completed:
-            recent_checkpoints = [
-                cp for cp in self.checkpoint_storage.list_recent(10) if cp.created_at >= cutoff_date
-            ]
+            recent_checkpoints = [cp for cp in self.checkpoint_storage.list_recent(10) if cp.created_at >= cutoff_date]
 
         active_tasks = self.task_storage.get_active_tasks()[:10]
 
@@ -885,17 +859,9 @@ class EnhancedUnifiedStandupTool(EnhancedBaseTool):
                 "generated_at": datetime.now(UTC).strftime("%Y-%m-%d %H:%M"),
                 "summary": {
                     "achievements": len(recent_checkpoints),
-                    "ongoing_tasks": len(
-                        [t for t in active_tasks if t.status == TaskStatus.IN_PROGRESS]
-                    ),
-                    "pending_tasks": len(
-                        [t for t in active_tasks if t.status == TaskStatus.PENDING]
-                    ),
-                    "projects_active": (
-                        len({cp.project_id for cp in recent_checkpoints})
-                        if recent_checkpoints
-                        else 0
-                    ),
+                    "ongoing_tasks": len([t for t in active_tasks if t.status == TaskStatus.IN_PROGRESS]),
+                    "pending_tasks": len([t for t in active_tasks if t.status == TaskStatus.PENDING]),
+                    "projects_active": (len({cp.project_id for cp in recent_checkpoints}) if recent_checkpoints else 0),
                 },
                 "achievements": (
                     [
@@ -929,14 +895,7 @@ class EnhancedUnifiedStandupTool(EnhancedBaseTool):
                     if task.status == TaskStatus.PENDING
                 ][:3],
                 "blockers": [],  # Would implement blocker detection
-                "productivity_score": (
-                    "High"
-                    if (
-                        recent_checkpoints
-                        or any(t.status == TaskStatus.IN_PROGRESS for t in active_tasks)
-                    )
-                    else "Moderate"
-                ),
+                "productivity_score": ("High" if (recent_checkpoints or any(t.status == TaskStatus.IN_PROGRESS for t in active_tasks)) else "Moderate"),
             },
             ensure_ascii=False,
             indent=2,

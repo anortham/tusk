@@ -137,9 +137,7 @@ class TestAsyncIOSubprocessSafety:
         def run_subprocess():
             """Run a simple subprocess command."""
             try:
-                result = subprocess.run(
-                    ["python", "--version"], capture_output=True, text=True, timeout=5
-                )
+                result = subprocess.run(["python", "--version"], capture_output=True, text=True, timeout=5)
                 return result.returncode == 0
             except Exception:
                 return False
@@ -166,9 +164,7 @@ class TestAsyncIOSubprocessSafety:
 
             # Should complete normally with reasonable timeout
             start_time = asyncio.get_event_loop().time()
-            branch, commit = await asyncio.wait_for(
-                mock_git(project_path), timeout=1.0  # 1 second should be plenty
-            )
+            branch, commit = await asyncio.wait_for(mock_git(project_path), timeout=1.0)  # 1 second should be plenty
             end_time = asyncio.get_event_loop().time()
 
             # Should have completed quickly
@@ -190,9 +186,7 @@ class TestAsyncSubprocessRegressionPrevention:
 
             # This pattern used to hang - now should work
             def git_subprocess():
-                return subprocess.run(
-                    ["git", "--version"], capture_output=True, text=True, timeout=3
-                )
+                return subprocess.run(["git", "--version"], capture_output=True, text=True, timeout=3)
 
             # Using asyncio.to_thread should prevent hanging
             result = await asyncio.to_thread(git_subprocess)

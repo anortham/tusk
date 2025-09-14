@@ -149,9 +149,7 @@ class TestGitIntegration:
             assert branch_works or commit_works, "At least one git command should work in git repo"
 
         # Record results for debugging
-        print(
-            f"Git commands compatibility: branch={branch_works}, commit={commit_works}, diff={diff_works}"
-        )
+        print(f"Git commands compatibility: branch={branch_works}, commit={commit_works}, diff={diff_works}")
 
     @pytest.mark.asyncio
     async def test_git_error_handling(self, checkpoint_tool):
@@ -236,9 +234,7 @@ class TestGitEdgeCases:
             # Initialize empty git repo
             try:
                 subprocess.run(["git", "init"], cwd=tmp_dir, check=True, capture_output=True)
-                subprocess.run(
-                    ["git", "config", "user.email", "test@example.com"], cwd=tmp_dir, check=True
-                )
+                subprocess.run(["git", "config", "user.email", "test@example.com"], cwd=tmp_dir, check=True)
                 subprocess.run(["git", "config", "user.name", "Test User"], cwd=tmp_dir, check=True)
 
                 # Test our methods with empty repo

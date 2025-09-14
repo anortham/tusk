@@ -364,9 +364,7 @@ class SearchEngine:
         try:
             with self.ix.searcher() as searcher:
                 # Create parser for multiple fields
-                parser = MultifieldParser(
-                    ["title", "content", "description", "search_text"], schema=self.ix.schema
-                )
+                parser = MultifieldParser(["title", "content", "description", "search_text"], schema=self.ix.schema)
 
                 # Parse the query
                 parsed_query = parser.parse(query)
@@ -433,9 +431,7 @@ class SearchEngine:
                     parsed_query = Every()
                 else:
                     # Create parser for multiple fields
-                    parser = MultifieldParser(
-                        ["title", "content", "description", "search_text"], schema=self.ix.schema
-                    )
+                    parser = MultifieldParser(["title", "content", "description", "search_text"], schema=self.ix.schema)
                     parsed_query = parser.parse(query)
 
                 # Add doc_type filter if specified
@@ -463,9 +459,7 @@ class SearchEngine:
                     parsed_query = parsed_query & date_query
 
                 # Execute search, sorted by date (newest first)
-                results = searcher.search(
-                    parsed_query, limit=limit, sortedby="created_at", reverse=True
-                )
+                results = searcher.search(parsed_query, limit=limit, sortedby="created_at", reverse=True)
 
                 if highlight and query != "*":
                     results.fragmenter.max_chars = 200
@@ -490,9 +484,7 @@ class SearchEngine:
                         )
                     )
 
-                logger.debug(
-                    f"Cross-project search for '{query}' returned {len(search_results)} results"
-                )
+                logger.debug(f"Cross-project search for '{query}' returned {len(search_results)} results")
                 return search_results
 
         except Exception as e:
@@ -508,9 +500,7 @@ class SearchEngine:
         tag_query = " OR ".join(f"tags:{tag}" for tag in tags)
         return self.search(tag_query, limit=limit)
 
-    def search_recent(
-        self, days: int = 7, limit: int = 20, doc_types: list[str] | None = None
-    ) -> list[SearchResult]:
+    def search_recent(self, days: int = 7, limit: int = 20, doc_types: list[str] | None = None) -> list[SearchResult]:
         """Search for recent documents."""
         from datetime import datetime, timedelta
 

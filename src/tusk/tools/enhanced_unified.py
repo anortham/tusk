@@ -20,14 +20,10 @@ class EnhancedUnifiedTaskTool(BaseTool):
 
         @mcp_server.tool
         async def task(
-            action: Annotated[
-                str, "The operation to perform: add, list, start, complete, update, search"
-            ],
+            action: Annotated[str, "The operation to perform: add, list, start, complete, update, search"],
             task: Annotated[str | None, "Task description when adding new tasks"] = None,
             task_id: Annotated[str | None, "Unique task identifier for operations"] = None,
-            status: Annotated[
-                str | None, "New status when updating: pending, in_progress, completed"
-            ] = None,
+            status: Annotated[str | None, "New status when updating: pending, in_progress, completed"] = None,
             query: Annotated[str | None, "Search query text for finding tasks"] = None,
             limit: Annotated[int, "Maximum number of results to return"] = 10,
         ) -> str:
@@ -78,15 +74,11 @@ class EnhancedUnifiedTaskTool(BaseTool):
 
                     # Enhance parameters
                     if hasattr(tool, "parameters"):
-                        tool.parameters = ToolEnhancer.enhance_tool_parameters(
-                            task, tool.parameters
-                        )
+                        tool.parameters = ToolEnhancer.enhance_tool_parameters(task, tool.parameters)
 
                     # Enhance description
                     if hasattr(tool, "description"):
-                        tool.description = ToolEnhancer.enhance_tool_description(
-                            task, tool.description or ""
-                        )
+                        tool.description = ToolEnhancer.enhance_tool_description(task, tool.description or "")
 
             try:
                 if action == "add":
@@ -159,9 +151,7 @@ class EnhancedUnifiedTaskTool(BaseTool):
                 indent=2,
             )
         else:
-            return json.dumps(
-                {"success": False, "error": "Failed to add task"}, ensure_ascii=False, indent=2
-            )
+            return json.dumps({"success": False, "error": "Failed to add task"}, ensure_ascii=False, indent=2)
 
     async def _list_tasks(self, limit: int) -> str:
         """List active tasks."""
@@ -194,9 +184,7 @@ class EnhancedUnifiedTaskTool(BaseTool):
                         "active_form": task.active_form,
                         "priority": task.priority.value,
                         "created_at": task.created_at.strftime("%Y-%m-%d %H:%M"),
-                        "started_at": (
-                            task.started_at.strftime("%Y-%m-%d %H:%M") if task.started_at else None
-                        ),
+                        "started_at": (task.started_at.strftime("%Y-%m-%d %H:%M") if task.started_at else None),
                     }
                     for task in in_progress
                 ],
@@ -265,11 +253,7 @@ class EnhancedUnifiedTaskTool(BaseTool):
                         "content": task_obj.content,
                         "active_form": task_obj.active_form,
                         "status": task_obj.status.value,
-                        "started_at": (
-                            task_obj.started_at.strftime("%Y-%m-%d %H:%M")
-                            if task_obj.started_at
-                            else None
-                        ),
+                        "started_at": (task_obj.started_at.strftime("%Y-%m-%d %H:%M") if task_obj.started_at else None),
                     },
                     "message": f"Started: {task_obj.get_display_form()}",
                 },
@@ -277,9 +261,7 @@ class EnhancedUnifiedTaskTool(BaseTool):
                 indent=2,
             )
         else:
-            return json.dumps(
-                {"success": False, "error": "Failed to start task"}, ensure_ascii=False, indent=2
-            )
+            return json.dumps({"success": False, "error": "Failed to start task"}, ensure_ascii=False, indent=2)
 
     async def _complete_task(self, task_id: str | None) -> str:
         """Complete a task."""
@@ -328,11 +310,7 @@ class EnhancedUnifiedTaskTool(BaseTool):
                         "id": task_obj.id,
                         "content": task_obj.content,
                         "status": task_obj.status.value,
-                        "completed_at": (
-                            task_obj.completed_at.strftime("%Y-%m-%d %H:%M")
-                            if task_obj.completed_at
-                            else None
-                        ),
+                        "completed_at": (task_obj.completed_at.strftime("%Y-%m-%d %H:%M") if task_obj.completed_at else None),
                     },
                     "message": f"Completed: {task_obj.content}",
                     "celebration": "🎉 Great work!",
@@ -341,9 +319,7 @@ class EnhancedUnifiedTaskTool(BaseTool):
                 indent=2,
             )
         else:
-            return json.dumps(
-                {"success": False, "error": "Failed to complete task"}, ensure_ascii=False, indent=2
-            )
+            return json.dumps({"success": False, "error": "Failed to complete task"}, ensure_ascii=False, indent=2)
 
     async def _update_task(self, task_id: str | None, status: str | None) -> str:
         """Update a task's status."""
@@ -396,9 +372,7 @@ class EnhancedUnifiedTaskTool(BaseTool):
 
         if self.task_storage.save(task_obj):
             self.search_engine.index_task(task_obj)
-            logger.info(
-                f"Updated task {task_obj.id} status: {old_status.value} -> {new_status.value}"
-            )
+            logger.info(f"Updated task {task_obj.id} status: {old_status.value} -> {new_status.value}")
 
             return json.dumps(
                 {
@@ -417,9 +391,7 @@ class EnhancedUnifiedTaskTool(BaseTool):
                 indent=2,
             )
         else:
-            return json.dumps(
-                {"success": False, "error": "Failed to update task"}, ensure_ascii=False, indent=2
-            )
+            return json.dumps({"success": False, "error": "Failed to update task"}, ensure_ascii=False, indent=2)
 
     async def _search_tasks(self, query: str | None, limit: int) -> str:
         """Search for tasks by query."""

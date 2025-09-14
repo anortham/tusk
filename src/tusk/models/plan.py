@@ -1,6 +1,7 @@
 """Plan model for persistent cross-session planning."""
 
 from enum import Enum
+from typing import Any
 from uuid import uuid4
 
 from pydantic import BaseModel, Field
@@ -34,17 +35,11 @@ class PlanStep(BaseModel):
 
     notes: str | None = Field(default=None, description="Notes about this step")
 
-    estimated_duration: str | None = Field(
-        default=None, description="How long this step should take"
-    )
+    estimated_duration: str | None = Field(default=None, description="How long this step should take")
 
-    dependencies: list[str] = Field(
-        default_factory=list, description="IDs of steps that must complete before this one"
-    )
+    dependencies: list[str] = Field(default_factory=list, description="IDs of steps that must complete before this one")
 
-    completed_at: TZAwareDatetime | None = Field(
-        default=None, description="When this step was completed"
-    )
+    completed_at: TZAwareDatetime | None = Field(default=None, description="When this step was completed")
 
     def mark_completed(self) -> None:
         """Mark this step as completed."""
@@ -58,9 +53,7 @@ class Plan(BaseModel):
     # Identity
     id: str = Field(default_factory=generate_plan_id, description="Unique plan ID")
 
-    workspace_id: str = Field(
-        default="", description="ID of the workspace this plan belongs to (deprecated)"
-    )
+    workspace_id: str = Field(default="", description="ID of the workspace this plan belongs to (deprecated)")
 
     # Project tracking
     project_id: str = Field(default="", description="ID of the project this plan belongs to")
@@ -73,18 +66,12 @@ class Plan(BaseModel):
     description: str = Field(description="Detailed description of what this plan achieves")
 
     # Goals and outcomes
-    goals: list[str] = Field(
-        default_factory=list, description="List of specific goals this plan should achieve"
-    )
+    goals: list[str] = Field(default_factory=list, description="List of specific goals this plan should achieve")
 
-    success_criteria: list[str] = Field(
-        default_factory=list, description="How to know when this plan is successfully completed"
-    )
+    success_criteria: list[str] = Field(default_factory=list, description="How to know when this plan is successfully completed")
 
     # Steps and structure
-    steps: list[PlanStep] = Field(
-        default_factory=list, description="Ordered list of steps to complete this plan"
-    )
+    steps: list[PlanStep] = Field(default_factory=list, description="Ordered list of steps to complete this plan")
 
     # Status and priority
     status: PlanStatus = Field(default=PlanStatus.DRAFT, description="Current plan status")
@@ -94,48 +81,30 @@ class Plan(BaseModel):
     # Organization
     tags: list[str] = Field(default_factory=list, description="Tags for organization")
 
-    category: str | None = Field(
-        default=None, description="Category of plan (feature, bugfix, research, etc.)"
-    )
+    category: str | None = Field(default=None, description="Category of plan (feature, bugfix, research, etc.)")
 
     # Relationships
-    related_todo_ids: list[str] = Field(
-        default_factory=list, description="IDs of todos created from this plan"
-    )
+    related_todo_ids: list[str] = Field(default_factory=list, description="IDs of todos created from this plan")
 
-    related_checkpoint_ids: list[str] = Field(
-        default_factory=list, description="IDs of checkpoints related to this plan"
-    )
+    related_checkpoint_ids: list[str] = Field(default_factory=list, description="IDs of checkpoints related to this plan")
 
     # Metadata
-    estimated_duration: str | None = Field(
-        default=None, description="Estimated total time to complete (e.g., '1w', '3d')"
-    )
+    estimated_duration: str | None = Field(default=None, description="Estimated total time to complete (e.g., '1w', '3d')")
 
     notes: str | None = Field(default=None, description="Additional notes about this plan")
 
     # Timestamps
-    created_at: TZAwareDatetime = Field(
-        default_factory=utc_now, description="When this plan was created"
-    )
+    created_at: TZAwareDatetime = Field(default_factory=utc_now, description="When this plan was created")
 
-    updated_at: TZAwareDatetime | None = Field(
-        default=None, description="When this plan was last updated"
-    )
+    updated_at: TZAwareDatetime | None = Field(default=None, description="When this plan was last updated")
 
-    started_at: TZAwareDatetime | None = Field(
-        default=None, description="When work on this plan began"
-    )
+    started_at: TZAwareDatetime | None = Field(default=None, description="When work on this plan began")
 
-    completed_at: TZAwareDatetime | None = Field(
-        default=None, description="When this plan was completed"
-    )
+    completed_at: TZAwareDatetime | None = Field(default=None, description="When this plan was completed")
 
-    target_completion: TZAwareDatetime | None = Field(
-        default=None, description="Target completion date"
-    )
+    target_completion: TZAwareDatetime | None = Field(default=None, description="Target completion date")
 
-    def add_step(self, description: str, **kwargs) -> PlanStep:
+    def add_step(self, description: str, **kwargs: Any) -> PlanStep:
         """Add a new step to the plan."""
         step = PlanStep(description=description, **kwargs)
         self.steps.append(step)

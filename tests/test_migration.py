@@ -192,9 +192,7 @@ class TestCrossProjectEdgeCases:
         project_id = "consistent-project"
         project_path = "/path/to/consistent/project"
 
-        checkpoint = Checkpoint(
-            description="Test checkpoint", project_id=project_id, project_path=project_path
-        )
+        checkpoint = Checkpoint(description="Test checkpoint", project_id=project_id, project_path=project_path)
 
         task = Task(
             content="Test task",

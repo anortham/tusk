@@ -116,9 +116,7 @@ class UnifiedTaskTool(BaseTool):
                 indent=2,
             )
         else:
-            return json.dumps(
-                {"success": False, "error": "Failed to add task"}, ensure_ascii=False, indent=2
-            )
+            return json.dumps({"success": False, "error": "Failed to add task"}, ensure_ascii=False, indent=2)
 
     async def _list_tasks(self, limit: int) -> str:
         """List active tasks."""
@@ -151,9 +149,7 @@ class UnifiedTaskTool(BaseTool):
                         "active_form": task.active_form,
                         "priority": task.priority.value,
                         "created_at": task.created_at.strftime("%Y-%m-%d %H:%M"),
-                        "started_at": (
-                            task.started_at.strftime("%Y-%m-%d %H:%M") if task.started_at else None
-                        ),
+                        "started_at": (task.started_at.strftime("%Y-%m-%d %H:%M") if task.started_at else None),
                     }
                     for task in in_progress
                 ],
@@ -221,9 +217,7 @@ class UnifiedTaskTool(BaseTool):
                         "content": task.content,
                         "active_form": task.active_form,
                         "status": task.status.value,
-                        "started_at": (
-                            task.started_at.strftime("%Y-%m-%d %H:%M") if task.started_at else None
-                        ),
+                        "started_at": (task.started_at.strftime("%Y-%m-%d %H:%M") if task.started_at else None),
                     },
                     "message": f"Started working on: {task.get_display_form()}",
                 },
@@ -231,9 +225,7 @@ class UnifiedTaskTool(BaseTool):
                 indent=2,
             )
         else:
-            return json.dumps(
-                {"success": False, "error": "Failed to update task"}, ensure_ascii=False, indent=2
-            )
+            return json.dumps({"success": False, "error": "Failed to update task"}, ensure_ascii=False, indent=2)
 
     async def _complete_task(self, task_id: str | None) -> str:
         """Mark a task as completed."""
@@ -277,11 +269,7 @@ class UnifiedTaskTool(BaseTool):
                         "id": task.id,
                         "content": task.content,
                         "status": task.status.value,
-                        "completed_at": (
-                            task.completed_at.strftime("%Y-%m-%d %H:%M")
-                            if task.completed_at
-                            else None
-                        ),
+                        "completed_at": (task.completed_at.strftime("%Y-%m-%d %H:%M") if task.completed_at else None),
                     },
                     "message": f"Completed: {task.content}",
                     "celebration": "Great job! The task is now done.",
@@ -290,9 +278,7 @@ class UnifiedTaskTool(BaseTool):
                 indent=2,
             )
         else:
-            return json.dumps(
-                {"success": False, "error": "Failed to update task"}, ensure_ascii=False, indent=2
-            )
+            return json.dumps({"success": False, "error": "Failed to update task"}, ensure_ascii=False, indent=2)
 
     async def _update_task(self, task_id: str | None, status: str | None) -> str:
         """Update a task's status."""
@@ -359,9 +345,7 @@ class UnifiedTaskTool(BaseTool):
                         "content": task.content,
                         "old_status": old_status.value,
                         "new_status": task.status.value,
-                        "updated_at": (
-                            task.updated_at.strftime("%Y-%m-%d %H:%M") if task.updated_at else None
-                        ),
+                        "updated_at": (task.updated_at.strftime("%Y-%m-%d %H:%M") if task.updated_at else None),
                     },
                     "message": f"Updated task status from {old_status.value} to {task.status.value}",
                 },
@@ -369,9 +353,7 @@ class UnifiedTaskTool(BaseTool):
                 indent=2,
             )
         else:
-            return json.dumps(
-                {"success": False, "error": "Failed to update task"}, ensure_ascii=False, indent=2
-            )
+            return json.dumps({"success": False, "error": "Failed to update task"}, ensure_ascii=False, indent=2)
 
     async def _search_tasks(self, query: str | None, limit: int) -> str:
         """Search tasks by content."""
@@ -510,9 +492,7 @@ class UnifiedCheckpointTool(BaseTool):
                 indent=2,
             )
         else:
-            return json.dumps(
-                {"success": False, "error": "Failed to save progress"}, ensure_ascii=False, indent=2
-            )
+            return json.dumps({"success": False, "error": "Failed to save progress"}, ensure_ascii=False, indent=2)
 
     async def _list_checkpoints(self, limit: int) -> str:
         """List recent checkpoints."""
@@ -657,14 +637,10 @@ class UnifiedRecallTool(BaseTool):
     async def _recall_quick(self) -> str:
         """Quick recall of the most recent context (last 2 days)."""
 
-        context_data = await self._build_recall_context(
-            days_back=2, include_tasks=True, include_plans=True, include_checkpoints=True
-        )
+        context_data = await self._build_recall_context(days_back=2, include_tasks=True, include_plans=True, include_checkpoints=True)
         return self._build_recall_response(context_data)
 
-    async def _recall_timeframe(
-        self, days_back: int, include_tasks: bool, include_plans: bool, include_checkpoints: bool
-    ) -> str:
+    async def _recall_timeframe(self, days_back: int, include_tasks: bool, include_plans: bool, include_checkpoints: bool) -> str:
         """Recall context for a specific timeframe."""
         context_data = await self._build_recall_context(
             days_back=days_back,
@@ -730,9 +706,7 @@ class UnifiedRecallTool(BaseTool):
             elif git_branch:
                 context["checkpoints"] = self.checkpoint_storage.find_by_git_branch(git_branch)
             else:
-                context["checkpoints"] = self.checkpoint_storage.list_by_date_range(
-                    start_date, end_date
-                )
+                context["checkpoints"] = self.checkpoint_storage.list_by_date_range(start_date, end_date)
 
         # Get tasks
         if include_tasks:
@@ -746,9 +720,7 @@ class UnifiedRecallTool(BaseTool):
                 # For time-based, filter by creation/update time
                 filtered_tasks = []
                 for task in all_tasks:
-                    if task.created_at >= start_date or (
-                        task.updated_at and task.updated_at >= start_date
-                    ):
+                    if task.created_at >= start_date or (task.updated_at and task.updated_at >= start_date):
                         filtered_tasks.append(task)
                 context["tasks"] = filtered_tasks
 
@@ -762,9 +734,7 @@ class UnifiedRecallTool(BaseTool):
             else:
                 filtered_plans = []
                 for plan in active_plans:
-                    if plan.created_at >= start_date or (
-                        plan.updated_at and plan.updated_at >= start_date
-                    ):
+                    if plan.created_at >= start_date or (plan.updated_at and plan.updated_at >= start_date):
                         filtered_plans.append(plan)
                 context["plans"] = filtered_plans
 
@@ -774,9 +744,7 @@ class UnifiedRecallTool(BaseTool):
         context["summary"] = {
             "checkpoints_count": len(context["checkpoints"]),
             "tasks_count": len(context["tasks"]),
-            "active_tasks": len(
-                [t for t in context["tasks"] if t.status == TaskStatus.IN_PROGRESS]
-            ),
+            "active_tasks": len([t for t in context["tasks"] if t.status == TaskStatus.IN_PROGRESS]),
             "pending_tasks": len([t for t in context["tasks"] if t.status == TaskStatus.PENDING]),
             "plans_count": len(context["plans"]),
             "days_covered": days_back,
@@ -806,9 +774,7 @@ class UnifiedRecallTool(BaseTool):
                         "session_id": getattr(cp, "session_id", ""),
                         "highlights_count": len(getattr(cp, "highlights", [])),
                     }
-                    for cp in sorted(
-                        context["checkpoints"], key=lambda c: c.created_at, reverse=True
-                    )[:5]
+                    for cp in sorted(context["checkpoints"], key=lambda c: c.created_at, reverse=True)[:5]
                 ],
                 "tasks": {
                     "in_progress": [
@@ -835,11 +801,7 @@ class UnifiedRecallTool(BaseTool):
                     {
                         "id": plan.id,
                         "title": plan.title,
-                        "description": (
-                            plan.description[:100] + "..."
-                            if len(plan.description) > 100
-                            else plan.description
-                        ),
+                        "description": (plan.description[:100] + "..." if len(plan.description) > 100 else plan.description),
                         "status": plan.status.value,
                         "progress": f"{plan.get_progress()[0]}/{plan.get_progress()[1]}",
                     }
@@ -858,9 +820,7 @@ class UnifiedStandupTool(BaseTool):
         """Register the unified standup tool."""
 
         @mcp_server.tool
-        async def standup(
-            timeframe: str = "daily", include_completed: bool = True, days_back: int = 1
-        ) -> str:
+        async def standup(timeframe: str = "daily", include_completed: bool = True, days_back: int = 1) -> str:
             """Generate a quick standup report of your recent work.
 
             Args:
@@ -969,13 +929,7 @@ class UnifiedStandupTool(BaseTool):
             "completed_tasks_by_project": completed_tasks_by_project,
             "plans_by_project": plans_by_project,
             "project_registry": registry,
-            "total_projects": len(
-                set(
-                    list(checkpoints_by_project.keys())
-                    + list(tasks_by_project.keys())
-                    + list(plans_by_project.keys())
-                )
-            ),
+            "total_projects": len(set(list(checkpoints_by_project.keys()) + list(tasks_by_project.keys()) + list(plans_by_project.keys()))),
         }
 
     def _build_standup_response(self, data: dict, timeframe: str) -> str:
@@ -990,11 +944,7 @@ class UnifiedStandupTool(BaseTool):
 
         # Build project-specific data
         projects_data = {}
-        for project_id in set(
-            list(data["checkpoints_by_project"].keys())
-            + list(data["tasks_by_project"].keys())
-            + list(data["plans_by_project"].keys())
-        ):
+        for project_id in set(list(data["checkpoints_by_project"].keys()) + list(data["tasks_by_project"].keys()) + list(data["plans_by_project"].keys())):
 
             project_checkpoints = data["checkpoints_by_project"].get(project_id, [])
             project_tasks = data["tasks_by_project"].get(project_id, [])
@@ -1019,26 +969,16 @@ class UnifiedStandupTool(BaseTool):
                             "id": cp.id,
                             "description": cp.description,
                             "created_at": cp.created_at.strftime("%Y-%m-%d %H:%M"),
-                            "project_path": (
-                                cp.project_path[:50] + "..."
-                                if len(cp.project_path) > 50
-                                else cp.project_path
-                            ),
+                            "project_path": (cp.project_path[:50] + "..." if len(cp.project_path) > 50 else cp.project_path),
                         }
-                        for cp in sorted(
-                            project_checkpoints, key=lambda c: c.created_at, reverse=True
-                        )[:5]
+                        for cp in sorted(project_checkpoints, key=lambda c: c.created_at, reverse=True)[:5]
                     ],
                     "tasks_in_progress": [
                         {
                             "id": task.id,
                             "content": task.content,
                             "active_form": task.active_form,
-                            "started_at": (
-                                task.started_at.strftime("%Y-%m-%d %H:%M")
-                                if task.started_at
-                                else None
-                            ),
+                            "started_at": (task.started_at.strftime("%Y-%m-%d %H:%M") if task.started_at else None),
                         }
                         for task in in_progress[:5]
                     ],
@@ -1046,11 +986,7 @@ class UnifiedStandupTool(BaseTool):
                         {
                             "id": task.id,
                             "content": task.content,
-                            "completed_at": (
-                                task.completed_at.strftime("%Y-%m-%d %H:%M")
-                                if task.completed_at
-                                else None
-                            ),
+                            "completed_at": (task.completed_at.strftime("%Y-%m-%d %H:%M") if task.completed_at else None),
                         }
                         for task in project_completed[:5]
                     ],
@@ -1199,9 +1135,7 @@ class UnifiedPlanTool(BaseTool):
                 indent=2,
             )
         else:
-            return json.dumps(
-                {"success": False, "error": "Failed to create plan"}, ensure_ascii=False, indent=2
-            )
+            return json.dumps({"success": False, "error": "Failed to create plan"}, ensure_ascii=False, indent=2)
 
     async def _list_plans(self, limit: int) -> str:
         """List active plans."""
@@ -1232,18 +1166,12 @@ class UnifiedPlanTool(BaseTool):
                 {
                     "id": plan.id,
                     "title": plan.title,
-                    "description": (
-                        plan.description[:100] + "..."
-                        if len(plan.description) > 100
-                        else plan.description
-                    ),
+                    "description": (plan.description[:100] + "..." if len(plan.description) > 100 else plan.description),
                     "status": plan.status.value,
                     "priority": plan.priority,
                     "progress": f"{completed_steps}/{total_steps}",
                     "created_at": plan.created_at.strftime("%Y-%m-%d %H:%M"),
-                    "updated_at": (
-                        plan.updated_at.strftime("%Y-%m-%d %H:%M") if plan.updated_at else None
-                    ),
+                    "updated_at": (plan.updated_at.strftime("%Y-%m-%d %H:%M") if plan.updated_at else None),
                 }
             )
 
@@ -1324,9 +1252,7 @@ class UnifiedPlanTool(BaseTool):
                 indent=2,
             )
         else:
-            return json.dumps(
-                {"success": False, "error": "Failed to activate plan"}, ensure_ascii=False, indent=2
-            )
+            return json.dumps({"success": False, "error": "Failed to activate plan"}, ensure_ascii=False, indent=2)
 
     async def _complete_plan(self, plan_id: str | None) -> str:
         """Mark a plan as completed."""
@@ -1387,9 +1313,7 @@ class UnifiedPlanTool(BaseTool):
                 indent=2,
             )
         else:
-            return json.dumps(
-                {"success": False, "error": "Failed to complete plan"}, ensure_ascii=False, indent=2
-            )
+            return json.dumps({"success": False, "error": "Failed to complete plan"}, ensure_ascii=False, indent=2)
 
     async def _add_step(self, plan_id: str | None, step_description: str | None) -> str:
         """Add a step to a plan."""
@@ -1517,19 +1441,13 @@ class UnifiedPlanTool(BaseTool):
                         "completed_at": target_step.completed_at.strftime("%Y-%m-%d %H:%M"),
                     },
                     "message": f"Completed step: {target_step.description}",
-                    "plan_status": (
-                        "Plan completed!"
-                        if completed_steps == total_steps
-                        else f"Progress: {completed_steps}/{total_steps} steps done"
-                    ),
+                    "plan_status": ("Plan completed!" if completed_steps == total_steps else f"Progress: {completed_steps}/{total_steps} steps done"),
                 },
                 ensure_ascii=False,
                 indent=2,
             )
         else:
-            return json.dumps(
-                {"success": False, "error": "Failed to complete step"}, ensure_ascii=False, indent=2
-            )
+            return json.dumps({"success": False, "error": "Failed to complete step"}, ensure_ascii=False, indent=2)
 
     async def _search_plans(self, query: str | None, limit: int) -> str:
         """Search plans by content."""
@@ -1566,11 +1484,7 @@ class UnifiedPlanTool(BaseTool):
                     {
                         "id": plan.id,
                         "title": plan.title,
-                        "description": (
-                            plan.description[:100] + "..."
-                            if len(plan.description) > 100
-                            else plan.description
-                        ),
+                        "description": (plan.description[:100] + "..." if len(plan.description) > 100 else plan.description),
                         "status": plan.status.value,
                         "priority": plan.priority,
                         "progress": f"{completed_steps}/{total_steps}",

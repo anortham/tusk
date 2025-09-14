@@ -52,9 +52,7 @@ class ToolEnhancer:
                                 description = description[0].upper() + description[1:] + "."
                                 param_props["description"] = description
 
-            logger.debug(
-                f"Enhanced tool {func.__name__} with {len(param_descriptions)} parameter descriptions"
-            )
+            logger.debug(f"Enhanced tool {func.__name__} with {len(param_descriptions)} parameter descriptions")
             return enhanced_schema
 
         except Exception as e:
@@ -135,24 +133,18 @@ def enhanced_tool(server_instance):
             # Now enhance the tool in the server's tool registry
             # This is a hook into FastMCP's internals - may need adjustment for different versions
             try:
-                if hasattr(server_instance, "_tool_manager") and hasattr(
-                    server_instance._tool_manager, "_tools"
-                ):
+                if hasattr(server_instance, "_tool_manager") and hasattr(server_instance._tool_manager, "_tools"):
                     tool_name = enhanced_func.__name__
                     if tool_name in server_instance._tool_manager._tools:
                         tool = server_instance._tool_manager._tools[tool_name]
 
                         # Enhance the parameter schema
                         if hasattr(tool, "parameters"):
-                            tool.parameters = ToolEnhancer.enhance_tool_parameters(
-                                enhanced_func, tool.parameters
-                            )
+                            tool.parameters = ToolEnhancer.enhance_tool_parameters(enhanced_func, tool.parameters)
 
                         # Enhance the description
                         if hasattr(tool, "description"):
-                            tool.description = ToolEnhancer.enhance_tool_description(
-                                enhanced_func, tool.description or ""
-                            )
+                            tool.description = ToolEnhancer.enhance_tool_description(enhanced_func, tool.description or "")
 
                         logger.info(f"Enhanced tool '{tool_name}' with rich parameter descriptions")
 

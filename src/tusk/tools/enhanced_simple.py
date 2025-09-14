@@ -115,9 +115,7 @@ class EnhancedUnifiedTaskTool(EnhancedBaseTool):
                 indent=2,
             )
         else:
-            return json.dumps(
-                {"success": False, "error": "Failed to add task"}, ensure_ascii=False, indent=2
-            )
+            return json.dumps({"success": False, "error": "Failed to add task"}, ensure_ascii=False, indent=2)
 
     async def _list_tasks(self, limit: int) -> str:
         """List active tasks."""
@@ -150,9 +148,7 @@ class EnhancedUnifiedTaskTool(EnhancedBaseTool):
                         "active_form": task.active_form,
                         "priority": task.priority.value,
                         "created_at": task.created_at.strftime("%Y-%m-%d %H:%M"),
-                        "started_at": (
-                            task.started_at.strftime("%Y-%m-%d %H:%M") if task.started_at else None
-                        ),
+                        "started_at": (task.started_at.strftime("%Y-%m-%d %H:%M") if task.started_at else None),
                     }
                     for task in in_progress
                 ],
@@ -221,9 +217,7 @@ class EnhancedUnifiedTaskTool(EnhancedBaseTool):
                         "content": task.content,
                         "active_form": task.active_form,
                         "status": task.status.value,
-                        "started_at": (
-                            task.started_at.strftime("%Y-%m-%d %H:%M") if task.started_at else None
-                        ),
+                        "started_at": (task.started_at.strftime("%Y-%m-%d %H:%M") if task.started_at else None),
                     },
                     "message": f"Started: {task.get_display_form()}",
                 },
@@ -231,9 +225,7 @@ class EnhancedUnifiedTaskTool(EnhancedBaseTool):
                 indent=2,
             )
         else:
-            return json.dumps(
-                {"success": False, "error": "Failed to start task"}, ensure_ascii=False, indent=2
-            )
+            return json.dumps({"success": False, "error": "Failed to start task"}, ensure_ascii=False, indent=2)
 
     async def _complete_task(self, task_id: str | None) -> str:
         """Complete a task."""
@@ -278,11 +270,7 @@ class EnhancedUnifiedTaskTool(EnhancedBaseTool):
                         "id": task.id,
                         "content": task.content,
                         "status": task.status.value,
-                        "completed_at": (
-                            task.completed_at.strftime("%Y-%m-%d %H:%M")
-                            if task.completed_at
-                            else None
-                        ),
+                        "completed_at": (task.completed_at.strftime("%Y-%m-%d %H:%M") if task.completed_at else None),
                     },
                     "message": f"Completed: {task.content}",
                     "celebration": "🎉 Great work!",
@@ -291,9 +279,7 @@ class EnhancedUnifiedTaskTool(EnhancedBaseTool):
                 indent=2,
             )
         else:
-            return json.dumps(
-                {"success": False, "error": "Failed to complete task"}, ensure_ascii=False, indent=2
-            )
+            return json.dumps({"success": False, "error": "Failed to complete task"}, ensure_ascii=False, indent=2)
 
     async def _update_task(self, task_id: str | None, status: str | None) -> str:
         """Update a task's status."""
@@ -365,9 +351,7 @@ class EnhancedUnifiedTaskTool(EnhancedBaseTool):
                 indent=2,
             )
         else:
-            return json.dumps(
-                {"success": False, "error": "Failed to update task"}, ensure_ascii=False, indent=2
-            )
+            return json.dumps({"success": False, "error": "Failed to update task"}, ensure_ascii=False, indent=2)
 
     async def _search_tasks(self, query: str | None, limit: int) -> str:
         """Search for tasks by query."""

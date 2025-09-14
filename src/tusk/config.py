@@ -17,45 +17,28 @@ class TuskConfig(BaseModel):
     # Storage settings
     storage_mode: Literal["global", "local"] = Field(
         default="global",
-        description=(
-            "Storage mode: 'global' for cross-project at ~/.coa/tusk, "
-            "'local' for project-specific"
-        ),
+        description=("Storage mode: 'global' for cross-project at ~/.coa/tusk, " "'local' for project-specific"),
     )
 
-    data_dir: Path | None = Field(
-        default=None, description="Custom data directory (overrides storage_mode if set)"
-    )
+    data_dir: Path | None = Field(default=None, description="Custom data directory (overrides storage_mode if set)")
 
     # Search settings
     search_enabled: bool = Field(default=True, description="Enable full-text search")
     max_search_results: int = Field(default=50, description="Maximum search results")
 
     # Memory settings
-    default_checkpoint_ttl: str = Field(
-        default="7d", description="Default TTL for checkpoints (e.g., '7d', '30d', '1h')"
-    )
-    max_highlights_per_checkpoint: int = Field(
-        default=10, description="Maximum highlights to store per checkpoint"
-    )
+    default_checkpoint_ttl: str = Field(default="7d", description="Default TTL for checkpoints (e.g., '7d', '30d', '1h')")
+    max_highlights_per_checkpoint: int = Field(default=10, description="Maximum highlights to store per checkpoint")
 
     # Removed expertise_level - we now use unified tools for everyone
-    enable_transformations: bool = Field(
-        default=True, description="Enable adaptive tool transformations"
-    )
+    enable_transformations: bool = Field(default=True, description="Enable adaptive tool transformations")
 
     # Logging
-    log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = Field(
-        default="INFO", description="Logging level"
-    )
-    log_dir: Path | None = Field(
-        default=None, description="Directory for log files (auto-determined if not set)"
-    )
+    log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = Field(default="INFO", description="Logging level")
+    log_dir: Path | None = Field(default=None, description="Directory for log files (auto-determined if not set)")
 
     # Project settings
-    auto_detect_project: bool = Field(
-        default=True, description="Automatically detect current project from working directory"
-    )
+    auto_detect_project: bool = Field(default=True, description="Automatically detect current project from working directory")
 
     @classmethod
     def from_env(cls) -> "TuskConfig":
@@ -65,14 +48,14 @@ class TuskConfig(BaseModel):
 
         return cls(
             server_name=os.getenv("TUSK_SERVER_NAME", "Tusk"),
-            storage_mode=os.getenv("TUSK_STORAGE_MODE", "global"),
+            storage_mode=os.getenv("TUSK_STORAGE_MODE", "global"),  # type: ignore[arg-type]
             data_dir=Path(data_dir).expanduser() if data_dir else None,
             search_enabled=os.getenv("TUSK_SEARCH_ENABLED", "true").lower() == "true",
             max_search_results=int(os.getenv("TUSK_MAX_SEARCH_RESULTS", "50")),
             default_checkpoint_ttl=os.getenv("TUSK_DEFAULT_TTL", "7d"),
             max_highlights_per_checkpoint=int(os.getenv("TUSK_MAX_HIGHLIGHTS", "10")),
             enable_transformations=os.getenv("TUSK_TRANSFORMATIONS", "true").lower() == "true",
-            log_level=os.getenv("TUSK_LOG_LEVEL", "INFO"),
+            log_level=os.getenv("TUSK_LOG_LEVEL", "INFO"),  # type: ignore[arg-type]
             log_dir=Path(log_dir).expanduser() if log_dir else None,
             auto_detect_project=os.getenv("TUSK_AUTO_DETECT_PROJECT", "true").lower() == "true",
         )
@@ -150,7 +133,7 @@ class TuskConfig(BaseModel):
 
         try:
             with open(registry_path, encoding="utf-8") as f:
-                return json.load(f)
+                return json.load(f)  # type: ignore[no-any-return]
         except (OSError, json.JSONDecodeError):
             return {}
 

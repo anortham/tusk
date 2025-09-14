@@ -34,9 +34,7 @@ class TestDatetimeConsistency:
         """Test that all models create timezone-aware datetimes by default."""
         # Test Checkpoint
         checkpoint = Checkpoint(description="Test checkpoint")
-        assert (
-            checkpoint.created_at.tzinfo is not None
-        ), "Checkpoint.created_at should be timezone-aware"
+        assert checkpoint.created_at.tzinfo is not None, "Checkpoint.created_at should be timezone-aware"
         assert checkpoint.created_at.tzinfo == UTC, "Should use UTC timezone"
 
         # Test Todo
@@ -77,9 +75,7 @@ class TestDatetimeConsistency:
         assert loaded_plan is not None, "Should load plan"
 
         # Check timezone preservation - THIS WILL FAIL with current implementation
-        assert (
-            loaded_checkpoint.created_at.tzinfo is not None
-        ), "Loaded checkpoint should have timezone"
+        assert loaded_checkpoint.created_at.tzinfo is not None, "Loaded checkpoint should have timezone"
         assert loaded_task.created_at.tzinfo is not None, "Loaded task should have timezone"
         assert loaded_plan.created_at.tzinfo is not None, "Loaded plan should have timezone"
 
@@ -110,9 +106,7 @@ class TestDatetimeConsistency:
 
         # This should work without timezone comparison errors
         try:
-            sorted_checkpoints = sorted(
-                loaded_checkpoints, key=lambda c: c.created_at, reverse=True
-            )
+            sorted_checkpoints = sorted(loaded_checkpoints, key=lambda c: c.created_at, reverse=True)
             assert len(sorted_checkpoints) == 3, "Should have all checkpoints"
         except TypeError as e:
             if "can't compare offset-naive and offset-aware datetimes" in str(e):
@@ -140,9 +134,7 @@ class TestDatetimeConsistency:
         try:
             filtered_checkpoints = checkpoint_storage.list_by_date_range(start_date, end_date)
             # Should get checkpoints from last 3 days
-            assert (
-                len(filtered_checkpoints) >= 3
-            ), f"Should get at least 3 checkpoints, got {len(filtered_checkpoints)}"
+            assert len(filtered_checkpoints) >= 3, f"Should get at least 3 checkpoints, got {len(filtered_checkpoints)}"
         except TypeError as e:
             if "can't compare offset-naive and offset-aware datetimes" in str(e):
                 pytest.fail("Timezone comparison error during date filtering")
@@ -179,19 +171,11 @@ class TestDatetimeConsistency:
         # This simulates the logic in recall.py lines 177-178, 196-197
         try:
             # Test checkpoint filtering
-            created_tz_aware = (
-                loaded_checkpoint.created_at.replace(tzinfo=UTC)
-                if loaded_checkpoint.created_at.tzinfo is None
-                else loaded_checkpoint.created_at
-            )
+            created_tz_aware = loaded_checkpoint.created_at.replace(tzinfo=UTC) if loaded_checkpoint.created_at.tzinfo is None else loaded_checkpoint.created_at
             checkpoint_in_range = created_tz_aware >= start_date
 
             # Test task filtering
-            task_created_tz_aware = (
-                loaded_task.created_at.replace(tzinfo=UTC)
-                if loaded_task.created_at.tzinfo is None
-                else loaded_task.created_at
-            )
+            task_created_tz_aware = loaded_task.created_at.replace(tzinfo=UTC) if loaded_task.created_at.tzinfo is None else loaded_task.created_at
             task_in_range = task_created_tz_aware >= start_date
 
             # Should be able to determine which items are in range
@@ -200,9 +184,7 @@ class TestDatetimeConsistency:
 
         except TypeError as e:
             if "can't compare offset-naive and offset-aware datetimes" in str(e):
-                pytest.fail(
-                    "Timezone comparison error during filtering - this is the bug we need to fix"
-                )
+                pytest.fail("Timezone comparison error during filtering - this is the bug we need to fix")
             raise
 
     def test_cross_model_datetime_comparisons(self, temp_config):
@@ -264,9 +246,7 @@ class TestDatetimeConsistency:
         # Check that timezone info is explicitly stored
         # Current implementation may store "2025-09-12T15:25:44.125495Z" (naive)
         # Should store "2025-09-12T15:25:44.125495+00:00" (aware)
-        assert (
-            "Z" in created_at_str or "+00:00" in created_at_str
-        ), f"JSON should contain explicit timezone info, got: {created_at_str}"
+        assert "Z" in created_at_str or "+00:00" in created_at_str, f"JSON should contain explicit timezone info, got: {created_at_str}"
 
     def test_task_status_transitions_preserve_timezone(self, temp_config):
         """Test that task status changes preserve timezone info."""
@@ -297,9 +277,7 @@ class TestDatetimeConsistency:
         # Final reload and verification
         final_task = task_storage.load(task.id)
         assert final_task.completed_at is not None, "Should have completed_at after final reload"
-        assert (
-            final_task.completed_at.tzinfo is not None
-        ), "completed_at should remain timezone-aware"
+        assert final_task.completed_at.tzinfo is not None, "completed_at should remain timezone-aware"
 
     def test_mixed_timezone_data_sorting_fails(self):
         """Test that demonstrates the actual error with mixed timezone data."""
@@ -324,9 +302,7 @@ class TestDatetimeConsistency:
             if len(timezone_aware) == 0 or len(timezone_naive) == 0:
                 pytest.skip("No mixed timezone data found")
 
-            print(
-                f"Found {len(timezone_aware)} timezone-aware and {len(timezone_naive)} timezone-naive checkpoints"
-            )
+            print(f"Found {len(timezone_aware)} timezone-aware and {len(timezone_naive)} timezone-naive checkpoints")
 
             # Try to sort them - this should fail with timezone comparison error
             try:
@@ -336,9 +312,7 @@ class TestDatetimeConsistency:
                 assert len(sorted_checkpoints) == len(checkpoints), "Should have all checkpoints"
             except TypeError as e:
                 if "can't compare offset-naive and offset-aware datetimes" in str(e):
-                    pytest.fail(
-                        "EXPECTED: Timezone comparison error during sorting - this demonstrates the bug"
-                    )
+                    pytest.fail("EXPECTED: Timezone comparison error during sorting - this demonstrates the bug")
                 raise
 
         except Exception as e:

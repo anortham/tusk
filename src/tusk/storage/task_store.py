@@ -2,13 +2,15 @@
 
 import json
 import logging
-from datetime import UTC, datetime
+from datetime import datetime
 from pathlib import Path
+from typing import Any
 
 import portalocker
 
 from ..config import TuskConfig
 from ..models.task import Task, TaskStatus
+from ..models.types import utc_now
 
 logger = logging.getLogger(__name__)
 
@@ -56,9 +58,7 @@ class TaskStorage:
             with open(tasks_file, "w", encoding="utf-8") as f:
                 portalocker.lock(f, portalocker.LOCK_EX)
                 try:
-                    json.dump(
-                        tasks_data, f, indent=2, ensure_ascii=False, default=self._json_serializer
-                    )
+                    json.dump(tasks_data, f, indent=2, ensure_ascii=False, default=self._json_serializer)
                 finally:
                     portalocker.unlock(f)
             return True
@@ -66,9 +66,8 @@ class TaskStorage:
             logger.error(f"Error writing tasks file: {e}")
             return False
 
-    def _json_serializer(self, obj):
+    def _json_serializer(self, obj: Any) -> str:
         """Custom JSON serializer for datetime objects."""
-        from datetime import datetime
 
         if isinstance(obj, datetime):
             return obj.isoformat()
@@ -200,11 +199,7 @@ class TaskStorage:
     def get_active_tasks(self) -> list[Task]:
         """Get tasks that are pending or in progress."""
         all_tasks = self.load_all()
-        return [
-            task
-            for task in all_tasks
-            if task.status in [TaskStatus.PENDING, TaskStatus.IN_PROGRESS]
-        ]
+        return [task for task in all_tasks if task.status in [TaskStatus.PENDING, TaskStatus.IN_PROGRESS]]
 
     def get_summary_stats(self) -> dict[str, int]:
         """Get summary statistics about tasks."""
@@ -246,7 +241,7 @@ class TaskStorage:
                         task.mark_blocked()
                     else:
                         task.status = new_status
-                        task.updated_at = datetime.now(UTC)
+                        task.updated_at = utc_now()
 
                     tasks_data[task_id] = task.model_dump(mode="json")
                     updated_count += 1

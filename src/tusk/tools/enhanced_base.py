@@ -39,9 +39,7 @@ class EnhancedBaseTool(ABC):
 
         Call this after registering tools to add docstring-based parameter descriptions.
         """
-        if not hasattr(mcp_server, "_tool_manager") or not hasattr(
-            mcp_server._tool_manager, "_tools"
-        ):
+        if not hasattr(mcp_server, "_tool_manager") or not hasattr(mcp_server._tool_manager, "_tools"):
             logger.warning("Cannot enhance tools: FastMCP server structure not as expected")
             return
 
@@ -58,9 +56,7 @@ class EnhancedBaseTool(ABC):
 
                     # Enhance parameter schema
                     if hasattr(tool, "parameters"):
-                        enhanced_params = self._enhance_parameter_schema(
-                            original_func, tool.parameters
-                        )
+                        enhanced_params = self._enhance_parameter_schema(original_func, tool.parameters)
                         if enhanced_params != tool.parameters:
                             tool.parameters = enhanced_params
                             enhanced_count += 1
@@ -68,9 +64,7 @@ class EnhancedBaseTool(ABC):
 
                     # Enhance description
                     if hasattr(tool, "description"):
-                        enhanced_desc = self._enhance_description(
-                            original_func, tool.description or ""
-                        )
+                        enhanced_desc = self._enhance_description(original_func, tool.description or "")
                         if enhanced_desc != tool.description:
                             tool.description = enhanced_desc
                             logger.debug(f"Enhanced description for tool: {tool_name}")

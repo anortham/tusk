@@ -87,9 +87,7 @@ class TestHighlightModel:
 
     def test_highlight_json_serialization(self):
         """Test highlight JSON serialization."""
-        highlight = Highlight(
-            content="Test highlight", category=HighlightCategory.DECISION, tags=["test"]
-        )
+        highlight = Highlight(content="Test highlight", category=HighlightCategory.DECISION, tags=["test"])
 
         # Should be JSON serializable
         json_str = highlight.model_dump_json()
