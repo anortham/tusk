@@ -49,9 +49,7 @@ class Highlight(BaseModel):
         description="When this highlight occurred",
     )
 
-    context: str | None = Field(
-        default=None, description="Additional context about the highlight"
-    )
+    context: str | None = Field(default=None, description="Additional context about the highlight")
 
     tags: list[str] = Field(default_factory=list, description="Tags for organization and search")
 

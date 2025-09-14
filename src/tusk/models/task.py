@@ -52,8 +52,7 @@ class Task(BaseModel):
 
     active_form: str = Field(
         description=(
-            "Present continuous form for when this task is in progress "
-            "(e.g., 'Running tests')"
+            "Present continuous form for when this task is in progress " "(e.g., 'Running tests')"
         )
     )
 

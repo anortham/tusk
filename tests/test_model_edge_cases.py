@@ -416,7 +416,6 @@ class TestModelTimestampConsistency:
         plan = Plan(title="UTC test", description="Testing UTC")
         highlight = Highlight(content="UTC test")
 
-
         # Check different timestamp fields based on model type
         assert checkpoint.created_at.tzinfo == UTC
         if checkpoint.updated_at is not None:
