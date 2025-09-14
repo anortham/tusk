@@ -29,27 +29,16 @@ class EnhancedUnifiedCheckpointTool(EnhancedBaseTool):
         ) -> str:
             """Save and retrieve work progress checkpoints.
 
-            Checkpoints are like save points in your development journey, capturing
-            important moments and progress that can be recalled later. Use them before
-            risky changes, after achievements, at natural breaks, or when insights emerge.
+            Checkpoints capture important moments and progress for later recall. Use before risky changes, after achievements, or when insights emerge.
 
             Args:
-                action: The operation to perform. Valid values are "save" (create new checkpoint),
-                    "list" (show recent checkpoints), "search" (find checkpoints by content).
-                    This parameter is required.
-                description: Progress description for saving checkpoints. Should be descriptive
-                    and meaningful (e.g., "Fixed authentication bug in login system" or
-                    "Completed user dashboard redesign"). Only required for action="save".
-                limit: Maximum number of results to return for "list" and "search" actions.
-                    Default 5, recommended range 3-20 to balance usefulness with readability.
-                query: Search query text for finding checkpoints. Searches checkpoint descriptions
-                    and related context. Use specific keywords for better results. Only used
-                    with action="search".
+                action: Required. Operations: "save" (new checkpoint), "list" (recent checkpoints), "search" (find by content)
+                description: Progress description for "save". Example: "Fixed auth bug in login system"
+                limit: Max results for "list"/"search" (default 5, range 3-20)
+                query: Search text for "search" action. Searches checkpoint descriptions
 
             Returns:
-                JSON response with checkpoint data, timestamps, and contextual information.
-                Save operations return the new checkpoint details. List/search operations
-                return arrays of matching checkpoints with relevance scoring.
+                JSON with checkpoint data, timestamps, and context info.
             """
             try:
                 if action == "save":
@@ -215,25 +204,17 @@ class EnhancedUnifiedRecallTool(EnhancedBaseTool):
         ) -> str:
             """Smart memory recall - gets the context you need automatically.
 
-            Recall retrieves your past work context to maintain continuity across sessions.
-            This is essential for picking up where you left off and building on previous
-            progress without losing important context or decisions.
+            Retrieve past work context to maintain continuity across sessions and build on previous progress.
 
             Args:
-                context: What type of context to recall. Valid values are "recent" (last 2 days
-                    of activity), "week" (past week summary), "session" (specific session by ID),
-                    "branch" (git branch filtered), "all" (comprehensive history). Default "recent".
-                days_back: Number of days to look back for context. Valid range 1-30 days.
-                    Used with "week", "branch", and "all" contexts. Default 7 days.
-                session_id: Specific session identifier to recall. Required when context="session".
-                    Use previous recall results to find valid session IDs.
-                git_branch: Git branch name to filter context by. Required when context="branch".
-                    Useful for feature-specific work continuity.
+                context: Context type. Values: "recent" (last 2 days), "week" (past week),
+                    "session" (specific session), "branch" (git filtered), "all" (full history). Default "recent"
+                days_back: Days to look back (1-30). Used with "week"/"branch"/"all" (default 7)
+                session_id: Session ID for "session" context. Get from previous recall results
+                git_branch: Branch name for "branch" context. Filters by git branch
 
             Returns:
-                JSON response with comprehensive context including checkpoints, todos, plans,
-                and session summaries. Includes timestamps, project associations, and
-                relevance scoring to help prioritize information.
+                JSON with context including checkpoints, todos, plans, and session summaries.
             """
             try:
                 if context == "recent":
@@ -379,37 +360,21 @@ class EnhancedUnifiedPlanTool(EnhancedBaseTool):
         ) -> str:
             """Plan complex work with structured multi-step approach.
 
-            Plans help break down complex work into manageable steps, track progress
-            across multiple sessions, and maintain alignment with users on project
-            direction. Use plans for any work requiring coordination of multiple tasks.
+            Break down complex work into manageable steps, track progress across sessions, and coordinate multiple tasks.
 
             Args:
-                action: The operation to perform. Valid values are "create" (new plan),
-                    "list" (show plans), "activate" (set active plan), "complete" (finish plan),
-                    "add_step" (add step to plan), "complete_step" (finish step),
-                    "search" (find plans by content). This parameter is required.
-                title: Plan title for creating new plans. Should be descriptive and
-                    goal-oriented (e.g., "Implement user authentication system").
-                    Only required for action="create".
-                description: Detailed plan description explaining the overall goal, approach,
-                    and expected outcomes. Used with action="create" for context.
-                plan_id: The unique identifier of the plan to operate on. Required for
-                    "activate", "complete", and "add_step" actions. Use action="list" to see plan IDs.
-                step_description: Description of the step to add to a plan. Should be specific
-                    and actionable (e.g., "Create user registration API endpoint"). Only used
-                    with action="add_step".
-                step_id: The unique identifier of the step to complete. Required for
-                    action="complete_step". Use plan details to see step IDs.
-                query: Search query text for finding plans. Searches plan titles, descriptions,
-                    and step content. Use specific keywords for better results. Only used
-                    with action="search".
-                limit: Maximum number of results to return for "list" and "search" actions.
-                    Default 10, recommended range 5-20 for optimal readability.
+                action: Required. Operations: "create" (new plan), "list" (show plans), "activate" (set active),
+                    "complete" (finish plan), "add_step" (add step), "complete_step" (finish step), "search" (find by content)
+                title: Plan title for "create". Example: "Implement user auth system"
+                description: Plan details for "create" explaining goal and approach
+                plan_id: Plan ID for "activate"/"complete"/"add_step". Get from "list" action
+                step_description: Step details for "add_step". Example: "Create registration API endpoint"
+                step_id: Step ID for "complete_step". Get from plan details
+                query: Search text for "search" action. Searches titles, descriptions, steps
+                limit: Max results for "list"/"search" (default 10, range 5-20)
 
             Returns:
-                JSON response with plan data including steps, progress tracking, and status
-                information. Create operations return new plan details. List/search operations
-                return arrays of plans with completion statistics and next actions.
+                JSON with plan data, steps, progress tracking, and status info.
             """
             try:
                 if action == "create":
@@ -626,24 +591,15 @@ class EnhancedUnifiedStandupTool(EnhancedBaseTool):
         ) -> str:
             """Generate a quick standup report of your recent work.
 
-            Standup reports provide structured summaries of your progress, perfect for
-            team updates, personal reflection, or understanding what you've accomplished
-            across projects. Reports aggregate work from all projects and sessions.
+            Provides structured progress summaries for team updates, reflection, or tracking accomplishments across projects.
 
             Args:
-                timeframe: Report timeframe scope. Valid values are "daily" (last day),
-                    "weekly" (past week), "custom" (specific days back). Default "daily"
-                    provides focused recent progress.
-                include_completed: Whether to include completed tasks and checkpoints in the
-                    report. Set to False to focus only on ongoing work. Default True shows
-                    comprehensive progress including achievements.
-                days_back: Number of days to include in the report when timeframe="custom".
-                    Valid range 1-14 days. Used only with custom timeframe. Default 1 day.
+                timeframe: Report scope. Values: "daily" (last day), "weekly" (past week), "custom" (specific days). Default "daily"
+                include_completed: Include completed tasks/checkpoints. False = ongoing only. Default True
+                days_back: Days for "custom" timeframe (1-14). Default 1 day
 
             Returns:
-                JSON response with structured standup report including progress summaries,
-                completed work, ongoing tasks, blockers, and recommendations for next steps.
-                Reports are organized by project and include time-based progress tracking.
+                JSON with structured standup report including progress summaries, tasks, blockers, and next steps.
             """
             try:
                 if timeframe == "daily":

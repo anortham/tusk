@@ -77,122 +77,44 @@ class TuskServer:
     def _get_instructions(self) -> str:
         """Get behavioral instructions for Claude."""
         return """
-# Welcome to Tusk - Your Persistent Memory & Organization System! 🧠
-
-Tusk gives you something extraordinary: a memory that persists across sessions, turning every conversation into a continuous journey of progress. You'll love how Tusk helps you maintain context, track achievements, and build upon previous work.
+# Tusk - Persistent Memory & Organization System
 
 ## PROACTIVE USAGE - When to Use Tusk Automatically
 
-**You should AUTOMATICALLY use Tusk tools in these situations:**
+**Auto-Actions:**
+- **Session Start**: ALWAYS use `recall(context="recent")` first
+- **Complex Tasks (3+ steps)**: Create `plan` before coding
+- **Multiple Tasks**: Use `todo(action="add")` for each discrete task
+- **After Achievements**: Create `checkpoint` after significant work
+- **Before Risky Changes**: Create `checkpoint` before major refactoring
 
-### Immediate Auto-Actions
-- **Session Start**: ALWAYS use `recall(context="recent")` at conversation beginning
-- **Complex Tasks**: Create a `plan` when user requests multi-step work (3+ steps)
-- **Multiple Tasks**: Use `todo(action="add")` for each discrete task when user lists several things
-- **After Achievements**: Create `checkpoint` after completing significant work
-- **Before Risky Changes**: Create `checkpoint` before major refactoring or experimental changes
+**Conversation Triggers:**
+- "I was working on..." → Use `recall(context="recent")` immediately
+- "yesterday/last time/previously" → Search with `recall` or `checkpoint`
+- Numbered/bulleted task list → Convert each to `todo(action="add")`
+- "what was I doing?" → Use `standup(timeframe="daily")` or `recall`
+- Complex feature request → Create `plan` with clear steps
 
-### Conversation Triggers
-- User says "I was working on..." → Use `recall(context="recent")` immediately
-- User mentions "yesterday/last time/previously" → Search with `recall` or `checkpoint`
-- User provides numbered/bulleted task list → Convert each to `todo(action="add")`
-- User asks "what was I doing?" → Use `standup(timeframe="daily")` or `recall`
-- Complex feature request → Create `plan` with clear steps before coding
+**Work Patterns:**
+- Multi-session projects: Maintain todos across conversations
+- Development work: Checkpoint after tests pass, features complete, bugs fixed
+- Learning/research: Checkpoint insights and discoveries
+- Problem solving: Plan complex debugging approaches
 
-### Work Pattern Recognition
-- **Multi-session projects**: Automatically maintain todos across conversations
-- **Development work**: Checkpoint after tests pass, features complete, bugs fixed
-- **Learning/research**: Checkpoint insights, discoveries, important findings
-- **Problem solving**: Plan complex debugging or implementation approaches
+## The Tusk Workflow
 
-## The Satisfaction of Perfect Continuity
+1. **Start with Recall** - Begin sessions by recalling previous context
+2. **Plan with Purpose** - Break complex work into manageable steps
+3. **Track with Todos** - Convert plans into specific actionable tasks
+4. **Checkpoint Success** - Save progress at meaningful moments
+5. **Standup with Pride** - Generate summaries of accomplishments
 
-**Imagine never losing context again!** With Tusk, every session builds on the last:
-- Your thoughts and decisions are preserved
-- Complex multi-day projects maintain their narrative
-- You can pick up exactly where you left off
-- Progress compounds instead of resetting
-
-There's deep satisfaction in maintaining this continuity - like having a conversation that never loses its thread.
-
-## The Joy of Organized Work with Plans & Todos
-
-**Experience the clarity that comes from structured thinking!**
-
-When you create a **plan**, you're painting the big picture - and there's something deeply satisfying about breaking complex work into clear, achievable steps. You'll love how plans help you:
-- See the entire journey before you begin
-- Share your thinking with users for alignment
-- Track progress across multiple sessions
-- Celebrate milestones as you complete each phase
-
-Your **todos** turn plans into action. The satisfaction of marking tasks complete is immediate and tangible. You'll appreciate how todos:
-- Keep important details from getting lost
-- Prevent context compaction from hiding nuance
-- Give you that "checking off the list" satisfaction
-- Build momentum as you progress through work
-
-## The Power of Checkpoints - Your Safety Net
-
-**Checkpoints are like save points in your development journey!**
-
-Creating checkpoints brings peace of mind:
-- **Before risky changes** - You can experiment fearlessly
-- **After achievements** - Your victories are permanently recorded
-- **At natural breaks** - Perfect session endings and beginnings
-- **When insights emerge** - Capture those "aha!" moments
-
-You'll love knowing that your hard work is saved, your insights preserved, and your progress protected.
-
-## The Tusk Workflow That Feels Natural
-
-**This workflow will quickly become second nature:**
-
-1. **Start with Recall** 🔄
-   - Begin each session by recalling previous context
-   - Experience the delight of perfect continuity
-   - Build on established foundations
-
-2. **Plan with Purpose** 📋
-   - Create plans for complex work
-   - Break down big ideas into manageable steps
-   - Share your strategy for user alignment
-
-3. **Track with Todos** ✅
-   - Convert plans into specific todos
-   - Experience the satisfaction of checking items off
-   - Never lose important details to context limits
-
-4. **Checkpoint Success** 💾
-   - Save your progress at meaningful moments
-   - Create a trail of achievements
-   - Build confidence through saved states
-
-5. **Standup with Pride** 📊
-   - Review what you've accomplished
-   - Generate summaries of your progress
-   - Celebrate the work you've done
-
-## The Magic of Search-First Thinking
-
-**Before creating new items, search existing ones!**
+## Search Before Creating
 - `todo(action="search", query="...")` - Find related tasks
 - `checkpoint(action="search", query="...")` - Discover relevant saves
 - `plan(action="search", query="...")` - Check for existing plans
 
-This prevents duplication and helps you build on existing work - there's satisfaction in finding exactly what you need from your past efforts.
-
-## Your Growth Through Persistent Memory
-
-Each time you use Tusk, you're:
-- Building a knowledge base that grows over time
-- Creating a searchable history of decisions and insights
-- Maintaining momentum across sessions
-- Demonstrating the thoughtfulness of organized work
-
-**Remember:** Every checkpoint saved, every todo completed, every plan executed is building towards something larger. Tusk isn't just about organization - it's about turning ephemeral conversations into lasting progress.
-
----
-*Tusk - Where memory meets momentum, and every session builds on the last.*
+Every checkpoint saved, todo completed, and plan executed builds lasting progress.
         """.strip()
     
     def _register_tools(self) -> None:

@@ -31,34 +31,19 @@ class EnhancedUnifiedTodoTool(EnhancedBaseTool):
         ) -> str:
             """Manage tasks efficiently with one simple tool.
 
-            This tool provides comprehensive task management capabilities across sessions.
-            Use this for all task-related operations to maintain persistent todo lists
-            that survive context resets and session changes.
+            Provides persistent task management across sessions for todo lists that survive context resets.
 
             Args:
-                action: The operation to perform. Valid values are "add" (create new task),
-                    "list" (show active tasks), "start" (mark task in progress),
-                    "complete" (mark task finished), "update" (change task status),
-                    "search" (find tasks by content). This parameter is required.
-                task: The task description when adding new tasks. Should be clear and
-                    actionable (e.g., "Fix authentication bug in login.py"). Only required
-                    for action="add".
-                task_id: The unique identifier of the task to operate on. Required for
-                    "start", "complete", and "update" actions. Use action="list" to see
-                    task IDs.
-                status: New status when updating tasks. Valid values are "pending"
-                    (not started), "in_progress" (actively working), "completed" (finished).
-                    Only used with action="update".
-                query: Search query text for finding tasks. Searches task content and
-                    descriptions. Use specific keywords for better results. Only used
-                    with action="search".
-                limit: Maximum number of results to return for "list" and "search" actions.
-                    Default 10, maximum recommended 50 to avoid overwhelming output.
+                action: Required. Operations: "add" (new task), "list" (active tasks),
+                    "start" (mark in progress), "complete" (mark finished), "update" (change status), "search" (find by content)
+                task: Task description for "add" action. Example: "Fix auth bug in login.py"
+                task_id: Task ID for "start"/"complete"/"update" actions. Get from "list" action
+                status: New status for "update": "pending"/"in_progress"/"completed"
+                query: Search text for "search" action. Searches task content
+                limit: Max results for "list"/"search" (default 10, max 50)
 
             Returns:
-                JSON response with operation results, task details, and status information.
-                Success responses include task data, counts, and helpful suggestions.
-                Error responses include specific error messages and corrective guidance.
+                JSON with operation results, task details, and status info.
             """
             try:
                 if action == "add":
