@@ -31,7 +31,7 @@ This directory contains Claude Code hooks and custom commands that integrate wit
 
 **Features:**
 - Detects completion language patterns
-- Suggests marking todos as completed
+- Suggests marking tasks as completed
 - Prevents stale task buildup
 - Provides actionable next steps
 
@@ -42,7 +42,7 @@ This directory contains Claude Code hooks and custom commands that integrate wit
 ### `/standup [period]`
 Generate a comprehensive standup report showing:
 - Recent work and completions
-- Current active todos
+- Current active tasks
 - Plan progress and next steps
 - Recommended priorities
 
@@ -68,16 +68,16 @@ Save current work state as a checkpoint:
 - Searchable and recallable
 - Includes work highlights and decisions
 
-### `/todos [add|complete|list]`
-Manage persistent todos:
+### `/tasks [add|complete|list]`
+Manage persistent tasks:
 - `add "task"` - Create new persistent todo
 - `complete <id>` - Mark todo as completed
 - `list` - Show current todo status
 
 ### `/search <query> [scope]`
 Search all persistent memory:
-- Full-text search across checkpoints, todos, plans
-- Scoped search (checkpoints, todos, plans)
+- Full-text search across checkpoints, tasks, plans
+- Scoped search (checkpoints, tasks, plans)
 - Results with relevance scores
 
 ## 🚀 Setup
@@ -117,7 +117,7 @@ Commands use Claude Code's built-in argument parsing and tool restrictions. Each
 1. **Use Pre-Compact Hooks**: Let them save context automatically
 2. **Regular Standups**: Use `/standup` to review progress
 3. **Controlled Recalls**: Use `/recall-check ask` when unsure about context
-4. **Active Todo Management**: Complete todos when work is done
+4. **Active Todo Management**: Complete tasks when work is done
 5. **Search First**: Use `/search` to find existing context before starting work
 
 ## 🔗 Integration with VS Code Bridge

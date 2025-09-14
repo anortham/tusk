@@ -38,7 +38,7 @@ class TestServerConfiguration:
         
         # Verify server has storage components
         assert hasattr(server, 'checkpoint_storage')
-        assert hasattr(server, 'todo_storage')
+        assert hasattr(server, 'task_storage')
         assert hasattr(server, 'plan_storage')
         assert hasattr(server, 'search_engine')
         
@@ -156,12 +156,12 @@ class TestServerStartupSequence:
         config.ensure_directories()
         
         # Test that storage classes can be imported and initialized
-        from src.tusk.storage import CheckpointStorage, TodoStorage, PlanStorage
+        from src.tusk.storage import CheckpointStorage, TaskStorage, PlanStorage
         from src.tusk.storage.search import SearchEngine
         
         # Should be able to create storage instances
         checkpoint_storage = CheckpointStorage(config)
-        todo_storage = TodoStorage(config)
+        todo_storage = TaskStorage(config)
         plan_storage = PlanStorage(config)
         search_engine = SearchEngine(config)
         

@@ -6,7 +6,7 @@ from datetime import datetime, timezone, timedelta
 from typing import Optional, List
 from uuid import uuid4
 
-from ..models.todo import Todo, TodoStatus, TodoPriority
+from ..models.task import Task, TaskStatus, TaskPriority
 from ..models.checkpoint import Checkpoint
 from ..models.plan import Plan, PlanStatus, PlanStep
 from .enhanced_base import EnhancedBaseTool
@@ -23,9 +23,9 @@ class EnhancedUnifiedCheckpointTool(EnhancedBaseTool):
         @mcp_server.tool
         async def checkpoint(
             action: str,
-            description: Optional[str] = None,
+            description: str | None = None,
             limit: int = 5,
-            query: Optional[str] = None
+            query: str | None = None
         ) -> str:
             """Save and retrieve work progress checkpoints.
 
@@ -63,6 +63,109 @@ class EnhancedUnifiedCheckpointTool(EnhancedBaseTool):
         # Enhance with parameter descriptions
         self.enhance_registered_tools(mcp_server, ['checkpoint'])
 
+    def _get_git_info(self, project_path: str) -> tuple[Optional[str], Optional[str]]:
+        """Get current git branch and commit hash."""
+        try:
+            import subprocess
+            import os
+
+            if not project_path or not os.path.exists(project_path):
+                return None, None
+
+            # Get current branch
+            branch_result = subprocess.run(
+                ['git', 'branch', '--show-current'],
+                capture_output=True,
+                text=True,
+                cwd=project_path,
+                timeout=5
+            )
+
+            # Get current commit hash (short)
+            commit_result = subprocess.run(
+                ['git', 'rev-parse', '--short=8', 'HEAD'],
+                capture_output=True,
+                text=True,
+                cwd=project_path,
+                timeout=5
+            )
+
+            branch = branch_result.stdout.strip() if branch_result.returncode == 0 else None
+            commit = commit_result.stdout.strip() if commit_result.returncode == 0 else None
+
+            return branch, commit
+
+        except Exception as e:
+            logger.debug(f"Could not get git info: {e}")
+            return None, None
+
+    def _get_recently_modified_files(self, project_path: str, max_files: int = 20) -> list[str]:
+        """Get recently modified files in the project."""
+        try:
+            import subprocess
+            import os
+
+            if not project_path or not os.path.exists(project_path):
+                return []
+
+            # Get files modified in last 24 hours, sorted by modification time
+            cmd = [
+                'git', 'diff', '--name-only',
+                '--diff-filter=AM',  # Added or Modified
+                'HEAD~1..HEAD'  # Since last commit
+            ]
+
+            result = subprocess.run(
+                cmd,
+                capture_output=True,
+                text=True,
+                cwd=project_path,
+                timeout=5
+            )
+
+            if result.returncode == 0 and result.stdout.strip():
+                files = [f.strip() for f in result.stdout.strip().split('\n') if f.strip()]
+                return files[:max_files]
+
+            # Fallback: get recently modified files from filesystem
+            cmd_ls = ['find', '.', '-type', 'f', '-mtime', '-1', '-not', '-path', './.git/*']
+            result_ls = subprocess.run(
+                cmd_ls,
+                capture_output=True,
+                text=True,
+                cwd=project_path,
+                timeout=5
+            )
+
+            if result_ls.returncode == 0:
+                files = [f.strip().lstrip('./') for f in result_ls.stdout.strip().split('\n')
+                        if f.strip() and not f.startswith('./.git')]
+                return files[:max_files]
+
+            return []
+
+        except Exception as e:
+            logger.debug(f"Could not get recently modified files: {e}")
+            return []
+
+    def _build_work_context(self, description: str, git_branch: Optional[str],
+                           git_commit: Optional[str], active_files: list[str]) -> str:
+        """Build rich work context for the checkpoint."""
+        context_parts = [f"Progress: {description}"]
+
+        if git_branch:
+            context_parts.append(f"Branch: {git_branch}")
+        if git_commit:
+            context_parts.append(f"Commit: {git_commit}")
+
+        if active_files:
+            files_str = ", ".join(active_files[:5])  # Show first 5 files
+            if len(active_files) > 5:
+                files_str += f" (and {len(active_files) - 5} more)"
+            context_parts.append(f"Active files: {files_str}")
+
+        return "\n".join(context_parts)
+
     async def _save_checkpoint(self, description: Optional[str]) -> str:
         """Save a progress checkpoint."""
         if not description:
@@ -75,12 +178,25 @@ class EnhancedUnifiedCheckpointTool(EnhancedBaseTool):
         project_id = self.config.get_current_project_id()
         project_path = self.config.get_current_project_path()
 
+        # Get git context
+        git_branch, git_commit = self._get_git_info(project_path)
+
+        # Get recently modified files
+        active_files = self._get_recently_modified_files(project_path)
+
+        # Build work context
+        work_context = self._build_work_context(description, git_branch, git_commit, active_files)
+
         checkpoint = Checkpoint(
             workspace_id="",
             project_id=project_id,
             project_path=project_path,
             description=description,
             session_id=f"session_{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')}",
+            git_branch=git_branch,
+            git_commit=git_commit,
+            work_context=work_context,
+            active_files=active_files[:10],  # Limit to top 10 files
         )
 
         checkpoint.set_ttl(self.config.default_checkpoint_ttl)
@@ -199,8 +315,8 @@ class EnhancedUnifiedRecallTool(EnhancedBaseTool):
         async def recall(
             context: str = "recent",
             days_back: int = 7,
-            session_id: Optional[str] = None,
-            git_branch: Optional[str] = None
+            session_id: str | None = None,
+            git_branch: str | None = None
         ) -> str:
             """Smart memory recall - gets the context you need automatically.
 
@@ -254,8 +370,8 @@ class EnhancedUnifiedRecallTool(EnhancedBaseTool):
             if cp.created_at >= cutoff_date
         ]
 
-        # Get active todos
-        active_todos = self.todo_storage.get_active_todos()[:5]
+        # Get active tasks
+        active_tasks = self.task_storage.get_active_tasks()[:5]
 
         # Get recent plans
         recent_plans = [
@@ -269,9 +385,9 @@ class EnhancedUnifiedRecallTool(EnhancedBaseTool):
             "timeframe": "last 2 days",
             "summary": {
                 "checkpoints_count": len(recent_checkpoints),
-                "active_todos": len(active_todos),
+                "active_tasks": len(active_tasks),
                 "recent_plans": len(recent_plans),
-                "context_available": len(recent_checkpoints) > 0 or len(active_todos) > 0 or len(recent_plans) > 0
+                "context_available": len(recent_checkpoints) > 0 or len(active_tasks) > 0 or len(recent_plans) > 0
             },
             "checkpoints": [
                 {
@@ -282,14 +398,14 @@ class EnhancedUnifiedRecallTool(EnhancedBaseTool):
                 }
                 for cp in recent_checkpoints[:3]
             ],
-            "active_todos": [
+            "active_tasks": [
                 {
-                    "id": todo.id,
-                    "content": todo.content,
-                    "status": todo.status.value,
-                    "active_form": todo.active_form if hasattr(todo, 'active_form') else None
+                    "id": task.id,
+                    "content": task.content,
+                    "status": task.status.value,
+                    "active_form": task.active_form if hasattr(task, 'active_form') else None
                 }
-                for todo in active_todos
+                for task in active_tasks
             ],
             "recent_plans": [
                 {
@@ -300,7 +416,7 @@ class EnhancedUnifiedRecallTool(EnhancedBaseTool):
                 }
                 for plan in recent_plans
             ],
-            "message": "Recent context loaded successfully" if (recent_checkpoints or active_todos or recent_plans) else "No recent context found"
+            "message": "Recent context loaded successfully" if (recent_checkpoints or active_tasks or recent_plans) else "No recent context found"
         }, ensure_ascii=False, indent=2)
 
     async def _recall_timeframe(self, days_back: int) -> str:
@@ -350,12 +466,12 @@ class EnhancedUnifiedPlanTool(EnhancedBaseTool):
         @mcp_server.tool
         async def plan(
             action: str,
-            title: Optional[str] = None,
-            description: Optional[str] = None,
-            plan_id: Optional[str] = None,
-            step_description: Optional[str] = None,
-            step_id: Optional[str] = None,
-            query: Optional[str] = None,
+            title: str | None = None,
+            description: str | None = None,
+            plan_id: str | None = None,
+            step_description: str | None = None,
+            step_id: str | None = None,
+            query: str | None = None,
             limit: int = 10
         ) -> str:
             """Plan complex work with structured multi-step approach.
@@ -636,7 +752,7 @@ class EnhancedUnifiedStandupTool(EnhancedBaseTool):
                 if cp.created_at >= cutoff_date
             ]
 
-        active_todos = self.todo_storage.get_active_todos()[:10]
+        active_tasks = self.task_storage.get_active_tasks()[:10]
 
         return json.dumps({
             "success": True,
@@ -645,8 +761,8 @@ class EnhancedUnifiedStandupTool(EnhancedBaseTool):
             "generated_at": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M"),
             "summary": {
                 "achievements": len(recent_checkpoints),
-                "ongoing_tasks": len([t for t in active_todos if t.status == TodoStatus.IN_PROGRESS]),
-                "pending_tasks": len([t for t in active_todos if t.status == TodoStatus.PENDING]),
+                "ongoing_tasks": len([t for t in active_tasks if t.status == TaskStatus.IN_PROGRESS]),
+                "pending_tasks": len([t for t in active_tasks if t.status == TaskStatus.PENDING]),
                 "projects_active": len(set(cp.project_id for cp in recent_checkpoints)) if recent_checkpoints else 0
             },
             "achievements": [
@@ -659,23 +775,23 @@ class EnhancedUnifiedStandupTool(EnhancedBaseTool):
             ] if include_completed else [],
             "ongoing_work": [
                 {
-                    "content": todo.content,
-                    "status": todo.status.value,
-                    "active_form": getattr(todo, 'active_form', todo.content),
-                    "project_id": todo.project_id
+                    "content": task.content,
+                    "status": task.status.value,
+                    "active_form": getattr(task, 'active_form', task.content),
+                    "project_id": task.project_id
                 }
-                for todo in active_todos if todo.status == TodoStatus.IN_PROGRESS
+                for task in active_tasks if task.status == TaskStatus.IN_PROGRESS
             ],
             "next_actions": [
                 {
-                    "content": todo.content,
-                    "priority": todo.priority.value,
-                    "project_id": todo.project_id
+                    "content": task.content,
+                    "priority": task.priority.value,
+                    "project_id": task.project_id
                 }
-                for todo in active_todos if todo.status == TodoStatus.PENDING
+                for task in active_tasks if task.status == TaskStatus.PENDING
             ][:3],
             "blockers": [],  # Would implement blocker detection
-            "productivity_score": "High" if (recent_checkpoints or any(t.status == TodoStatus.IN_PROGRESS for t in active_todos)) else "Moderate"
+            "productivity_score": "High" if (recent_checkpoints or any(t.status == TaskStatus.IN_PROGRESS for t in active_tasks)) else "Moderate"
         }, ensure_ascii=False, indent=2)
 
     async def _generate_weekly_standup(self, include_completed: bool) -> str:

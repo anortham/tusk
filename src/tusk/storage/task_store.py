@@ -8,13 +8,13 @@ from typing import Dict, List, Optional
 import portalocker
 
 from ..config import TuskConfig
-from ..models.todo import Todo, TodoStatus
+from ..models.task import Task, TaskStatus
 
 logger = logging.getLogger(__name__)
 
 
-class TodoStorage:
-    """Storage for todos using a single JSON file per workspace."""
+class TaskStorage:
+    """Storage for tasks using a single JSON file per workspace."""
     
     def __init__(self, config: TuskConfig):
         self.config = config
@@ -71,7 +71,7 @@ class TodoStorage:
             return obj.isoformat()
         raise TypeError(f"Object of type {type(obj)} is not JSON serializable")
     
-    def load(self, todo_id: str) -> Optional[Todo]:
+    def load(self, todo_id: str) -> Optional[Task]:
         """Load a todo by ID."""
         todos_data = self._load_todos_file()
         
@@ -79,12 +79,12 @@ class TodoStorage:
             return None
         
         try:
-            return Todo.model_validate(todos_data[todo_id])
+            return Task.model_validate(todos_data[todo_id])
         except Exception as e:
             logger.error(f"Error deserializing todo {todo_id}: {e}")
             return None
     
-    def save(self, todo: Todo) -> bool:
+    def save(self, todo: Task) -> bool:
         """Save a todo."""
         todos_data = self._load_todos_file()
         
@@ -128,14 +128,14 @@ class TodoStorage:
         todos_data = self._load_todos_file()
         return todo_id in todos_data
     
-    def load_all(self) -> List[Todo]:
+    def load_all(self) -> List[Task]:
         """Load all todos."""
         todos_data = self._load_todos_file()
         todos = []
         
         for todo_id, todo_data in todos_data.items():
             try:
-                todo = Todo.model_validate(todo_data)
+                todo = Task.model_validate(todo_data)
                 todos.append(todo)
             except Exception as e:
                 logger.error(f"Error deserializing todo {todo_id}: {e}")
@@ -151,34 +151,34 @@ class TodoStorage:
         """Count the number of todos."""
         return len(self.list_ids())
     
-    def find_by_status(self, status: TodoStatus) -> List[Todo]:
+    def find_by_status(self, status: TaskStatus) -> List[Task]:
         """Find todos by status."""
         all_todos = self.load_all()
         return [todo for todo in all_todos if todo.status == status]
     
-    def find_pending(self) -> List[Todo]:
+    def find_pending(self) -> List[Task]:
         """Find all pending todos."""
-        return self.find_by_status(TodoStatus.PENDING)
+        return self.find_by_status(TaskStatus.PENDING)
     
-    def find_in_progress(self) -> List[Todo]:
+    def find_in_progress(self) -> List[Task]:
         """Find all in-progress todos."""
-        return self.find_by_status(TodoStatus.IN_PROGRESS)
+        return self.find_by_status(TaskStatus.IN_PROGRESS)
     
-    def find_completed(self) -> List[Todo]:
+    def find_completed(self) -> List[Task]:
         """Find all completed todos."""
-        return self.find_by_status(TodoStatus.COMPLETED)
+        return self.find_by_status(TaskStatus.COMPLETED)
     
-    def find_by_checkpoint(self, checkpoint_id: str) -> List[Todo]:
+    def find_by_checkpoint(self, checkpoint_id: str) -> List[Task]:
         """Find todos linked to a specific checkpoint."""
         all_todos = self.load_all()
         return [todo for todo in all_todos if todo.checkpoint_id == checkpoint_id]
     
-    def find_by_plan(self, plan_id: str) -> List[Todo]:
+    def find_by_plan(self, plan_id: str) -> List[Task]:
         """Find todos linked to a specific plan."""
         all_todos = self.load_all()
         return [todo for todo in all_todos if todo.plan_id == plan_id]
     
-    def find_by_tags(self, tags: List[str]) -> List[Todo]:
+    def find_by_tags(self, tags: List[str]) -> List[Task]:
         """Find todos that have any of the specified tags."""
         all_todos = self.load_all()
         matching_todos = []
@@ -189,17 +189,17 @@ class TodoStorage:
         
         return matching_todos
     
-    def find_overdue(self) -> List[Todo]:
+    def find_overdue(self) -> List[Task]:
         """Find todos that are overdue."""
         all_todos = self.load_all()
         return [todo for todo in all_todos if todo.is_overdue()]
     
-    def get_active_todos(self) -> List[Todo]:
+    def get_active_tasks(self) -> List[Task]:
         """Get todos that are pending or in progress."""
         all_todos = self.load_all()
         return [
             todo for todo in all_todos 
-            if todo.status in [TodoStatus.PENDING, TodoStatus.IN_PROGRESS]
+            if todo.status in [TaskStatus.PENDING, TaskStatus.IN_PROGRESS]
         ]
     
     def get_summary_stats(self) -> Dict[str, int]:
@@ -223,7 +223,7 @@ class TodoStorage:
         
         return stats
     
-    def bulk_update_status(self, todo_ids: List[str], new_status: TodoStatus) -> int:
+    def bulk_update_status(self, todo_ids: List[str], new_status: TaskStatus) -> int:
         """Update status for multiple todos. Returns count of updated todos."""
         updated_count = 0
         todos_data = self._load_todos_file()
@@ -231,14 +231,14 @@ class TodoStorage:
         for todo_id in todo_ids:
             if todo_id in todos_data:
                 try:
-                    todo = Todo.model_validate(todos_data[todo_id])
+                    todo = Task.model_validate(todos_data[todo_id])
                     
                     # Update status using the appropriate method
-                    if new_status == TodoStatus.IN_PROGRESS:
+                    if new_status == TaskStatus.IN_PROGRESS:
                         todo.mark_in_progress()
-                    elif new_status == TodoStatus.COMPLETED:
+                    elif new_status == TaskStatus.COMPLETED:
                         todo.mark_completed()
-                    elif new_status == TodoStatus.BLOCKED:
+                    elif new_status == TaskStatus.BLOCKED:
                         todo.mark_blocked()
                     else:
                         todo.status = new_status

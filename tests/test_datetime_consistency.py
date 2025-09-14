@@ -13,10 +13,10 @@ import pytest
 
 from src.tusk.config import TuskConfig
 from src.tusk.models.checkpoint import Checkpoint
-from src.tusk.models.todo import Todo, TodoStatus
+from src.tusk.models.task import Task, TaskStatus
 from src.tusk.models.plan import Plan, PlanStatus
 from src.tusk.storage.checkpoint_store import CheckpointStorage
-from src.tusk.storage.todo_store import TodoStorage
+from src.tusk.storage.task_store import TaskStorage
 from src.tusk.storage.plan_store import PlanStorage
 
 
@@ -41,7 +41,7 @@ class TestDatetimeConsistency:
         assert checkpoint.created_at.tzinfo == timezone.utc, "Should use UTC timezone"
         
         # Test Todo
-        todo = Todo(
+        todo = Task(
             content="Test todo",
             active_form="Testing todo"
         )
@@ -63,7 +63,7 @@ class TestDatetimeConsistency:
             description="Test checkpoint for roundtrip"
         )
         
-        todo = Todo(
+        todo = Task(
             content="Test todo",
             active_form="Testing todo"
         )
@@ -75,7 +75,7 @@ class TestDatetimeConsistency:
         
         # Save and reload via storage
         checkpoint_storage = CheckpointStorage(temp_config)
-        todo_storage = TodoStorage(temp_config) 
+        todo_storage = TaskStorage(temp_config) 
         plan_storage = PlanStorage(temp_config)
         
         assert checkpoint_storage.save(checkpoint), "Should save checkpoint"
@@ -163,13 +163,13 @@ class TestDatetimeConsistency:
         
         # Create mixed timezone data
         checkpoint_storage = CheckpointStorage(temp_config)
-        todo_storage = TodoStorage(temp_config)
+        todo_storage = TaskStorage(temp_config)
         
         # Create test data with different timestamps
         base_time = datetime.now(timezone.utc)
         
         checkpoint = Checkpoint(description="Test checkpoint")
-        todo = Todo(content="Test todo", active_form="Testing")
+        todo = Task(content="Test todo", active_form="Testing")
         
         # Manually set different creation times to test filtering
         checkpoint.created_at = base_time - timedelta(days=1)
@@ -207,12 +207,12 @@ class TestDatetimeConsistency:
     def test_cross_model_datetime_comparisons(self, temp_config):
         """Test comparing datetimes between different model types."""
         checkpoint = Checkpoint(description="Test")
-        todo = Todo(content="Test", active_form="Testing")
+        todo = Task(content="Test", active_form="Testing")
         plan = Plan(title="Test", description="Test")
         
         # Save and reload to simulate real usage
         checkpoint_storage = CheckpointStorage(temp_config)
-        todo_storage = TodoStorage(temp_config)
+        todo_storage = TaskStorage(temp_config)
         plan_storage = PlanStorage(temp_config)
         
         checkpoint_storage.save(checkpoint)
@@ -270,12 +270,12 @@ class TestDatetimeConsistency:
     
     def test_todo_status_transitions_preserve_timezone(self, temp_config):
         """Test that todo status changes preserve timezone info."""
-        todo = Todo(
+        todo = Task(
             content="Test todo transitions",
             active_form="Testing transitions"
         )
         
-        todo_storage = TodoStorage(temp_config)
+        todo_storage = TaskStorage(temp_config)
         todo_storage.save(todo)
         
         # Transition to in_progress

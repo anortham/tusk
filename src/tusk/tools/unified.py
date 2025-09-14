@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 from typing import Optional, List
 from uuid import uuid4
 
-from ..models.todo import Todo, TodoStatus, TodoPriority
+from ..models.task import Task, TaskStatus, TaskPriority
 from ..models.checkpoint import Checkpoint
 from ..models.plan import Plan, PlanStatus, PlanStep
 from .base import BaseTool
@@ -14,7 +14,7 @@ from .base import BaseTool
 logger = logging.getLogger(__name__)
 
 
-class UnifiedTodoTool(BaseTool):
+class UnifiedTaskTool(BaseTool):
     """Unified todo tool - handles all todo operations via action parameter."""
     
     def register(self, mcp_server) -> None:
@@ -95,8 +95,8 @@ class UnifiedTodoTool(BaseTool):
             status=TodoStatus.PENDING,
         )
         
-        if self.todo_storage.save(todo):
-            self.search_engine.index_todo(todo)
+        if self.task_storage.save(todo):
+            self.search_engine.index_task(todo)
             logger.info(f"Created todo {todo.id}")
             
             return json.dumps({
@@ -119,7 +119,7 @@ class UnifiedTodoTool(BaseTool):
     
     async def _list_tasks(self, limit: int) -> str:
         """List active tasks."""
-        active_todos = self.todo_storage.get_active_todos()[:limit]
+        active_todos = self.task_storage.get_active_tasks()[:limit]
         
         if not active_todos:
             return json.dumps({
@@ -175,7 +175,7 @@ class UnifiedTodoTool(BaseTool):
                 "error": "Task ID is required for start action"
             }, ensure_ascii=False, indent=2)
         
-        todo = self.todo_storage.load(task_id)
+        todo = self.task_storage.load(task_id)
         if not todo:
             return json.dumps({
                 "success": False,
@@ -197,8 +197,8 @@ class UnifiedTodoTool(BaseTool):
         
         todo.mark_in_progress()
         
-        if self.todo_storage.save(todo):
-            self.search_engine.index_todo(todo)
+        if self.task_storage.save(todo):
+            self.search_engine.index_task(todo)
             
             return json.dumps({
                 "success": True,
@@ -226,7 +226,7 @@ class UnifiedTodoTool(BaseTool):
                 "error": "Task ID is required for complete action"
             }, ensure_ascii=False, indent=2)
         
-        todo = self.todo_storage.load(task_id)
+        todo = self.task_storage.load(task_id)
         if not todo:
             return json.dumps({
                 "success": False,
@@ -247,8 +247,8 @@ class UnifiedTodoTool(BaseTool):
         
         todo.mark_completed()
         
-        if self.todo_storage.save(todo):
-            self.search_engine.index_todo(todo)
+        if self.task_storage.save(todo):
+            self.search_engine.index_task(todo)
             
             return json.dumps({
                 "success": True,
@@ -292,7 +292,7 @@ class UnifiedTodoTool(BaseTool):
                 "error": f"Invalid status: {status}. Valid values: pending, in_progress, completed"
             }, ensure_ascii=False, indent=2)
         
-        todo = self.todo_storage.load(task_id)
+        todo = self.task_storage.load(task_id)
         if not todo:
             return json.dumps({
                 "success": False,
@@ -313,8 +313,8 @@ class UnifiedTodoTool(BaseTool):
             todo.completed_at = None
             todo.updated_at = datetime.now(timezone.utc)
         
-        if self.todo_storage.save(todo):
-            self.search_engine.index_todo(todo)
+        if self.task_storage.save(todo):
+            self.search_engine.index_task(todo)
             
             return json.dumps({
                 "success": True,
@@ -359,7 +359,7 @@ class UnifiedTodoTool(BaseTool):
         
         todos = []
         for search_result in results:
-            todo = self.todo_storage.load(search_result.doc_id)
+            todo = self.task_storage.load(search_result.doc_id)
             if todo:
                 todos.append({
                     "id": todo.id,
@@ -674,7 +674,7 @@ class UnifiedRecallTool(BaseTool):
         
         # Get todos
         if include_todos:
-            all_todos = self.todo_storage.get_active_todos()
+            all_todos = self.task_storage.get_active_tasks()
             
             # Filter todos by timeframe or specific criteria
             if session_id or git_branch:
@@ -856,7 +856,7 @@ class UnifiedStandupTool(BaseTool):
                         checkpoints_by_project[project_id].append(checkpoint)
                 
                 elif result.doc_type == "todo":
-                    todo = self.todo_storage.load(result.doc_id)
+                    todo = self.task_storage.load(result.doc_id)
                     if todo:
                         project_id = todo.project_id or "unknown"
                         if project_id not in todos_by_project:

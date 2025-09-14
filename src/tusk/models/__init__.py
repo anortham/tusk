@@ -3,6 +3,6 @@
 from .checkpoint import Checkpoint
 from .highlight import Highlight
 from .plan import Plan
-from .todo import Todo
+from .task import Task
 
-__all__ = ["Checkpoint", "Highlight", "Plan", "Todo"]
+__all__ = ["Checkpoint", "Highlight", "Plan", "Task"]

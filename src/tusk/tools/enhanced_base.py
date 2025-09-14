@@ -19,7 +19,7 @@ class EnhancedBaseTool(ABC):
         self.server = server
         self.config = server.config
         self.checkpoint_storage = server.checkpoint_storage
-        self.todo_storage = server.todo_storage
+        self.task_storage = server.task_storage
         self.plan_storage = server.plan_storage
         self.search_engine = server.search_engine
 

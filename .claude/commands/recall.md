@@ -1,5 +1,5 @@
 ---
-allowed-tools: mcp__tusk__recall, mcp__tusk__checkpoint, mcp__tusk__todo, mcp__tusk__plan
+allowed-tools: mcp__tusk__recall, mcp__tusk__checkpoint, mcp__tusk__task, mcp__tusk__plan
 description: Check for relevant context and optionally recall it
 argument-hint: [auto|ask]
 ---
@@ -9,7 +9,7 @@ $if($1 == "ask")
 
 First, let me check for recent context using `recall(context="recent")`:
 
-This will check recent checkpoints, todos, and plans to see if there's relevant context for this session. 
+This will check recent checkpoints, tasks, and plans to see if there's relevant context for this session. 
 
 If meaningful context exists, I'll summarize what's available and let you decide whether to do a full recall.
 

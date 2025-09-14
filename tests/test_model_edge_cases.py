@@ -6,9 +6,9 @@ from pathlib import Path
 
 import pytest
 
-from src.tusk.models import Checkpoint, Todo, Plan, Highlight
+from src.tusk.models import Checkpoint, Task, Plan, Highlight
 from src.tusk.models.highlight import HighlightCategory, HighlightImportance
-from src.tusk.models.todo import TodoStatus, TodoPriority
+from src.tusk.models.task import TaskStatus, TaskPriority
 from src.tusk.models.plan import PlanStatus, PlanStep
 
 
@@ -201,19 +201,19 @@ class TestTodoModelEdgeCases:
     
     def test_todo_status_transition_validation(self):
         """Test that status transitions follow business rules."""
-        todo = Todo(content="Test todo", active_form="Testing todo")
+        todo = Task(content="Test todo", active_form="Testing todo")
         
         # Should start as pending
-        assert todo.status == TodoStatus.PENDING
+        assert todo.status == TaskStatus.PENDING
         
         # Valid transition: pending -> in_progress
         todo.mark_in_progress()
-        assert todo.status == TodoStatus.IN_PROGRESS
+        assert todo.status == TaskStatus.IN_PROGRESS
         assert todo.started_at is not None
         
         # Valid transition: in_progress -> completed
         todo.mark_completed()
-        assert todo.status == TodoStatus.COMPLETED
+        assert todo.status == TaskStatus.COMPLETED
         assert todo.completed_at is not None
         
         # Invalid transitions should be handled gracefully
@@ -221,7 +221,7 @@ class TestTodoModelEdgeCases:
     
     def test_todo_display_form_logic(self):
         """Test todo display form changes based on status."""
-        todo = Todo(content="Write tests", active_form="Writing tests")
+        todo = Task(content="Write tests", active_form="Writing tests")
         
         # Pending: should show content
         assert todo.get_display_form() == "Write tests"
@@ -236,15 +236,15 @@ class TestTodoModelEdgeCases:
     
     def test_todo_priority_levels(self):
         """Test all priority levels are supported."""
-        priorities = [TodoPriority.LOW, TodoPriority.MEDIUM, TodoPriority.HIGH]
+        priorities = [TaskPriority.LOW, TaskPriority.MEDIUM, TaskPriority.HIGH]
         
         for priority in priorities:
-            todo = Todo(content="Test", active_form="Testing", priority=priority)
+            todo = Task(content="Test", active_form="Testing", priority=priority)
             assert todo.priority == priority
     
     def test_todo_time_tracking(self):
         """Test todo time tracking functionality."""
-        todo = Todo(content="Time test", active_form="Testing time")
+        todo = Task(content="Time test", active_form="Testing time")
         
         # Initially no time tracking
         assert todo.started_at is None
@@ -265,10 +265,10 @@ class TestTodoModelEdgeCases:
     
     def test_todo_with_extensive_metadata(self):
         """Test todo with lots of metadata."""
-        todo = Todo(
+        todo = Task(
             content="Complex todo",
             active_form="Working on complex todo",
-            priority=TodoPriority.HIGH,
+            priority=TaskPriority.HIGH,
             tags=["urgent", "important", "complex", "testing"],
             notes="This is a very detailed todo with extensive notes about what needs to be done and why it's important."
         )
@@ -410,7 +410,7 @@ class TestModelTimestampConsistency:
     def test_all_models_use_utc_timestamps(self):
         """Test that all models create UTC timestamps by default."""
         checkpoint = Checkpoint(description="UTC test")
-        todo = Todo(content="UTC test", active_form="Testing UTC")
+        todo = Task(content="UTC test", active_form="Testing UTC")
         plan = Plan(title="UTC test", description="Testing UTC")
         highlight = Highlight(content="UTC test")
         
@@ -442,7 +442,7 @@ class TestModelTimestampConsistency:
     
     def test_updated_at_changes_on_modification(self):
         """Test that updated_at changes when models are modified."""
-        todo = Todo(content="Update test", active_form="Testing updates")
+        todo = Task(content="Update test", active_form="Testing updates")
         original_updated = todo.updated_at
         
         # Modify the todo
@@ -464,7 +464,7 @@ class TestModelValidationEdgeCases:
         assert checkpoint.description == ""
         
         # Empty content in todo
-        todo = Todo(content="", active_form="")
+        todo = Task(content="", active_form="")
         assert todo.content == ""
         assert todo.active_form == ""
     
@@ -475,7 +475,7 @@ class TestModelValidationEdgeCases:
         checkpoint = Checkpoint(description=unicode_content)
         assert checkpoint.description == unicode_content
         
-        todo = Todo(content=unicode_content, active_form=unicode_content)
+        todo = Task(content=unicode_content, active_form=unicode_content)
         assert todo.content == unicode_content
         
         highlight = Highlight(content=unicode_content)
@@ -489,14 +489,14 @@ class TestModelValidationEdgeCases:
         checkpoint = Checkpoint(description=long_string)
         assert len(checkpoint.description) == 100000
         
-        todo = Todo(content=long_string, active_form="Working on long content")
+        todo = Task(content=long_string, active_form="Working on long content")
         assert len(todo.content) == 100000
     
     def test_special_characters_in_ids(self):
         """Test that generated IDs don't contain problematic characters."""
         models = [
             Checkpoint(description="ID test"),
-            Todo(content="ID test", active_form="Testing ID"),
+            Task(content="ID test", active_form="Testing ID"),
             Plan(title="ID test", description="Testing ID")
         ]
         

@@ -10,10 +10,10 @@ from datetime import datetime, timezone
 import pytest
 
 from src.tusk.config import TuskConfig
-from src.tusk.models import Checkpoint, Todo, Plan
-from src.tusk.models.todo import TodoStatus, TodoPriority
+from src.tusk.models import Checkpoint, Task, Plan
+from src.tusk.models.task import TaskStatus, TaskPriority
 from src.tusk.models.plan import PlanStatus
-from src.tusk.storage import CheckpointStorage, TodoStorage, PlanStorage, SearchEngine
+from src.tusk.storage import CheckpointStorage, TaskStorage, PlanStorage, SearchEngine
 from src.tusk.tools.unified import (
     UnifiedTodoTool, 
     UnifiedCheckpointTool, 
@@ -43,7 +43,7 @@ def mock_server(temp_config):
     
     # Use real storage for integration testing
     mock_server.checkpoint_storage = CheckpointStorage(temp_config)
-    mock_server.todo_storage = TodoStorage(temp_config)
+    mock_server.todo_storage = TaskStorage(temp_config)
     mock_server.plan_storage = PlanStorage(temp_config)
     mock_server.search_engine = SearchEngine(temp_config)
     

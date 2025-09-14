@@ -8,8 +8,8 @@ from unittest.mock import patch
 import pytest
 
 from src.tusk.config import TuskConfig
-from src.tusk.models import Checkpoint, Todo, Plan
-from src.tusk.models.todo import TodoStatus
+from src.tusk.models import Checkpoint, Task, Plan
+from src.tusk.models.task import TaskStatus
 from src.tusk.models.plan import PlanStatus
 
 
@@ -73,7 +73,7 @@ class TestMigrationFunctionality:
             project_path="/path/to/test-project"
         )
         
-        todo = Todo(
+        todo = Task(
             content="Test todo",
             active_form="Testing todo",
             project_id="test-project", 
@@ -170,7 +170,7 @@ class TestCrossProjectEdgeCases:
         """Test handling of very long project paths."""
         long_path = "/very/long/path/that/goes/deep/into/nested/directories/and/keeps/going/until/it/reaches/maximum/length"
         
-        todo = Todo(
+        todo = Task(
             content="Todo with long project path",
             active_form="Testing long path",
             project_id="long-path-project",
@@ -206,7 +206,7 @@ class TestCrossProjectEdgeCases:
             project_path=project_path
         )
         
-        todo = Todo(
+        todo = Task(
             content="Test todo", 
             active_form="Testing todo",
             project_id=project_id,

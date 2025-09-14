@@ -11,8 +11,11 @@ from .types import TZAwareDatetime, utc_now
 
 
 def generate_id() -> str:
-    """Generate a unique ID for checkpoints."""
-    return str(uuid4())
+    """Generate a timestamp-based unique ID for checkpoints."""
+    from datetime import datetime, timezone
+    now = datetime.now(timezone.utc)
+    # Format: YYYYMMDD_HHMMSS_microseconds (20250914_143025_123456)
+    return now.strftime("%Y%m%d_%H%M%S_%f")
 
 
 def parse_ttl(ttl_str: str) -> timedelta:

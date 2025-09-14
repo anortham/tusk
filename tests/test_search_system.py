@@ -8,8 +8,8 @@ from datetime import datetime, timezone
 import pytest
 
 from src.tusk.config import TuskConfig
-from src.tusk.models import Checkpoint, Todo, Plan
-from src.tusk.models.todo import TodoStatus, TodoPriority
+from src.tusk.models import Checkpoint, Task, Plan
+from src.tusk.models.task import TaskStatus, TaskPriority
 from src.tusk.models.plan import PlanStatus
 from src.tusk.storage.search import SearchEngine, SearchResult
 
@@ -46,12 +46,12 @@ def sample_checkpoint():
 
 
 @pytest.fixture
-def sample_todo():
+def sample_task():
     """Create a sample todo for testing."""
-    return Todo(
+    return Task(
         content="Write comprehensive unit tests",
         active_form="Writing comprehensive unit tests",
-        priority=TodoPriority.HIGH,
+        priority=TaskPriority.HIGH,
         tags=["testing", "quality", "development"]
     )
 
@@ -128,16 +128,16 @@ class TestSearchEngineIndexing:
         assert len(results) >= 1
         assert any(r.doc_id == sample_checkpoint.id for r in results)
     
-    def test_index_todo(self, search_engine, sample_todo):
+    def test_index_task(self, search_engine, sample_task):
         """Test indexing a todo."""
-        result = search_engine.index_todo(sample_todo)
+        result = search_engine.index_task(sample_task)
         
         assert result is True
         
         # Verify the todo is searchable
         results = search_engine.search("unit tests", limit=5)
         assert len(results) >= 1
-        assert any(r.doc_id == sample_todo.id for r in results)
+        assert any(r.doc_id == sample_task.id for r in results)
     
     def test_index_plan(self, search_engine, sample_plan):
         """Test indexing a plan."""
@@ -150,11 +150,11 @@ class TestSearchEngineIndexing:
         assert len(results) >= 1
         assert any(r.doc_id == sample_plan.id for r in results)
     
-    def test_index_multiple_documents(self, search_engine, sample_checkpoint, sample_todo, sample_plan):
+    def test_index_multiple_documents(self, search_engine, sample_checkpoint, sample_task, sample_plan):
         """Test indexing multiple different document types."""
         # Index all documents
         assert search_engine.index_checkpoint(sample_checkpoint)
-        assert search_engine.index_todo(sample_todo)
+        assert search_engine.index_task(sample_task)
         assert search_engine.index_plan(sample_plan)
         
         # Search for "API" should find both plan and checkpoint (authentication system is an API-related concept)
@@ -169,7 +169,7 @@ class TestSearchEngineIndexing:
         test_results = search_engine.search("tests", limit=10)
         assert len(test_results) >= 1
         test_doc_ids = [r.doc_id for r in test_results]
-        assert sample_todo.id in test_doc_ids
+        assert sample_task.id in test_doc_ids
 
 
 class TestSearchEngineQuerying:
@@ -187,22 +187,22 @@ class TestSearchEngineQuerying:
         results = search_engine.search("nonexistent keyword", limit=5)
         assert len(results) == 0
     
-    def test_search_with_doc_types_filter(self, search_engine, sample_checkpoint, sample_todo):
+    def test_search_with_doc_types_filter(self, search_engine, sample_checkpoint, sample_task):
         """Test search with document type filtering."""
         search_engine.index_checkpoint(sample_checkpoint)
-        search_engine.index_todo(sample_todo)
+        search_engine.index_task(sample_task)
         
         # Search only for checkpoints
         results = search_engine.search("test", limit=5, doc_types=["checkpoint"])
         checkpoint_results = [r for r in results if r.doc_id == sample_checkpoint.id]
-        todo_results = [r for r in results if r.doc_id == sample_todo.id]
+        task_results = [r for r in results if r.doc_id == sample_task.id]
         
         # Should find checkpoint but not todo (if checkpoint contains "test")
         # Note: our sample checkpoint might not contain "test", so this verifies filtering works
         
         # Search only for todos
-        results = search_engine.search("tests", limit=5, doc_types=["todo"])
-        assert any(r.doc_id == sample_todo.id for r in results)
+        results = search_engine.search("tests", limit=5, doc_types=["task"])
+        assert any(r.doc_id == sample_task.id for r in results)
     
     def test_search_limit(self, search_engine):
         """Test search result limiting."""
@@ -287,15 +287,15 @@ class TestSearchEngineAdvanced:
         # Old checkpoint should not be in recent results
         assert old_checkpoint.id not in recent_ids
     
-    def test_search_recent_with_doc_types(self, search_engine, sample_todo):
+    def test_search_recent_with_doc_types(self, search_engine, sample_task):
         """Test recent search with document type filtering."""
-        search_engine.index_todo(sample_todo)
+        search_engine.index_task(sample_task)
         
         # Search for recent todos only
-        results = search_engine.search_recent(days=1, limit=5, doc_types=["todo"])
+        results = search_engine.search_recent(days=1, limit=5, doc_types=["task"])
         
         assert len(results) >= 1
-        assert any(r.doc_id == sample_todo.id for r in results)
+        assert any(r.doc_id == sample_task.id for r in results)
     
     def test_update_document(self, search_engine, sample_checkpoint):
         """Test updating an existing document in the index."""
@@ -452,10 +452,10 @@ class TestSearchEngineIntegration:
                 work_context="Working on security improvements for the web application",
                 tags=["security", "bugfix", "authentication"]
             ),
-            Todo(
+            Task(
                 content="Write integration tests for the authentication API",
                 active_form="Writing integration tests for authentication API",
-                priority=TodoPriority.HIGH,
+                priority=TaskPriority.HIGH,
                 tags=["testing", "authentication", "api"]
             ),
             Plan(
@@ -468,7 +468,7 @@ class TestSearchEngineIntegration:
         
         # Index all documents
         search_engine.index_checkpoint(documents[0])
-        search_engine.index_todo(documents[1])
+        search_engine.index_task(documents[1])
         search_engine.index_plan(documents[2])
         
         # Test various searches

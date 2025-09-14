@@ -7,10 +7,10 @@ from unittest.mock import patch
 import pytest
 
 from src.tusk.config import TuskConfig
-from src.tusk.models import Checkpoint, Todo, Plan
-from src.tusk.storage import CheckpointStorage, TodoStorage, PlanStorage
+from src.tusk.models import Checkpoint, Task, Plan
+from src.tusk.storage import CheckpointStorage, TaskStorage, PlanStorage
 from src.tusk.storage.search import SearchEngine
-from src.tusk.models.todo import TodoStatus, TodoPriority
+from src.tusk.models.task import TaskStatus, TaskPriority
 from src.tusk.models.plan import PlanStatus
 
 
@@ -32,7 +32,7 @@ class TestCrossProjectFunctionality:
     def storage_and_search(self, temp_config):
         """Create storage instances and search engine for testing."""
         checkpoint_storage = CheckpointStorage(temp_config)
-        todo_storage = TodoStorage(temp_config)
+        todo_storage = TaskStorage(temp_config)
         plan_storage = PlanStorage(temp_config)
         search_engine = SearchEngine(temp_config)
         search_engine._ensure_index()
@@ -57,7 +57,7 @@ class TestCrossProjectFunctionality:
             project_path=test_project_path
         )
         
-        todo = Todo(
+        todo = Task(
             content="Test todo",
             active_form="Testing todo",
             project_id=test_project_id,
@@ -105,14 +105,14 @@ class TestCrossProjectFunctionality:
             created_items.append(("checkpoint", checkpoint.id, project_id))
             
             # Create todo
-            todo = Todo(
+            todo = Task(
                 content=f"Todo from {project_id}",
                 active_form=f"Working on {project_id}",
                 project_id=project_id,
                 project_path=project_path
             )
             storages["todo_storage"].save(todo)
-            search_engine.index_todo(todo)
+            search_engine.index_task(todo)
             created_items.append(("todo", todo.id, project_id))
             
             # Create plan
@@ -330,15 +330,15 @@ class TestCrossProjectFunctionality:
             search_engine.index_checkpoint(checkpoint)
             
             # Create recent todos
-            todo = Todo(
+            todo = Task(
                 content=f"Implement feature Y in {project_id}",
                 active_form=f"Implementing feature Y in {project_id}",
-                status=TodoStatus.COMPLETED,
+                status=TaskStatus.COMPLETED,
                 project_id=project_id,
                 project_path=f"/path/to/{project_id}"
             )
             storages["todo_storage"].save(todo)
-            search_engine.index_todo(todo)
+            search_engine.index_task(todo)
             
             # Create plans
             plan = Plan(

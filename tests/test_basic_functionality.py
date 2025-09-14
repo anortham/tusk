@@ -7,11 +7,11 @@ from datetime import datetime
 import pytest
 
 from src.tusk.config import TuskConfig
-from src.tusk.models import Checkpoint, Todo, Plan, Highlight
+from src.tusk.models import Checkpoint, Task, Plan, Highlight
 from src.tusk.models.highlight import HighlightCategory
-from src.tusk.models.todo import TodoPriority, TodoStatus
+from src.tusk.models.task import TaskPriority, TaskStatus
 from src.tusk.models.plan import PlanStatus
-from src.tusk.storage import CheckpointStorage, TodoStorage, PlanStorage
+from src.tusk.storage import CheckpointStorage, TaskStorage, PlanStorage
 
 
 @pytest.fixture
@@ -83,18 +83,18 @@ class TestCheckpointStorage:
         assert recent[1].description == "Test checkpoint 2"
 
 
-class TestTodoStorage:
+class TestTaskStorage:
     """Test todo storage functionality."""
     
     def test_create_and_load_todo(self, temp_config):
         """Test creating and loading a todo."""
-        storage = TodoStorage(temp_config)
+        storage = TaskStorage(temp_config)
         
         # Create todo
-        todo = Todo(
+        todo = Task(
             content="Write unit tests",
             active_form="Writing unit tests",
-            priority=TodoPriority.HIGH,
+            priority=TaskPriority.HIGH,
             tags=["testing", "python"],
             notes="Focus on storage layer first",
         )
@@ -107,50 +107,50 @@ class TestTodoStorage:
         assert loaded is not None
         assert loaded.id == todo.id
         assert loaded.content == "Write unit tests"
-        assert loaded.priority == TodoPriority.HIGH
+        assert loaded.priority == TaskPriority.HIGH
         assert "testing" in loaded.tags
         assert loaded.notes == "Focus on storage layer first"
     
     def test_todo_status_transitions(self, temp_config):
         """Test todo status transitions."""
-        storage = TodoStorage(temp_config)
+        storage = TaskStorage(temp_config)
         
         # Create todo
-        todo = Todo(
+        todo = Task(
             content="Test status transitions",
             active_form="Testing status transitions",
         )
         
         # Initial status should be pending
-        assert todo.status == TodoStatus.PENDING
+        assert todo.status == TaskStatus.PENDING
         assert todo.started_at is None
         assert todo.completed_at is None
         
         # Mark in progress
         todo.mark_in_progress()
-        assert todo.status == TodoStatus.IN_PROGRESS
+        assert todo.status == TaskStatus.IN_PROGRESS
         assert todo.started_at is not None
         
         # Mark completed
         todo.mark_completed()
-        assert todo.status == TodoStatus.COMPLETED
+        assert todo.status == TaskStatus.COMPLETED
         assert todo.completed_at is not None
         
         # Save and reload
         storage.save(todo)
         loaded = storage.load(todo.id)
-        assert loaded.status == TodoStatus.COMPLETED
+        assert loaded.status == TaskStatus.COMPLETED
         assert loaded.completed_at is not None
     
     def test_find_todos_by_status(self, temp_config):
         """Test finding todos by status."""
-        storage = TodoStorage(temp_config)
+        storage = TaskStorage(temp_config)
         
         # Create todos with different statuses
-        todo1 = Todo(content="Pending task", active_form="Working on pending")
-        todo2 = Todo(content="Active task", active_form="Working on active")
+        todo1 = Task(content="Pending task", active_form="Working on pending")
+        todo2 = Task(content="Active task", active_form="Working on active")
         todo2.mark_in_progress()
-        todo3 = Todo(content="Done task", active_form="Working on done")
+        todo3 = Task(content="Done task", active_form="Working on done")
         todo3.mark_completed()
         
         # Save all
@@ -295,7 +295,7 @@ class TestModelValidation:
     def test_todo_validation(self):
         """Test todo model validation."""
         # Valid todo
-        todo = Todo(
+        todo = Task(
             workspace_id="",
             content="Test todo",
             active_form="Testing todo",
@@ -303,8 +303,8 @@ class TestModelValidation:
         
         assert todo.workspace_id == ""
         assert todo.content == "Test todo"
-        assert todo.status == TodoStatus.PENDING
-        assert todo.priority == TodoPriority.MEDIUM
+        assert todo.status == TaskStatus.PENDING
+        assert todo.priority == TaskPriority.MEDIUM
         
         # Test display forms
         assert todo.get_display_form() == "Test todo"  # Pending state

@@ -23,10 +23,10 @@ class EnhancedUnifiedTodoTool(EnhancedBaseTool):
         @mcp_server.tool
         async def todo(
             action: str,
-            task: Optional[str] = None,
-            task_id: Optional[str] = None,
-            status: Optional[str] = None,
-            query: Optional[str] = None,
+            task: str | None = None,
+            task_id: str | None = None,
+            status: str | None = None,
+            query: str | None = None,
             limit: int = 10
         ) -> str:
             """Manage tasks efficiently with one simple tool.

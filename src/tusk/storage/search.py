@@ -14,7 +14,7 @@ from whoosh.query import Query
 from whoosh.writing import LockError
 
 from ..config import TuskConfig
-from ..models import Checkpoint, Plan, Todo
+from ..models import Checkpoint, Plan, Task
 
 logger = logging.getLogger(__name__)
 
@@ -189,45 +189,45 @@ class SearchEngine:
         
         return self._safe_write(_write)
     
-    def index_todo(self, todo: Todo) -> bool:
-        """Index a todo for search."""
+    def index_task(self, task: Task) -> bool:
+        """Index a task for search."""
         def _write():
             writer = self.ix.writer()
             
             search_parts = [
-                todo.content,
-                todo.active_form,
-                todo.status.value,
-                todo.priority.value,
+                task.content,
+                task.active_form,
+                task.status.value,
+                task.priority.value,
             ]
-            search_parts.extend(todo.tags)
+            search_parts.extend(task.tags)
             
-            if todo.notes:
-                search_parts.append(todo.notes)
+            if task.notes:
+                search_parts.append(task.notes)
             
             writer.add_document(
-                doc_id=todo.id,
-                doc_type="todo",
-                title=todo.content,
-                content=todo.notes or "",
-                description=todo.content,
-                status=todo.status.value,
-                priority=todo.priority.value,
-                tags=",".join(todo.tags),
-                created_at=todo.created_at,
-                updated_at=todo.updated_at,
-                workspace_id=todo.workspace_id,
-                project_id=todo.project_id,
-                project_path=todo.project_path,
-                checkpoint_id=todo.checkpoint_id or "",
-                plan_id=todo.plan_id or "",
+                doc_id=task.id,
+                doc_type="task",
+                title=task.content,
+                content=task.notes or "",
+                description=task.content,
+                status=task.status.value,
+                priority=task.priority.value,
+                tags=",".join(task.tags),
+                created_at=task.created_at,
+                updated_at=task.updated_at,
+                workspace_id=task.workspace_id,
+                project_id=task.project_id,
+                project_path=task.project_path,
+                checkpoint_id=task.checkpoint_id or "",
+                plan_id=task.plan_id or "",
                 active_files="",
                 git_branch="",
                 search_text=" ".join(filter(None, search_parts)),
             )
             
             writer.commit()
-            logger.debug(f"Indexed todo {todo.id}")
+            logger.debug(f"Indexed task {task.id}")
             return True
         
         return self._safe_write(_write)

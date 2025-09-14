@@ -8,17 +8,17 @@ Generate a standup report from Tusk memory showing:
 
 **Recent Work (Last 2 Days):**
 - Completed checkpoints with highlights
-- Finished todos and their outcomes  
+- Finished tasks and their outcomes  
 - Plan progress and next steps
 
 **Current Status:**
-- Active todos in progress
+- Active tasks in progress
 - Pending tasks to pick up
 - Current plan focus areas
 
 **Blockers & Issues:**
 - Any incomplete work requiring attention
-- Stale todos that may need cleanup
+- Stale tasks that may need cleanup
 
 **Next Actions:**
 - Recommended priorities for upcoming work

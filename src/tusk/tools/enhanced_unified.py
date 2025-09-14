@@ -3,10 +3,10 @@
 import json
 import logging
 from datetime import datetime, timezone
-from typing import Optional, List
+from typing import List, Union, Annotated, Optional
 from uuid import uuid4
 
-from ..models.todo import Todo, TodoStatus, TodoPriority
+from ..models.task import Task, TaskStatus, TaskPriority
 from ..models.checkpoint import Checkpoint
 from ..models.plan import Plan, PlanStatus, PlanStep
 from .base import BaseTool
@@ -15,26 +15,27 @@ from .enhancement import ToolEnhancer
 logger = logging.getLogger(__name__)
 
 
-class EnhancedUnifiedTodoTool(BaseTool):
-    """Enhanced unified todo tool with rich parameter descriptions."""
+class EnhancedUnifiedTaskTool(BaseTool):
+    """Enhanced unified task tool with rich parameter descriptions."""
 
     def register(self, mcp_server) -> None:
-        """Register the enhanced unified todo tool."""
+        """Register the enhanced unified task tool."""
 
         @mcp_server.tool
-        async def todo(
-            action: str,
-            task: Optional[str] = None,
-            task_id: Optional[str] = None,
-            status: Optional[str] = None,
-            query: Optional[str] = None,
-            limit: int = 10
+        async def task(
+            action: Annotated[str, "The operation to perform: add, list, start, complete, update, search"],
+            task: Annotated[Union[str, None], "Task description when adding new tasks"] = None,
+            task_id: Annotated[Union[str, None], "Unique task identifier for operations"] = None,
+            status: Annotated[Union[str, None], "New status when updating: pending, in_progress, completed"] = None,
+            query: Annotated[Union[str, None], "Search query text for finding tasks"] = None,
+            limit: Annotated[int, "Maximum number of results to return"] = 10
         ) -> str:
-            """Manage tasks efficiently with one simple tool.
+            """Manage high-level tasks that persist across sessions.
 
-            This tool provides comprehensive task management capabilities across sessions.
-            Use this for all task-related operations to maintain persistent todo lists
-            that survive context resets and session changes.
+            This tool handles project-level tasks and work items that need to survive
+            context resets and session changes. Use this for tasks that span multiple
+            sessions, unlike Claude's built-in TodoWrite which is for session-specific
+            granular tracking.
 
             Args:
                 action: The operation to perform. Valid values are "add" (create new task),
@@ -62,25 +63,25 @@ class EnhancedUnifiedTodoTool(BaseTool):
                 Error responses include specific error messages and corrective guidance.
 
             Examples:
-                todo(action="add", task="Fix the bug in login system")
-                todo(action="list")
-                todo(action="start", task_id="abc123")
-                todo(action="complete", task_id="abc123")
-                todo(action="update", task_id="abc123", status="in_progress")
-                todo(action="search", query="bug", limit=5)
+                task(action="add", task="Fix the bug in login system")
+                task(action="list")
+                task(action="start", task_id="abc123")
+                task(action="complete", task_id="abc123")
+                task(action="update", task_id="abc123", status="in_progress")
+                task(action="search", query="bug", limit=5)
             """
             # After registration, enhance the tool with parameter descriptions
             if hasattr(mcp_server, '_tool_manager') and hasattr(mcp_server._tool_manager, '_tools'):
-                if 'todo' in mcp_server._tool_manager._tools:
-                    tool = mcp_server._tool_manager._tools['todo']
+                if 'task' in mcp_server._tool_manager._tools:
+                    tool = mcp_server._tool_manager._tools['task']
 
                     # Enhance parameters
                     if hasattr(tool, 'parameters'):
-                        tool.parameters = ToolEnhancer.enhance_tool_parameters(todo, tool.parameters)
+                        tool.parameters = ToolEnhancer.enhance_tool_parameters(task, tool.parameters)
 
                     # Enhance description
                     if hasattr(tool, 'description'):
-                        tool.description = ToolEnhancer.enhance_tool_description(todo, tool.description or "")
+                        tool.description = ToolEnhancer.enhance_tool_description(task, tool.description or "")
 
             try:
                 if action == "add":
@@ -102,7 +103,7 @@ class EnhancedUnifiedTodoTool(BaseTool):
                     }, ensure_ascii=False, indent=2)
 
             except Exception as e:
-                logger.error(f"Todo operation failed: {e}")
+                logger.error(f"Task operation failed: {e}")
                 return json.dumps({
                     "success": False,
                     "error": str(e)
@@ -120,29 +121,29 @@ class EnhancedUnifiedTodoTool(BaseTool):
         project_id = self.config.get_current_project_id()
         project_path = self.config.get_current_project_path()
 
-        todo = Todo(
+        task_obj = Task(
             workspace_id="",
             project_id=project_id,
             project_path=project_path,
             content=task,
             active_form=f"Working on {task.lower()}",
-            priority=TodoPriority.MEDIUM,
-            status=TodoStatus.PENDING,
+            priority=TaskPriority.MEDIUM,
+            status=TaskStatus.PENDING,
         )
 
-        if self.todo_storage.save(todo):
-            self.search_engine.index_todo(todo)
-            logger.info(f"Created todo {todo.id}")
+        if self.task_storage.save(task_obj):
+            self.search_engine.index_task(task_obj)
+            logger.info(f"Created task {task_obj.id}")
 
             return json.dumps({
                 "success": True,
                 "action": "task_added",
                 "task": {
-                    "id": todo.id,
+                    "id": task_obj.id,
                     "content": task,
-                    "priority": todo.priority.value,
-                    "status": todo.status.value,
-                    "created_at": todo.created_at.strftime("%Y-%m-%d %H:%M")
+                    "priority": task_obj.priority.value,
+                    "status": task_obj.status.value,
+                    "created_at": task_obj.created_at.strftime("%Y-%m-%d %H:%M")
                 },
                 "message": f"Added task: {task}"
             }, ensure_ascii=False, indent=2)
@@ -154,50 +155,50 @@ class EnhancedUnifiedTodoTool(BaseTool):
 
     async def _list_tasks(self, limit: int) -> str:
         """List active tasks."""
-        active_todos = self.todo_storage.get_active_todos()[:limit]
+        active_tasks = self.task_storage.get_active_tasks()[:limit]
 
-        if not active_todos:
+        if not active_tasks:
             return json.dumps({
                 "success": True,
                 "total_tasks": 0,
                 "message": "No active tasks",
-                "suggestion": "Use todo(action='add', task='your task') to create one!"
+                "suggestion": "Use task(action='add', task='your task') to create one!"
             }, ensure_ascii=False, indent=2)
 
         # Group by status
-        in_progress = [t for t in active_todos if t.status == TodoStatus.IN_PROGRESS]
-        pending = [t for t in active_todos if t.status == TodoStatus.PENDING]
+        in_progress = [t for t in active_tasks if t.status == TaskStatus.IN_PROGRESS]
+        pending = [t for t in active_tasks if t.status == TaskStatus.PENDING]
 
         result = {
             "success": True,
-            "total_tasks": len(active_todos),
+            "total_tasks": len(active_tasks),
             "tasks": {
                 "in_progress": [
                     {
-                        "id": todo.id,
-                        "content": todo.content,
-                        "active_form": todo.active_form,
-                        "priority": todo.priority.value,
-                        "created_at": todo.created_at.strftime("%Y-%m-%d %H:%M"),
-                        "started_at": todo.started_at.strftime("%Y-%m-%d %H:%M") if todo.started_at else None
+                        "id": task.id,
+                        "content": task.content,
+                        "active_form": task.active_form,
+                        "priority": task.priority.value,
+                        "created_at": task.created_at.strftime("%Y-%m-%d %H:%M"),
+                        "started_at": task.started_at.strftime("%Y-%m-%d %H:%M") if task.started_at else None
                     }
-                    for todo in in_progress
+                    for task in in_progress
                 ],
                 "pending": [
                     {
-                        "id": todo.id,
-                        "content": todo.content,
-                        "priority": todo.priority.value,
-                        "created_at": todo.created_at.strftime("%Y-%m-%d %H:%M")
+                        "id": task.id,
+                        "content": task.content,
+                        "priority": task.priority.value,
+                        "created_at": task.created_at.strftime("%Y-%m-%d %H:%M")
                     }
-                    for todo in pending
+                    for task in pending
                 ]
             },
             "counts": {
                 "in_progress": len(in_progress),
                 "pending": len(pending)
             },
-            "suggestion": "Use todo(action='start', task_id='ID') or todo(action='complete', task_id='ID')"
+            "suggestion": "Use task(action='start', task_id='ID') or task(action='complete', task_id='ID')"
         }
 
         return json.dumps(result, ensure_ascii=False, indent=2)
@@ -210,43 +211,43 @@ class EnhancedUnifiedTodoTool(BaseTool):
                 "error": "Task ID is required for start action"
             }, ensure_ascii=False, indent=2)
 
-        todo = self.todo_storage.load(task_id)
-        if not todo:
+        task_obj = self.task_storage.load(task_id)
+        if not task_obj:
             return json.dumps({
                 "success": False,
                 "error": f"Task {task_id} not found"
             }, ensure_ascii=False, indent=2)
 
-        if todo.status == TodoStatus.IN_PROGRESS:
+        if task_obj.status == TaskStatus.IN_PROGRESS:
             return json.dumps({
                 "success": True,
                 "action": "task_already_started",
                 "task": {
-                    "id": todo.id,
-                    "content": todo.content,
-                    "active_form": todo.active_form,
-                    "status": todo.status.value
+                    "id": task_obj.id,
+                    "content": task_obj.content,
+                    "active_form": task_obj.active_form,
+                    "status": task_obj.status.value
                 },
-                "message": f"Already working on: {todo.get_display_form()}"
+                "message": f"Already working on: {task_obj.get_display_form()}"
             }, ensure_ascii=False, indent=2)
 
-        todo.mark_in_progress()
+        task_obj.mark_in_progress()
 
-        if self.todo_storage.save(todo):
-            self.search_engine.index_todo(todo)
-            logger.info(f"Started todo {todo.id}")
+        if self.task_storage.save(task_obj):
+            self.search_engine.index_task(task_obj)
+            logger.info(f"Started task {task_obj.id}")
 
             return json.dumps({
                 "success": True,
                 "action": "task_started",
                 "task": {
-                    "id": todo.id,
-                    "content": todo.content,
-                    "active_form": todo.active_form,
-                    "status": todo.status.value,
-                    "started_at": todo.started_at.strftime("%Y-%m-%d %H:%M") if todo.started_at else None
+                    "id": task_obj.id,
+                    "content": task_obj.content,
+                    "active_form": task_obj.active_form,
+                    "status": task_obj.status.value,
+                    "started_at": task_obj.started_at.strftime("%Y-%m-%d %H:%M") if task_obj.started_at else None
                 },
-                "message": f"Started: {todo.get_display_form()}"
+                "message": f"Started: {task_obj.get_display_form()}"
             }, ensure_ascii=False, indent=2)
         else:
             return json.dumps({
@@ -262,41 +263,41 @@ class EnhancedUnifiedTodoTool(BaseTool):
                 "error": "Task ID is required for complete action"
             }, ensure_ascii=False, indent=2)
 
-        todo = self.todo_storage.load(task_id)
-        if not todo:
+        task_obj = self.task_storage.load(task_id)
+        if not task_obj:
             return json.dumps({
                 "success": False,
                 "error": f"Task {task_id} not found"
             }, ensure_ascii=False, indent=2)
 
-        if todo.status == TodoStatus.COMPLETED:
+        if task_obj.status == TaskStatus.COMPLETED:
             return json.dumps({
                 "success": True,
                 "action": "task_already_completed",
                 "task": {
-                    "id": todo.id,
-                    "content": todo.content,
-                    "status": todo.status.value
+                    "id": task_obj.id,
+                    "content": task_obj.content,
+                    "status": task_obj.status.value
                 },
-                "message": f"Already completed: {todo.content}"
+                "message": f"Already completed: {task_obj.content}"
             }, ensure_ascii=False, indent=2)
 
-        todo.mark_completed()
+        task_obj.mark_completed()
 
-        if self.todo_storage.save(todo):
-            self.search_engine.index_todo(todo)
-            logger.info(f"Completed todo {todo.id}")
+        if self.task_storage.save(task_obj):
+            self.search_engine.index_task(task_obj)
+            logger.info(f"Completed task {task_obj.id}")
 
             return json.dumps({
                 "success": True,
                 "action": "task_completed",
                 "task": {
-                    "id": todo.id,
-                    "content": todo.content,
-                    "status": todo.status.value,
-                    "completed_at": todo.completed_at.strftime("%Y-%m-%d %H:%M") if todo.completed_at else None
+                    "id": task_obj.id,
+                    "content": task_obj.content,
+                    "status": task_obj.status.value,
+                    "completed_at": task_obj.completed_at.strftime("%Y-%m-%d %H:%M") if task_obj.completed_at else None
                 },
-                "message": f"Completed: {todo.content}",
+                "message": f"Completed: {task_obj.content}",
                 "celebration": "🎉 Great work!"
             }, ensure_ascii=False, indent=2)
         else:
@@ -321,47 +322,47 @@ class EnhancedUnifiedTodoTool(BaseTool):
 
         # Validate status
         try:
-            new_status = TodoStatus(status)
+            new_status = TaskStatus(status)
         except ValueError:
             return json.dumps({
                 "success": False,
                 "error": f"Invalid status: {status}. Use: pending, in_progress, completed"
             }, ensure_ascii=False, indent=2)
 
-        todo = self.todo_storage.load(task_id)
-        if not todo:
+        task_obj = self.task_storage.load(task_id)
+        if not task_obj:
             return json.dumps({
                 "success": False,
                 "error": f"Task {task_id} not found"
             }, ensure_ascii=False, indent=2)
 
-        old_status = todo.status
+        old_status = task_obj.status
 
         # Update status
-        if new_status == TodoStatus.IN_PROGRESS:
-            todo.mark_in_progress()
-        elif new_status == TodoStatus.COMPLETED:
-            todo.mark_completed()
-        elif new_status == TodoStatus.PENDING:
-            todo.status = TodoStatus.PENDING
-            todo.started_at = None
-            todo.completed_at = None
+        if new_status == TaskStatus.IN_PROGRESS:
+            task_obj.mark_in_progress()
+        elif new_status == TaskStatus.COMPLETED:
+            task_obj.mark_completed()
+        elif new_status == TaskStatus.PENDING:
+            task_obj.status = TaskStatus.PENDING
+            task_obj.started_at = None
+            task_obj.completed_at = None
 
-        if self.todo_storage.save(todo):
-            self.search_engine.index_todo(todo)
-            logger.info(f"Updated todo {todo.id} status: {old_status.value} -> {new_status.value}")
+        if self.task_storage.save(task_obj):
+            self.search_engine.index_task(task_obj)
+            logger.info(f"Updated task {task_obj.id} status: {old_status.value} -> {new_status.value}")
 
             return json.dumps({
                 "success": True,
                 "action": "task_updated",
                 "task": {
-                    "id": todo.id,
-                    "content": todo.content,
+                    "id": task_obj.id,
+                    "content": task_obj.content,
                     "old_status": old_status.value,
                     "new_status": new_status.value,
                     "updated_at": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M")
                 },
-                "message": f"Updated {todo.content}: {old_status.value} -> {new_status.value}"
+                "message": f"Updated {task_obj.content}: {old_status.value} -> {new_status.value}"
             }, ensure_ascii=False, indent=2)
         else:
             return json.dumps({
@@ -377,8 +378,8 @@ class EnhancedUnifiedTodoTool(BaseTool):
                 "error": "Query is required for search action"
             }, ensure_ascii=False, indent=2)
 
-        # Search todos
-        search_results = self.search_engine.search_todos(query, limit=limit)
+        # Search tasks
+        search_results = self.search_engine.search_tasks(query, limit=limit)
 
         if not search_results:
             return json.dumps({
@@ -386,13 +387,13 @@ class EnhancedUnifiedTodoTool(BaseTool):
                 "query": query,
                 "total_results": 0,
                 "message": f"No tasks found matching '{query}'",
-                "suggestion": "Try broader search terms or use todo(action='list') to see all tasks"
+                "suggestion": "Try broader search terms or use task(action='list') to see all tasks"
             }, ensure_ascii=False, indent=2)
 
         # Format results
         formatted_results = []
         for result in search_results:
-            todo_data = {
+            task_data = {
                 "id": result.id,
                 "content": result.content,
                 "status": result.status.value,
@@ -402,14 +403,14 @@ class EnhancedUnifiedTodoTool(BaseTool):
                 "relevance": "High"  # Could add scoring later
             }
 
-            if result.status == TodoStatus.IN_PROGRESS and result.started_at:
-                todo_data["started_at"] = result.started_at.strftime("%Y-%m-%d %H:%M")
-                todo_data["active_form"] = result.active_form
+            if result.status == TaskStatus.IN_PROGRESS and result.started_at:
+                task_data["started_at"] = result.started_at.strftime("%Y-%m-%d %H:%M")
+                task_data["active_form"] = result.active_form
 
-            if result.status == TodoStatus.COMPLETED and result.completed_at:
-                todo_data["completed_at"] = result.completed_at.strftime("%Y-%m-%d %H:%M")
+            if result.status == TaskStatus.COMPLETED and result.completed_at:
+                task_data["completed_at"] = result.completed_at.strftime("%Y-%m-%d %H:%M")
 
-            formatted_results.append(todo_data)
+            formatted_results.append(task_data)
 
         return json.dumps({
             "success": True,

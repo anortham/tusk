@@ -10,11 +10,11 @@
 Tusk Stop Hook - Auto-Completion Detection
 
 Analyzes Claude's responses to detect when work is completed and suggests
-marking todos/plans as completed. This helps prevent stale task buildup.
+marking tasks/plans as completed. This helps prevent stale task buildup.
 
 Key Features:
 - Detects completion language patterns
-- Suggests todo completion
+- Suggests task completion
 - Tracks work completion patterns
 - Non-blocking execution
 """

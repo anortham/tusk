@@ -10,7 +10,7 @@ from fastmcp import FastMCP
 from fastmcp.utilities.logging import get_logger
 
 from .config import TuskConfig
-from .storage import CheckpointStorage, PlanStorage, SearchEngine, TodoStorage
+from .storage import CheckpointStorage, PlanStorage, SearchEngine, TaskStorage
 
 # Configure logging
 logger = get_logger(__name__)
@@ -25,7 +25,7 @@ class TuskServer:
         
         # Initialize storage
         self.checkpoint_storage = CheckpointStorage(self.config)
-        self.todo_storage = TodoStorage(self.config)
+        self.task_storage = TaskStorage(self.config)
         self.plan_storage = PlanStorage(self.config)
         self.search_engine = SearchEngine(self.config)
         
@@ -84,19 +84,19 @@ class TuskServer:
 **Auto-Actions:**
 - **Session Start**: ALWAYS use `recall(context="recent")` first
 - **Complex Tasks (3+ steps)**: Create `plan` before coding
-- **Multiple Tasks**: Use `todo(action="add")` for each discrete task
+- **Multiple Tasks**: Use `task(action="add")` for each discrete task
 - **After Achievements**: Create `checkpoint` after significant work
 - **Before Risky Changes**: Create `checkpoint` before major refactoring
 
 **Conversation Triggers:**
 - "I was working on..." → Use `recall(context="recent")` immediately
 - "yesterday/last time/previously" → Search with `recall` or `checkpoint`
-- Numbered/bulleted task list → Convert each to `todo(action="add")`
+- Numbered/bulleted task list → Convert each to `task(action="add")`
 - "what was I doing?" → Use `standup(timeframe="daily")` or `recall`
 - Complex feature request → Create `plan` with clear steps
 
 **Work Patterns:**
-- Multi-session projects: Maintain todos across conversations
+- Multi-session projects: Maintain tasks across conversations
 - Development work: Checkpoint after tests pass, features complete, bugs fixed
 - Learning/research: Checkpoint insights and discoveries
 - Problem solving: Plan complex debugging approaches
@@ -105,33 +105,33 @@ class TuskServer:
 
 1. **Start with Recall** - Begin sessions by recalling previous context
 2. **Plan with Purpose** - Break complex work into manageable steps
-3. **Track with Todos** - Convert plans into specific actionable tasks
+3. **Track with Tasks** - Convert plans into specific actionable tasks
 4. **Checkpoint Success** - Save progress at meaningful moments
 5. **Standup with Pride** - Generate summaries of accomplishments
 
 ## Search Before Creating
-- `todo(action="search", query="...")` - Find related tasks
+- `task(action="search", query="...")` - Find related tasks
 - `checkpoint(action="search", query="...")` - Discover relevant saves
 - `plan(action="search", query="...")` - Check for existing plans
 
-Every checkpoint saved, todo completed, and plan executed builds lasting progress.
+Every checkpoint saved, task completed, and plan executed builds lasting progress.
         """.strip()
     
     def _register_tools(self) -> None:
         """Register enhanced unified MCP tools with rich parameter descriptions."""
         # Import all enhanced tools
         from .tools.unified import UnifiedCleanupTool  # Keep original cleanup for now
-        from .tools.enhanced_simple import EnhancedUnifiedTodoTool
         from .tools.enhanced_all import (
             EnhancedUnifiedCheckpointTool,
             EnhancedUnifiedRecallTool,
             EnhancedUnifiedPlanTool,
             EnhancedUnifiedStandupTool
         )
+        from .tools.enhanced_unified import EnhancedUnifiedTaskTool
 
         # Create enhanced tool instances with rich parameter descriptions
         plan_tool = EnhancedUnifiedPlanTool(self)
-        todo_tool = EnhancedUnifiedTodoTool(self)
+        task_tool = EnhancedUnifiedTaskTool(self)
         checkpoint_tool = EnhancedUnifiedCheckpointTool(self)
         recall_tool = EnhancedUnifiedRecallTool(self)
         standup_tool = EnhancedUnifiedStandupTool(self)
@@ -141,13 +141,13 @@ Every checkpoint saved, todo completed, and plan executed builds lasting progres
 
         # Register enhanced tools in workflow order
         plan_tool.register(self.mcp)
-        todo_tool.register(self.mcp)
+        task_tool.register(self.mcp)
         checkpoint_tool.register(self.mcp)
         recall_tool.register(self.mcp)
         standup_tool.register(self.mcp)
         # cleanup_tool.register(self.mcp)  # Hidden during testing period
 
-        logger.info("Registered 5 enhanced unified tools with rich parameter descriptions: plan, todo, checkpoint, recall, standup")
+        logger.info("Registered 5 enhanced unified tools with rich parameter descriptions: plan, task, checkpoint, recall, standup")
     
     def run_stdio(self) -> None:
         """Run the server with stdio transport."""
@@ -163,7 +163,7 @@ Every checkpoint saved, todo completed, and plan executed builds lasting progres
         """Get statistics about the current data."""
         return {
             "checkpoints": self.checkpoint_storage.count(),
-            "todos": self.todo_storage.count(),
+            "tasks": self.task_storage.count(),
             "plans": self.plan_storage.count(),
             "search_stats": self.search_engine.get_index_stats(),
         }
