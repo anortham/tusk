@@ -2,16 +2,15 @@
 
 import tempfile
 from pathlib import Path
-from datetime import datetime
 
 import pytest
 
 from src.tusk.config import TuskConfig
-from src.tusk.models import Checkpoint, Task, Plan, Highlight
+from src.tusk.models import Checkpoint, Highlight, Plan, Task
 from src.tusk.models.highlight import HighlightCategory
-from src.tusk.models.task import TaskPriority, TaskStatus
 from src.tusk.models.plan import PlanStatus
-from src.tusk.storage import CheckpointStorage, TaskStorage, PlanStorage
+from src.tusk.models.task import TaskPriority, TaskStatus
+from src.tusk.storage import CheckpointStorage, PlanStorage, TaskStorage
 
 
 @pytest.fixture
@@ -211,7 +210,7 @@ class TestPlanStorage:
 
     def test_plan_progress(self, temp_config):
         """Test plan progress tracking."""
-        storage = PlanStorage(temp_config)
+        PlanStorage(temp_config)
 
         # Create plan with steps
         plan = Plan(
@@ -331,7 +330,7 @@ class TestModelValidation:
         assert len(plan.steps) == 0
 
         # Test adding steps
-        step = plan.add_step("Test step")
+        plan.add_step("Test step")
         assert len(plan.steps) == 1
         assert plan.steps[0].description == "Test step"
         assert not plan.steps[0].completed

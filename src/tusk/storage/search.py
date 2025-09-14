@@ -1,16 +1,13 @@
 """Whoosh-based search engine for Tusk memory."""
 
-from datetime import datetime, timezone
 import logging
 import random
 import time
-from pathlib import Path
-from typing import Any, Dict, List, Optional, Union
+from datetime import UTC, datetime
+from typing import Any
 
-from whoosh import fields, index, qparser
-from whoosh.filedb.filestore import FileStorage
-from whoosh.qparser import MultifieldParser, QueryParser
-from whoosh.query import Query
+from whoosh import fields, index
+from whoosh.qparser import MultifieldParser
 from whoosh.writing import LockError
 
 from ..config import TuskConfig
@@ -22,7 +19,7 @@ logger = logging.getLogger(__name__)
 class SearchResult:
     """A search result with score and metadata."""
 
-    def __init__(self, doc_id: str, doc_type: str, score: float, highlights: Dict[str, str]):
+    def __init__(self, doc_id: str, doc_type: str, score: float, highlights: dict[str, str]):
         self.doc_id = doc_id
         self.doc_type = doc_type  # 'checkpoint', 'task', 'plan'
         self.score = score
@@ -288,7 +285,7 @@ class SearchEngine:
         doc_type: str,
         content: str,
         title: str,
-        tags: List[str],
+        tags: list[str],
         workspace_id: str,
         created_at: datetime,
         **kwargs,
@@ -357,9 +354,9 @@ class SearchEngine:
         self,
         query: str,
         limit: int = 20,
-        doc_types: Optional[List[str]] = None,
+        doc_types: list[str] | None = None,
         highlight: bool = True,
-    ) -> List[SearchResult]:
+    ) -> list[SearchResult]:
         """Search across all indexed content."""
         if self.ix is None:
             self._ensure_index()
@@ -418,11 +415,11 @@ class SearchEngine:
         self,
         query: str = "*",
         limit: int = 50,
-        doc_types: Optional[List[str]] = None,
-        project_ids: Optional[List[str]] = None,
-        days_back: Optional[int] = None,
+        doc_types: list[str] | None = None,
+        project_ids: list[str] | None = None,
+        days_back: int | None = None,
         highlight: bool = True,
-    ) -> List[SearchResult]:
+    ) -> list[SearchResult]:
         """Search across projects with optional filtering."""
         if self.ix is None:
             self._ensure_index()
@@ -458,9 +455,10 @@ class SearchEngine:
                 # Add date filter if specified
                 if days_back:
                     from datetime import datetime, timedelta
+
                     from whoosh.query import DateRange
 
-                    threshold = datetime.now(timezone.utc) - timedelta(days=days_back)
+                    threshold = datetime.now(UTC) - timedelta(days=days_back)
                     date_query = DateRange("created_at", threshold, None)
                     parsed_query = parsed_query & date_query
 
@@ -501,7 +499,7 @@ class SearchEngine:
             logger.error(f"Error in cross-project search for '{query}': {e}")
             return []
 
-    def search_by_tags(self, tags: List[str], limit: int = 20) -> List[SearchResult]:
+    def search_by_tags(self, tags: list[str], limit: int = 20) -> list[SearchResult]:
         """Search by tags."""
         if not tags:
             return []
@@ -511,8 +509,8 @@ class SearchEngine:
         return self.search(tag_query, limit=limit)
 
     def search_recent(
-        self, days: int = 7, limit: int = 20, doc_types: Optional[List[str]] = None
-    ) -> List[SearchResult]:
+        self, days: int = 7, limit: int = 20, doc_types: list[str] | None = None
+    ) -> list[SearchResult]:
         """Search for recent documents."""
         from datetime import datetime, timedelta
 
@@ -525,7 +523,7 @@ class SearchEngine:
 
             with self.ix.searcher() as searcher:
                 # Calculate date threshold
-                threshold = datetime.now(timezone.utc) - timedelta(days=days)
+                threshold = datetime.now(UTC) - timedelta(days=days)
 
                 # Build query
                 from whoosh.query import DateRange
@@ -559,7 +557,7 @@ class SearchEngine:
             logger.error(f"Error searching recent documents: {e}")
             return []
 
-    def get_suggestions(self, partial_query: str, limit: int = 10) -> List[str]:
+    def get_suggestions(self, partial_query: str, limit: int = 10) -> list[str]:
         """Get search suggestions based on partial query."""
         try:
             if self.ix is None:
@@ -605,7 +603,7 @@ class SearchEngine:
             logger.error(f"Error optimizing index: {e}")
             return False
 
-    def get_index_stats(self) -> Dict[str, Any]:
+    def get_index_stats(self) -> dict[str, Any]:
         """Get statistics about the search index."""
         try:
             if self.ix is None:

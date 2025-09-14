@@ -7,11 +7,11 @@ from unittest.mock import patch
 import pytest
 
 from src.tusk.config import TuskConfig
-from src.tusk.models import Checkpoint, Task, Plan
-from src.tusk.storage import CheckpointStorage, TaskStorage, PlanStorage
-from src.tusk.storage.search import SearchEngine
-from src.tusk.models.task import TaskStatus, TaskPriority
+from src.tusk.models import Checkpoint, Plan, Task
 from src.tusk.models.plan import PlanStatus
+from src.tusk.models.task import TaskStatus
+from src.tusk.storage import CheckpointStorage, PlanStorage, TaskStorage
+from src.tusk.storage.search import SearchEngine
 
 
 class TestCrossProjectFunctionality:

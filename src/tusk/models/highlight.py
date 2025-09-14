@@ -1,8 +1,7 @@
 """Highlight model for important moments and decisions."""
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from enum import Enum
-from typing import Optional
 
 from pydantic import BaseModel, Field
 
@@ -46,11 +45,11 @@ class Highlight(BaseModel):
     )
 
     timestamp: datetime = Field(
-        default_factory=lambda: datetime.now(timezone.utc),
+        default_factory=lambda: datetime.now(UTC),
         description="When this highlight occurred",
     )
 
-    context: Optional[str] = Field(
+    context: str | None = Field(
         default=None, description="Additional context about the highlight"
     )
 
@@ -61,7 +60,7 @@ class Highlight(BaseModel):
         default_factory=list, description="Files related to this highlight"
     )
 
-    related_task_id: Optional[str] = Field(default=None, description="ID of related task item")
+    related_task_id: str | None = Field(default=None, description="ID of related task item")
 
     def __str__(self) -> str:
         return f"[{self.category.value.upper()}] {self.content[:100]}..."

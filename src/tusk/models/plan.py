@@ -1,8 +1,6 @@
 """Plan model for persistent cross-session planning."""
 
-from datetime import datetime, timezone
 from enum import Enum
-from typing import Optional
 from uuid import uuid4
 
 from pydantic import BaseModel, Field
@@ -34,9 +32,9 @@ class PlanStep(BaseModel):
 
     completed: bool = Field(default=False, description="Whether this step is done")
 
-    notes: Optional[str] = Field(default=None, description="Notes about this step")
+    notes: str | None = Field(default=None, description="Notes about this step")
 
-    estimated_duration: Optional[str] = Field(
+    estimated_duration: str | None = Field(
         default=None, description="How long this step should take"
     )
 
@@ -44,7 +42,7 @@ class PlanStep(BaseModel):
         default_factory=list, description="IDs of steps that must complete before this one"
     )
 
-    completed_at: Optional[TZAwareDatetime] = Field(
+    completed_at: TZAwareDatetime | None = Field(
         default=None, description="When this step was completed"
     )
 
@@ -96,7 +94,7 @@ class Plan(BaseModel):
     # Organization
     tags: list[str] = Field(default_factory=list, description="Tags for organization")
 
-    category: Optional[str] = Field(
+    category: str | None = Field(
         default=None, description="Category of plan (feature, bugfix, research, etc.)"
     )
 
@@ -110,30 +108,30 @@ class Plan(BaseModel):
     )
 
     # Metadata
-    estimated_duration: Optional[str] = Field(
+    estimated_duration: str | None = Field(
         default=None, description="Estimated total time to complete (e.g., '1w', '3d')"
     )
 
-    notes: Optional[str] = Field(default=None, description="Additional notes about this plan")
+    notes: str | None = Field(default=None, description="Additional notes about this plan")
 
     # Timestamps
     created_at: TZAwareDatetime = Field(
         default_factory=utc_now, description="When this plan was created"
     )
 
-    updated_at: Optional[TZAwareDatetime] = Field(
+    updated_at: TZAwareDatetime | None = Field(
         default=None, description="When this plan was last updated"
     )
 
-    started_at: Optional[TZAwareDatetime] = Field(
+    started_at: TZAwareDatetime | None = Field(
         default=None, description="When work on this plan began"
     )
 
-    completed_at: Optional[TZAwareDatetime] = Field(
+    completed_at: TZAwareDatetime | None = Field(
         default=None, description="When this plan was completed"
     )
 
-    target_completion: Optional[TZAwareDatetime] = Field(
+    target_completion: TZAwareDatetime | None = Field(
         default=None, description="Target completion date"
     )
 

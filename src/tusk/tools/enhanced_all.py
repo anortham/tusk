@@ -2,13 +2,12 @@
 
 import json
 import logging
-from datetime import datetime, timezone, timedelta
-from typing import Optional, List, Union, Annotated
-from uuid import uuid4
+from datetime import UTC, datetime, timedelta
+from typing import Annotated
 
-from ..models.task import Task, TaskStatus, TaskPriority
 from ..models.checkpoint import Checkpoint
-from ..models.plan import Plan, PlanStatus, PlanStep
+from ..models.plan import Plan, PlanStatus
+from ..models.task import TaskStatus
 from .enhanced_base import EnhancedBaseTool
 
 logger = logging.getLogger(__name__)
@@ -27,12 +26,12 @@ class EnhancedUnifiedCheckpointTool(EnhancedBaseTool):
                 'Required. Operations: "save" (new checkpoint), "list" (recent checkpoints), "search" (find by content)',
             ],
             description: Annotated[
-                Union[str, None],
+                str | None,
                 'Progress description for "save". Example: "Fixed auth bug in login system"',
             ] = None,
             limit: Annotated[int, 'Max results for "list"/"search" (default 5, range 3-20)'] = 5,
             query: Annotated[
-                Union[str, None],
+                str | None,
                 'Search text for "search" action. Searches checkpoint descriptions',
             ] = None,
         ) -> str:
@@ -73,12 +72,12 @@ class EnhancedUnifiedCheckpointTool(EnhancedBaseTool):
         # Enhance with parameter descriptions
         self.enhance_registered_tools(mcp_server, ["checkpoint"])
 
-    async def _get_git_info_safe(self, project_path: str) -> tuple[Optional[str], Optional[str]]:
+    async def _get_git_info_safe(self, project_path: str) -> tuple[str | None, str | None]:
         """Get current git branch and commit hash safely using thread pool to avoid AsyncIO deadlock."""
         try:
             import asyncio
-            import subprocess
             import os
+            import subprocess
 
             if not project_path or not os.path.exists(project_path):
                 return None, None
@@ -119,7 +118,7 @@ class EnhancedUnifiedCheckpointTool(EnhancedBaseTool):
                     asyncio.to_thread(run_git_subprocess), timeout=5.0  # Overall timeout
                 )
                 return branch, commit
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 logger.debug("Git info timeout - operations took too long")
                 return None, None
 
@@ -133,8 +132,8 @@ class EnhancedUnifiedCheckpointTool(EnhancedBaseTool):
         """Get recently modified files safely using thread pool to avoid AsyncIO deadlock."""
         try:
             import asyncio
-            import subprocess
             import os
+            import subprocess
 
             if not project_path or not os.path.exists(project_path):
                 return []
@@ -174,7 +173,7 @@ class EnhancedUnifiedCheckpointTool(EnhancedBaseTool):
                     asyncio.to_thread(run_file_detection), timeout=4.0  # Overall timeout
                 )
                 return files
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 logger.debug("File detection timeout - operations took too long")
                 return []
 
@@ -185,8 +184,8 @@ class EnhancedUnifiedCheckpointTool(EnhancedBaseTool):
     def _build_work_context(
         self,
         description: str,
-        git_branch: Optional[str],
-        git_commit: Optional[str],
+        git_branch: str | None,
+        git_commit: str | None,
         active_files: list[str],
     ) -> str:
         """Build rich work context for the checkpoint."""
@@ -205,7 +204,7 @@ class EnhancedUnifiedCheckpointTool(EnhancedBaseTool):
 
         return "\n".join(context_parts)
 
-    async def _save_checkpoint(self, description: Optional[str]) -> str:
+    async def _save_checkpoint(self, description: str | None) -> str:
         """Save a progress checkpoint."""
         if not description:
             return json.dumps(
@@ -232,7 +231,7 @@ class EnhancedUnifiedCheckpointTool(EnhancedBaseTool):
             project_id=project_id,
             project_path=project_path,
             description=description,
-            session_id=f"session_{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')}",
+            session_id=f"session_{datetime.now(UTC).strftime('%Y%m%d_%H%M%S')}",
             git_branch=git_branch,
             git_commit=git_commit,
             work_context=work_context,
@@ -308,7 +307,7 @@ class EnhancedUnifiedCheckpointTool(EnhancedBaseTool):
             indent=2,
         )
 
-    async def _search_checkpoints(self, query: Optional[str], limit: int) -> str:
+    async def _search_checkpoints(self, query: str | None, limit: int) -> str:
         """Search checkpoints by content."""
         if not query:
             return json.dumps(
@@ -421,7 +420,7 @@ class EnhancedUnifiedRecallTool(EnhancedBaseTool):
 
     async def _recall_recent(self) -> str:
         """Quick recall of recent context (last 2 days)."""
-        cutoff_date = datetime.now(timezone.utc) - timedelta(days=2)
+        cutoff_date = datetime.now(UTC) - timedelta(days=2)
 
         # Get recent checkpoints
         recent_checkpoints = [
@@ -607,7 +606,7 @@ class EnhancedUnifiedPlanTool(EnhancedBaseTool):
         # Enhance with parameter descriptions
         self.enhance_registered_tools(mcp_server, ["plan"])
 
-    async def _create_plan(self, title: Optional[str], description: Optional[str]) -> str:
+    async def _create_plan(self, title: str | None, description: str | None) -> str:
         """Create a new plan."""
         if not title:
             return json.dumps(
@@ -648,9 +647,7 @@ class EnhancedUnifiedPlanTool(EnhancedBaseTool):
                         "steps_count": 0,
                     },
                     "message": f"Created plan: {title}",
-                    "next_action": "Use plan(action='add_step', plan_id='{}', step_description='first step') to add steps".format(
-                        plan.id
-                    ),
+                    "next_action": f"Use plan(action='add_step', plan_id='{plan.id}', step_description='first step') to add steps",
                 },
                 ensure_ascii=False,
                 indent=2,
@@ -711,7 +708,7 @@ class EnhancedUnifiedPlanTool(EnhancedBaseTool):
             indent=2,
         )
 
-    async def _activate_plan(self, plan_id: Optional[str]) -> str:
+    async def _activate_plan(self, plan_id: str | None) -> str:
         """Activate a plan."""
         if not plan_id:
             return json.dumps(
@@ -731,7 +728,7 @@ class EnhancedUnifiedPlanTool(EnhancedBaseTool):
             indent=2,
         )
 
-    async def _complete_plan(self, plan_id: Optional[str]) -> str:
+    async def _complete_plan(self, plan_id: str | None) -> str:
         """Complete a plan."""
         if not plan_id:
             return json.dumps(
@@ -751,7 +748,7 @@ class EnhancedUnifiedPlanTool(EnhancedBaseTool):
             indent=2,
         )
 
-    async def _add_step(self, plan_id: Optional[str], step_description: Optional[str]) -> str:
+    async def _add_step(self, plan_id: str | None, step_description: str | None) -> str:
         """Add a step to a plan."""
         if not plan_id:
             return json.dumps(
@@ -779,7 +776,7 @@ class EnhancedUnifiedPlanTool(EnhancedBaseTool):
             indent=2,
         )
 
-    async def _complete_step(self, step_id: Optional[str]) -> str:
+    async def _complete_step(self, step_id: str | None) -> str:
         """Complete a plan step."""
         if not step_id:
             return json.dumps(
@@ -799,7 +796,7 @@ class EnhancedUnifiedPlanTool(EnhancedBaseTool):
             indent=2,
         )
 
-    async def _search_plans(self, query: Optional[str], limit: int) -> str:
+    async def _search_plans(self, query: str | None, limit: int) -> str:
         """Search plans by content."""
         if not query:
             return json.dumps(
@@ -869,7 +866,7 @@ class EnhancedUnifiedStandupTool(EnhancedBaseTool):
 
     async def _generate_daily_standup(self, include_completed: bool) -> str:
         """Generate daily standup report."""
-        cutoff_date = datetime.now(timezone.utc) - timedelta(days=1)
+        cutoff_date = datetime.now(UTC) - timedelta(days=1)
 
         # Get today's work
         recent_checkpoints = []
@@ -885,7 +882,7 @@ class EnhancedUnifiedStandupTool(EnhancedBaseTool):
                 "success": True,
                 "report_type": "daily_standup",
                 "timeframe": "last 24 hours",
-                "generated_at": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M"),
+                "generated_at": datetime.now(UTC).strftime("%Y-%m-%d %H:%M"),
                 "summary": {
                     "achievements": len(recent_checkpoints),
                     "ongoing_tasks": len(
@@ -895,7 +892,7 @@ class EnhancedUnifiedStandupTool(EnhancedBaseTool):
                         [t for t in active_tasks if t.status == TaskStatus.PENDING]
                     ),
                     "projects_active": (
-                        len(set(cp.project_id for cp in recent_checkpoints))
+                        len({cp.project_id for cp in recent_checkpoints})
                         if recent_checkpoints
                         else 0
                     ),

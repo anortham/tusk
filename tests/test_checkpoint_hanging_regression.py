@@ -1,11 +1,12 @@
 """Regression tests to prevent checkpoint hanging issues from returning."""
 
 import asyncio
-import pytest
 import sys
 import time
 from pathlib import Path
-from unittest.mock import MagicMock, patch, AsyncMock
+from unittest.mock import MagicMock
+
+import pytest
 
 # Add src to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
@@ -14,7 +15,6 @@ from tusk.config import TuskConfig
 from tusk.storage.checkpoint_store import CheckpointStorage
 from tusk.storage.search import SearchEngine
 from tusk.tools.enhanced_all import EnhancedUnifiedCheckpointTool
-from tusk.models.checkpoint import Checkpoint
 
 
 class TestCheckpointHangingRegression:
@@ -68,7 +68,7 @@ class TestCheckpointHangingRegression:
             assert "checkpoint" in parsed
             assert "id" in parsed["checkpoint"]
 
-        except asyncio.TimeoutError:
+        except TimeoutError:
             pytest.fail("Checkpoint save operation timed out - hanging regression detected!")
 
     @pytest.mark.asyncio
@@ -104,7 +104,7 @@ class TestCheckpointHangingRegression:
                 parsed = json.loads(result)
                 assert parsed["success"] is True
 
-        except asyncio.TimeoutError:
+        except TimeoutError:
             pytest.fail(
                 "Concurrent checkpoint operations timed out - deadlock regression detected!"
             )
@@ -138,7 +138,7 @@ class TestCheckpointHangingRegression:
             assert commit is None or isinstance(commit, str)
             assert isinstance(files, list)
 
-        except asyncio.TimeoutError:
+        except TimeoutError:
             pytest.fail("Git operations timed out - subprocess hanging regression detected!")
 
     @pytest.mark.asyncio
@@ -168,7 +168,7 @@ class TestCheckpointHangingRegression:
             parsed = json.loads(result)
             assert parsed["success"] is True
 
-        except asyncio.TimeoutError:
+        except TimeoutError:
             pytest.fail("Full checkpoint workflow timed out - workflow regression detected!")
 
     @pytest.mark.asyncio
@@ -193,7 +193,7 @@ class TestCheckpointHangingRegression:
             # Should register quickly
             assert duration < 8.0, f"Tool registration took too long: {duration}s"
 
-        except asyncio.TimeoutError:
+        except TimeoutError:
             pytest.fail("Tool registration timed out - registration hanging regression detected!")
 
     @pytest.mark.asyncio
@@ -230,14 +230,15 @@ class TestCheckpointHangingRegression:
             assert result2 == (None, None)
             assert result3 == []
 
-        except asyncio.TimeoutError:
+        except TimeoutError:
             pytest.fail("Error handling timed out - error condition hanging regression detected!")
 
     def test_memory_usage_during_operations(self, checkpoint_tool):
         """Test that operations don't cause memory issues that could lead to hanging."""
         try:
-            import psutil
             import os
+
+            import psutil
         except ImportError:
             pytest.skip("psutil not available for memory testing")
 
@@ -275,7 +276,7 @@ class TestCheckpointHangingRegression:
 
         try:
             # Rapid sequential operations
-            for i in range(20):
+            for _i in range(20):
                 result = await asyncio.wait_for(
                     checkpoint_tool._get_git_info_safe(str(Path.cwd())), timeout=5.0
                 )
@@ -290,7 +291,7 @@ class TestCheckpointHangingRegression:
             # Should complete all operations in reasonable time
             assert duration < 30.0, f"Rapid sequential operations took too long: {duration}s"
 
-        except asyncio.TimeoutError:
+        except TimeoutError:
             pytest.fail(
                 "Rapid sequential operations timed out - resource exhaustion regression detected!"
             )
@@ -337,7 +338,7 @@ class TestCheckpointHangingRegression:
                 len(timeout_errors) == 0
             ), f"Found {len(timeout_errors)} timeout errors in stress test"
 
-        except asyncio.TimeoutError:
+        except TimeoutError:
             pytest.fail(
                 "Stress test timed out - concurrent operations hanging regression detected!"
             )

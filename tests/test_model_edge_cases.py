@@ -1,15 +1,14 @@
 """Edge case tests for Tusk core models."""
 
 import json
-from datetime import datetime, timezone, timedelta
-from pathlib import Path
+from datetime import UTC, datetime, timedelta
 
 import pytest
 
-from src.tusk.models import Checkpoint, Task, Plan, Highlight
+from src.tusk.models import Checkpoint, Highlight, Plan, Task
 from src.tusk.models.highlight import HighlightCategory, HighlightImportance
-from src.tusk.models.task import TaskStatus, TaskPriority
-from src.tusk.models.plan import PlanStatus, PlanStep
+from src.tusk.models.plan import PlanStatus
+from src.tusk.models.task import TaskPriority, TaskStatus
 
 
 class TestHighlightModel:
@@ -27,7 +26,7 @@ class TestHighlightModel:
 
     def test_highlight_creation_with_all_fields(self):
         """Test highlight creation with all fields specified."""
-        custom_time = datetime.now(timezone.utc)
+        custom_time = datetime.now(UTC)
         highlight = Highlight(
             content="Detailed highlight",
             category=HighlightCategory.COMPLETION,
@@ -254,13 +253,13 @@ class TestTaskModelEdgeCases:
         assert task.completed_at is None
 
         # Mark in progress
-        start_time = datetime.now(timezone.utc)
+        start_time = datetime.now(UTC)
         task.mark_in_progress()
         assert task.started_at is not None
         assert task.started_at >= start_time
 
         # Mark completed
-        completion_time = datetime.now(timezone.utc)
+        completion_time = datetime.now(UTC)
         task.mark_completed()
         assert task.completed_at is not None
         assert task.completed_at >= completion_time
@@ -417,19 +416,18 @@ class TestModelTimestampConsistency:
         plan = Plan(title="UTC test", description="Testing UTC")
         highlight = Highlight(content="UTC test")
 
-        models = [checkpoint, task, plan, highlight]
 
         # Check different timestamp fields based on model type
-        assert checkpoint.created_at.tzinfo == timezone.utc
+        assert checkpoint.created_at.tzinfo == UTC
         if checkpoint.updated_at is not None:
-            assert checkpoint.updated_at.tzinfo == timezone.utc
-        assert task.created_at.tzinfo == timezone.utc
+            assert checkpoint.updated_at.tzinfo == UTC
+        assert task.created_at.tzinfo == UTC
         if task.updated_at is not None:
-            assert task.updated_at.tzinfo == timezone.utc
-        assert plan.created_at.tzinfo == timezone.utc
+            assert task.updated_at.tzinfo == UTC
+        assert plan.created_at.tzinfo == UTC
         if plan.updated_at is not None:
-            assert plan.updated_at.tzinfo == timezone.utc
-        assert highlight.timestamp.tzinfo == timezone.utc
+            assert plan.updated_at.tzinfo == UTC
+        assert highlight.timestamp.tzinfo == UTC
 
     def test_timestamp_ordering_consistency(self):
         """Test that timestamps are ordered correctly."""

@@ -1,8 +1,10 @@
 """Tool enhancement utilities for rich parameter descriptions."""
 
-import docstring_parser
 import inspect
-from typing import Any, Callable, Dict, Optional
+from collections.abc import Callable
+from typing import Any
+
+import docstring_parser
 from fastmcp.utilities.logging import get_logger
 
 logger = get_logger(__name__)
@@ -12,7 +14,7 @@ class ToolEnhancer:
     """Enhances FastMCP tools with rich parameter descriptions from docstrings."""
 
     @staticmethod
-    def enhance_tool_parameters(func: Callable, existing_schema: Dict[str, Any]) -> Dict[str, Any]:
+    def enhance_tool_parameters(func: Callable, existing_schema: dict[str, Any]) -> dict[str, Any]:
         """
         Enhance tool parameter schema with descriptions from docstring.
 

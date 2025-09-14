@@ -1,25 +1,20 @@
 """Comprehensive tests for Tusk unified MCP tools."""
 
-import tempfile
 import json
-import asyncio
+import tempfile
 from pathlib import Path
-from unittest.mock import Mock, AsyncMock
-from datetime import datetime, timezone
+from unittest.mock import Mock
 
 import pytest
 
 from src.tusk.config import TuskConfig
-from src.tusk.models import Checkpoint, Task, Plan
-from src.tusk.models.task import TaskStatus, TaskPriority
-from src.tusk.models.plan import PlanStatus
-from src.tusk.storage import CheckpointStorage, TaskStorage, PlanStorage, SearchEngine
+from src.tusk.storage import CheckpointStorage, PlanStorage, SearchEngine, TaskStorage
 from src.tusk.tools.unified import (
-    UnifiedTaskTool,
     UnifiedCheckpointTool,
+    UnifiedPlanTool,
     UnifiedRecallTool,
     UnifiedStandupTool,
-    UnifiedPlanTool,
+    UnifiedTaskTool,
 )
 
 

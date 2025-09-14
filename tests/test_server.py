@@ -1,10 +1,11 @@
 """Tests for server functionality and MCP integration."""
 
-import pytest
-from unittest.mock import Mock, patch
+from unittest.mock import patch
 
-from src.tusk.server import TuskServer, main
+import pytest
+
 from src.tusk.config import TuskConfig
+from src.tusk.server import TuskServer
 
 
 class TestServerConfiguration:
@@ -90,11 +91,11 @@ class TestMCPIntegration:
         """Test that all tools can be imported without errors."""
         try:
             from src.tusk.tools.unified import (
-                UnifiedTaskTool,
                 UnifiedCheckpointTool,
+                UnifiedPlanTool,
                 UnifiedRecallTool,
                 UnifiedStandupTool,
-                UnifiedPlanTool,
+                UnifiedTaskTool,
             )
 
             # All tools imported successfully
@@ -156,7 +157,7 @@ class TestServerStartupSequence:
         config.ensure_directories()
 
         # Test that storage classes can be imported and initialized
-        from src.tusk.storage import CheckpointStorage, TaskStorage, PlanStorage
+        from src.tusk.storage import CheckpointStorage, PlanStorage, TaskStorage
         from src.tusk.storage.search import SearchEngine
 
         # Should be able to create storage instances

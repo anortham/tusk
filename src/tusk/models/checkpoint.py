@@ -1,8 +1,6 @@
 """Checkpoint model for work context snapshots."""
 
-from datetime import datetime, timedelta, timezone
-from typing import Optional
-from uuid import uuid4
+from datetime import UTC, datetime, timedelta
 
 from pydantic import BaseModel, Field
 
@@ -12,9 +10,8 @@ from .types import TZAwareDatetime, utc_now
 
 def generate_id() -> str:
     """Generate a timestamp-based unique ID for checkpoints."""
-    from datetime import datetime, timezone
 
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     # Format: YYYYMMDD_HHMMSS_microseconds (20250914_143025_123456)
     return now.strftime("%Y%m%d_%H%M%S_%f")
 
@@ -55,7 +52,7 @@ class Checkpoint(BaseModel):
 
     project_path: str = Field(default="", description="Full path to the project directory")
 
-    session_id: Optional[str] = Field(
+    session_id: str | None = Field(
         default=None, description="Session ID when this checkpoint was created"
     )
 
@@ -64,7 +61,7 @@ class Checkpoint(BaseModel):
         description="Human-readable description of what's happening in this checkpoint"
     )
 
-    work_context: Optional[str] = Field(
+    work_context: str | None = Field(
         default=None,
         description="Detailed context about the current work - goals, status, next steps",
     )
@@ -80,11 +77,11 @@ class Checkpoint(BaseModel):
     )
 
     # Version control context
-    git_branch: Optional[str] = Field(
+    git_branch: str | None = Field(
         default=None, description="Git branch when checkpoint was created"
     )
 
-    git_commit: Optional[str] = Field(
+    git_commit: str | None = Field(
         default=None, description="Git commit hash when checkpoint was created"
     )
 
@@ -101,11 +98,11 @@ class Checkpoint(BaseModel):
         default_factory=utc_now, description="When this checkpoint was created"
     )
 
-    updated_at: Optional[TZAwareDatetime] = Field(
+    updated_at: TZAwareDatetime | None = Field(
         default=None, description="When this checkpoint was last updated"
     )
 
-    ttl_expiry: Optional[TZAwareDatetime] = Field(
+    ttl_expiry: TZAwareDatetime | None = Field(
         default=None, description="When this checkpoint should expire and be cleaned up"
     )
 

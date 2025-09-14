@@ -3,9 +3,9 @@
 import json
 import logging
 from abc import ABC, abstractmethod
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Dict, Generic, List, Optional, Type, TypeVar
+from typing import Any, Generic, TypeVar
 
 import portalocker
 from pydantic import BaseModel
@@ -20,7 +20,7 @@ T = TypeVar("T", bound=BaseModel)
 class BaseStorage(Generic[T], ABC):
     """Base class for JSON file storage with file locking."""
 
-    def __init__(self, config: TuskConfig, model_class: Type[T]):
+    def __init__(self, config: TuskConfig, model_class: type[T]):
         self.config = config
         self.model_class = model_class
         self.data_dir = config.get_data_dir()
@@ -41,24 +41,24 @@ class BaseStorage(Generic[T], ABC):
         storage_dir = self.data_dir / self.get_storage_subdir()
         return storage_dir / f"{item_id}.json"
 
-    def _read_json_file(self, file_path: Path) -> Optional[Dict[str, Any]]:
+    def _read_json_file(self, file_path: Path) -> dict[str, Any] | None:
         """Read JSON data from file with locking."""
         if not file_path.exists():
             return None
 
         try:
-            with open(file_path, "r", encoding="utf-8") as f:
+            with open(file_path, encoding="utf-8") as f:
                 # Use shared lock for reading
                 portalocker.lock(f, portalocker.LOCK_SH)
                 try:
                     return json.load(f)
                 finally:
                     portalocker.unlock(f)
-        except (json.JSONDecodeError, IOError) as e:
+        except (OSError, json.JSONDecodeError) as e:
             logger.error(f"Error reading {file_path}: {e}")
             return None
 
-    def _write_json_file(self, file_path: Path, data: Dict[str, Any]) -> bool:
+    def _write_json_file(self, file_path: Path, data: dict[str, Any]) -> bool:
         """Write JSON data to file with locking."""
         try:
             # Ensure parent directory exists
@@ -72,7 +72,7 @@ class BaseStorage(Generic[T], ABC):
                 finally:
                     portalocker.unlock(f)
             return True
-        except IOError as e:
+        except OSError as e:
             logger.error(f"Error writing {file_path}: {e}")
             return False
 
@@ -85,13 +85,12 @@ class BaseStorage(Generic[T], ABC):
                 return obj.isoformat()
             else:
                 # For naive datetimes, assume UTC and add explicit timezone
-                from datetime import timezone
 
-                obj_utc = obj.replace(tzinfo=timezone.utc)
+                obj_utc = obj.replace(tzinfo=UTC)
                 return obj_utc.isoformat()
         raise TypeError(f"Object of type {type(obj)} is not JSON serializable")
 
-    def load(self, item_id: str) -> Optional[T]:
+    def load(self, item_id: str) -> T | None:
         """Load an item by ID."""
         file_path = self._get_file_path(item_id)
         data = self._read_json_file(file_path)
@@ -109,7 +108,7 @@ class BaseStorage(Generic[T], ABC):
         """Save an item."""
         try:
             # Get ID from the item
-            item_id = getattr(item, "id")
+            item_id = item.id
             file_path = self._get_file_path(item_id)
 
             # Convert to dict and save
@@ -137,7 +136,7 @@ class BaseStorage(Generic[T], ABC):
             file_path.unlink()
             logger.debug(f"Deleted {self.model_class.__name__} {item_id}")
             return True
-        except IOError as e:
+        except OSError as e:
             logger.error(f"Error deleting {item_id}: {e}")
             return False
 
@@ -146,7 +145,7 @@ class BaseStorage(Generic[T], ABC):
         file_path = self._get_file_path(item_id)
         return file_path.exists()
 
-    def list_ids(self) -> List[str]:
+    def list_ids(self) -> list[str]:
         """List all item IDs."""
         storage_dir = self.data_dir / self.get_storage_subdir()
 
@@ -161,7 +160,7 @@ class BaseStorage(Generic[T], ABC):
 
         return sorted(ids)
 
-    def load_all(self) -> List[T]:
+    def load_all(self) -> list[T]:
         """Load all items."""
         items = []
 

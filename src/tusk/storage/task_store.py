@@ -2,8 +2,8 @@
 
 import json
 import logging
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Dict, List, Optional
 
 import portalocker
 
@@ -30,7 +30,7 @@ class TaskStorage:
         """Get the tasks file path."""
         return self.data_dir / "tasks" / "tasks.json"
 
-    def _load_tasks_file(self) -> Dict[str, Dict]:
+    def _load_tasks_file(self) -> dict[str, dict]:
         """Load all tasks from the JSON file."""
         tasks_file = self._get_tasks_file()
 
@@ -38,17 +38,17 @@ class TaskStorage:
             return {}
 
         try:
-            with open(tasks_file, "r", encoding="utf-8") as f:
+            with open(tasks_file, encoding="utf-8") as f:
                 portalocker.lock(f, portalocker.LOCK_SH)
                 try:
                     return json.load(f)
                 finally:
                     portalocker.unlock(f)
-        except (json.JSONDecodeError, IOError) as e:
+        except (OSError, json.JSONDecodeError) as e:
             logger.error(f"Error reading tasks file: {e}")
             return {}
 
-    def _save_tasks_file(self, tasks_data: Dict[str, Dict]) -> bool:
+    def _save_tasks_file(self, tasks_data: dict[str, dict]) -> bool:
         """Save all tasks to the JSON file."""
         tasks_file = self._get_tasks_file()
 
@@ -62,7 +62,7 @@ class TaskStorage:
                 finally:
                     portalocker.unlock(f)
             return True
-        except IOError as e:
+        except OSError as e:
             logger.error(f"Error writing tasks file: {e}")
             return False
 
@@ -74,7 +74,7 @@ class TaskStorage:
             return obj.isoformat()
         raise TypeError(f"Object of type {type(obj)} is not JSON serializable")
 
-    def load(self, task_id: str) -> Optional[Task]:
+    def load(self, task_id: str) -> Task | None:
         """Load a task by ID."""
         tasks_data = self._load_tasks_file()
 
@@ -131,7 +131,7 @@ class TaskStorage:
         tasks_data = self._load_tasks_file()
         return task_id in tasks_data
 
-    def load_all(self) -> List[Task]:
+    def load_all(self) -> list[Task]:
         """Load all tasks."""
         tasks_data = self._load_tasks_file()
         tasks = []
@@ -145,7 +145,7 @@ class TaskStorage:
 
         return tasks
 
-    def list_ids(self) -> List[str]:
+    def list_ids(self) -> list[str]:
         """List all task IDs."""
         tasks_data = self._load_tasks_file()
         return sorted(tasks_data.keys())
@@ -154,34 +154,34 @@ class TaskStorage:
         """Count the number of tasks."""
         return len(self.list_ids())
 
-    def find_by_status(self, status: TaskStatus) -> List[Task]:
+    def find_by_status(self, status: TaskStatus) -> list[Task]:
         """Find tasks by status."""
         all_tasks = self.load_all()
         return [task for task in all_tasks if task.status == status]
 
-    def find_pending(self) -> List[Task]:
+    def find_pending(self) -> list[Task]:
         """Find all pending tasks."""
         return self.find_by_status(TaskStatus.PENDING)
 
-    def find_in_progress(self) -> List[Task]:
+    def find_in_progress(self) -> list[Task]:
         """Find all in-progress tasks."""
         return self.find_by_status(TaskStatus.IN_PROGRESS)
 
-    def find_completed(self) -> List[Task]:
+    def find_completed(self) -> list[Task]:
         """Find all completed tasks."""
         return self.find_by_status(TaskStatus.COMPLETED)
 
-    def find_by_checkpoint(self, checkpoint_id: str) -> List[Task]:
+    def find_by_checkpoint(self, checkpoint_id: str) -> list[Task]:
         """Find tasks linked to a specific checkpoint."""
         all_tasks = self.load_all()
         return [task for task in all_tasks if task.checkpoint_id == checkpoint_id]
 
-    def find_by_plan(self, plan_id: str) -> List[Task]:
+    def find_by_plan(self, plan_id: str) -> list[Task]:
         """Find tasks linked to a specific plan."""
         all_tasks = self.load_all()
         return [task for task in all_tasks if task.plan_id == plan_id]
 
-    def find_by_tags(self, tags: List[str]) -> List[Task]:
+    def find_by_tags(self, tags: list[str]) -> list[Task]:
         """Find tasks that have any of the specified tags."""
         all_tasks = self.load_all()
         matching_tasks = []
@@ -192,12 +192,12 @@ class TaskStorage:
 
         return matching_tasks
 
-    def find_overdue(self) -> List[Task]:
+    def find_overdue(self) -> list[Task]:
         """Find tasks that are overdue."""
         all_tasks = self.load_all()
         return [task for task in all_tasks if task.is_overdue()]
 
-    def get_active_tasks(self) -> List[Task]:
+    def get_active_tasks(self) -> list[Task]:
         """Get tasks that are pending or in progress."""
         all_tasks = self.load_all()
         return [
@@ -206,7 +206,7 @@ class TaskStorage:
             if task.status in [TaskStatus.PENDING, TaskStatus.IN_PROGRESS]
         ]
 
-    def get_summary_stats(self) -> Dict[str, int]:
+    def get_summary_stats(self) -> dict[str, int]:
         """Get summary statistics about tasks."""
         all_tasks = self.load_all()
 
@@ -227,7 +227,7 @@ class TaskStorage:
 
         return stats
 
-    def bulk_update_status(self, task_ids: List[str], new_status: TaskStatus) -> int:
+    def bulk_update_status(self, task_ids: list[str], new_status: TaskStatus) -> int:
         """Update status for multiple tasks. Returns count of updated tasks."""
         updated_count = 0
         tasks_data = self._load_tasks_file()
@@ -246,7 +246,7 @@ class TaskStorage:
                         task.mark_blocked()
                     else:
                         task.status = new_status
-                        task.updated_at = datetime.now(timezone.utc)
+                        task.updated_at = datetime.now(UTC)
 
                     tasks_data[task_id] = task.model_dump(mode="json")
                     updated_count += 1

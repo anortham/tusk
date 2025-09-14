@@ -2,13 +2,9 @@
 
 import json
 import logging
-from datetime import datetime, timezone
-from typing import Optional
-from uuid import uuid4
+from datetime import UTC, datetime
 
-from ..models.task import Task, TaskStatus, TaskPriority
-from ..models.checkpoint import Checkpoint
-from ..models.plan import Plan, PlanStatus, PlanStep
+from ..models.task import Task, TaskPriority, TaskStatus
 from .enhanced_base import EnhancedBaseTool
 
 logger = logging.getLogger(__name__)
@@ -75,7 +71,7 @@ class EnhancedUnifiedTaskTool(EnhancedBaseTool):
         # After registration, enhance the tool with rich parameter descriptions
         self.enhance_registered_tools(mcp_server, ["task"])
 
-    async def _add_task(self, task: Optional[str]) -> str:
+    async def _add_task(self, task: str | None) -> str:
         """Add a new task."""
         if not task:
             return json.dumps(
@@ -176,7 +172,7 @@ class EnhancedUnifiedTaskTool(EnhancedBaseTool):
 
         return json.dumps(result, ensure_ascii=False, indent=2)
 
-    async def _start_task(self, task_id: Optional[str]) -> str:
+    async def _start_task(self, task_id: str | None) -> str:
         """Start working on a task."""
         if not task_id:
             return json.dumps(
@@ -239,7 +235,7 @@ class EnhancedUnifiedTaskTool(EnhancedBaseTool):
                 {"success": False, "error": "Failed to start task"}, ensure_ascii=False, indent=2
             )
 
-    async def _complete_task(self, task_id: Optional[str]) -> str:
+    async def _complete_task(self, task_id: str | None) -> str:
         """Complete a task."""
         if not task_id:
             return json.dumps(
@@ -299,7 +295,7 @@ class EnhancedUnifiedTaskTool(EnhancedBaseTool):
                 {"success": False, "error": "Failed to complete task"}, ensure_ascii=False, indent=2
             )
 
-    async def _update_task(self, task_id: Optional[str], status: Optional[str]) -> str:
+    async def _update_task(self, task_id: str | None, status: str | None) -> str:
         """Update a task's status."""
         if not task_id:
             return json.dumps(
@@ -361,7 +357,7 @@ class EnhancedUnifiedTaskTool(EnhancedBaseTool):
                         "content": task.content,
                         "old_status": old_status.value,
                         "new_status": new_status.value,
-                        "updated_at": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M"),
+                        "updated_at": datetime.now(UTC).strftime("%Y-%m-%d %H:%M"),
                     },
                     "message": f"Updated {task.content}: {old_status.value} -> {new_status.value}",
                 },
@@ -373,7 +369,7 @@ class EnhancedUnifiedTaskTool(EnhancedBaseTool):
                 {"success": False, "error": "Failed to update task"}, ensure_ascii=False, indent=2
             )
 
-    async def _search_tasks(self, query: Optional[str], limit: int) -> str:
+    async def _search_tasks(self, query: str | None, limit: int) -> str:
         """Search for tasks by query."""
         if not query:
             return json.dumps(

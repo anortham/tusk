@@ -1,11 +1,11 @@
 """Tusk memory tools for FastMCP."""
 
 from .unified import (
-    UnifiedTaskTool,
     UnifiedCheckpointTool,
+    UnifiedPlanTool,
     UnifiedRecallTool,
     UnifiedStandupTool,
-    UnifiedPlanTool,
+    UnifiedTaskTool,
 )
 
 __all__ = [

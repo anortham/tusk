@@ -1,8 +1,6 @@
 """Task model for cross-session task management."""
 
-from datetime import datetime, timezone
 from enum import Enum
-from typing import Optional
 from uuid import uuid4
 
 from pydantic import BaseModel, Field
@@ -53,7 +51,10 @@ class Task(BaseModel):
     content: str = Field(description="What needs to be done")
 
     active_form: str = Field(
-        description="Present continuous form for when this task is in progress (e.g., 'Running tests')"
+        description=(
+            "Present continuous form for when this task is in progress "
+            "(e.g., 'Running tests')"
+        )
     )
 
     # Status and priority
@@ -65,22 +66,22 @@ class Task(BaseModel):
     tags: list[str] = Field(default_factory=list, description="Tags for organization")
 
     # Relationships
-    checkpoint_id: Optional[str] = Field(
+    checkpoint_id: str | None = Field(
         default=None, description="ID of the checkpoint where this task was created"
     )
 
-    parent_task_id: Optional[str] = Field(
+    parent_task_id: str | None = Field(
         default=None, description="ID of parent task if this is a subtask"
     )
 
-    plan_id: Optional[str] = Field(default=None, description="ID of the plan this task belongs to")
+    plan_id: str | None = Field(default=None, description="ID of the plan this task belongs to")
 
     # Metadata
-    notes: Optional[str] = Field(
+    notes: str | None = Field(
         default=None, description="Additional notes or context about this task"
     )
 
-    estimated_duration: Optional[str] = Field(
+    estimated_duration: str | None = Field(
         default=None, description="Estimated time to complete (e.g., '30m', '2h', '1d')"
     )
 
@@ -89,19 +90,19 @@ class Task(BaseModel):
         default_factory=utc_now, description="When this task was created"
     )
 
-    updated_at: Optional[TZAwareDatetime] = Field(
+    updated_at: TZAwareDatetime | None = Field(
         default=None, description="When this task was last updated"
     )
 
-    started_at: Optional[TZAwareDatetime] = Field(
+    started_at: TZAwareDatetime | None = Field(
         default=None, description="When work on this task was started"
     )
 
-    completed_at: Optional[TZAwareDatetime] = Field(
+    completed_at: TZAwareDatetime | None = Field(
         default=None, description="When this task was completed"
     )
 
-    due_date: Optional[TZAwareDatetime] = Field(
+    due_date: TZAwareDatetime | None = Field(
         default=None, description="When this task should be completed by"
     )
 

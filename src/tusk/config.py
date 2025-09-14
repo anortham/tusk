@@ -3,7 +3,7 @@
 import json
 import os
 from pathlib import Path
-from typing import Dict, Literal, Optional
+from typing import Literal
 
 from pydantic import BaseModel, Field
 
@@ -17,10 +17,13 @@ class TuskConfig(BaseModel):
     # Storage settings
     storage_mode: Literal["global", "local"] = Field(
         default="global",
-        description="Storage mode: 'global' for cross-project at ~/.coa/tusk, 'local' for project-specific",
+        description=(
+            "Storage mode: 'global' for cross-project at ~/.coa/tusk, "
+            "'local' for project-specific"
+        ),
     )
 
-    data_dir: Optional[Path] = Field(
+    data_dir: Path | None = Field(
         default=None, description="Custom data directory (overrides storage_mode if set)"
     )
 
@@ -45,7 +48,7 @@ class TuskConfig(BaseModel):
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = Field(
         default="INFO", description="Logging level"
     )
-    log_dir: Optional[Path] = Field(
+    log_dir: Path | None = Field(
         default=None, description="Directory for log files (auto-determined if not set)"
     )
 
@@ -126,7 +129,7 @@ class TuskConfig(BaseModel):
         # Fallback to current directory name
         return cwd.name
 
-    def _find_git_root(self, path: Path) -> Optional[Path]:
+    def _find_git_root(self, path: Path) -> Path | None:
         """Find the git repository root starting from the given path."""
         current = path.resolve()
         while current != current.parent:
@@ -139,19 +142,19 @@ class TuskConfig(BaseModel):
         """Get the current project path as a string."""
         return str(Path.cwd().resolve())
 
-    def load_projects_registry(self) -> Dict[str, str]:
+    def load_projects_registry(self) -> dict[str, str]:
         """Load the projects registry (path -> project_id mapping)."""
         registry_path = self.get_projects_registry_path()
         if not registry_path.exists():
             return {}
 
         try:
-            with open(registry_path, "r", encoding="utf-8") as f:
+            with open(registry_path, encoding="utf-8") as f:
                 return json.load(f)
-        except (json.JSONDecodeError, IOError):
+        except (OSError, json.JSONDecodeError):
             return {}
 
-    def save_projects_registry(self, registry: Dict[str, str]) -> None:
+    def save_projects_registry(self, registry: dict[str, str]) -> None:
         """Save the projects registry (path -> project_id mapping)."""
         registry_path = self.get_projects_registry_path()
         registry_path.parent.mkdir(parents=True, exist_ok=True)
@@ -159,7 +162,7 @@ class TuskConfig(BaseModel):
         try:
             with open(registry_path, "w", encoding="utf-8") as f:
                 json.dump(registry, f, indent=2, ensure_ascii=False)
-        except IOError as e:
+        except OSError as e:
             # Log error but don't fail - registry is not critical
             import logging
 

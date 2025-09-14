@@ -3,14 +3,9 @@
 import json
 import tempfile
 from pathlib import Path
-from unittest.mock import patch
-
-import pytest
 
 from src.tusk.config import TuskConfig
-from src.tusk.models import Checkpoint, Task, Plan
-from src.tusk.models.task import TaskStatus
-from src.tusk.models.plan import PlanStatus
+from src.tusk.models import Checkpoint, Plan, Task
 
 
 class TestMigrationFunctionality:

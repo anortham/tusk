@@ -5,19 +5,18 @@ These tests expose the datetime timezone issues and ensure they're properly fixe
 
 import json
 import tempfile
-from datetime import datetime, timezone, timedelta
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
-from typing import List
 
 import pytest
 
 from src.tusk.config import TuskConfig
 from src.tusk.models.checkpoint import Checkpoint
-from src.tusk.models.task import Task, TaskStatus
-from src.tusk.models.plan import Plan, PlanStatus
+from src.tusk.models.plan import Plan
+from src.tusk.models.task import Task
 from src.tusk.storage.checkpoint_store import CheckpointStorage
-from src.tusk.storage.task_store import TaskStorage
 from src.tusk.storage.plan_store import PlanStorage
+from src.tusk.storage.task_store import TaskStorage
 
 
 class TestDatetimeConsistency:
@@ -38,17 +37,17 @@ class TestDatetimeConsistency:
         assert (
             checkpoint.created_at.tzinfo is not None
         ), "Checkpoint.created_at should be timezone-aware"
-        assert checkpoint.created_at.tzinfo == timezone.utc, "Should use UTC timezone"
+        assert checkpoint.created_at.tzinfo == UTC, "Should use UTC timezone"
 
         # Test Todo
         task = Task(content="Test task", active_form="Testing task")
         assert task.created_at.tzinfo is not None, "Todo.created_at should be timezone-aware"
-        assert task.created_at.tzinfo == timezone.utc, "Should use UTC timezone"
+        assert task.created_at.tzinfo == UTC, "Should use UTC timezone"
 
         # Test Plan
         plan = Plan(title="Test plan", description="Test plan description")
         assert plan.created_at.tzinfo is not None, "Plan.created_at should be timezone-aware"
-        assert plan.created_at.tzinfo == timezone.utc, "Should use UTC timezone"
+        assert plan.created_at.tzinfo == UTC, "Should use UTC timezone"
 
     def test_json_roundtrip_preserves_timezone(self, temp_config):
         """Test that saving and loading preserves timezone information."""
@@ -100,7 +99,7 @@ class TestDatetimeConsistency:
         for i in range(3):
             checkpoint = Checkpoint(description=f"Checkpoint {i}")
             # Manually adjust created_at for testing
-            checkpoint.created_at = datetime.now(timezone.utc) + timedelta(minutes=i)
+            checkpoint.created_at = datetime.now(UTC) + timedelta(minutes=i)
             checkpoints.append(checkpoint)
             checkpoint_storage.save(checkpoint)
             # Small delay to ensure unique timestamp-based IDs
@@ -125,7 +124,7 @@ class TestDatetimeConsistency:
         checkpoint_storage = CheckpointStorage(temp_config)
 
         # Create checkpoints across different days
-        base_time = datetime.now(timezone.utc)
+        base_time = datetime.now(UTC)
         checkpoints = []
 
         for i in range(5):
@@ -158,7 +157,7 @@ class TestDatetimeConsistency:
         task_storage = TaskStorage(temp_config)
 
         # Create test data with different timestamps
-        base_time = datetime.now(timezone.utc)
+        base_time = datetime.now(UTC)
 
         checkpoint = Checkpoint(description="Test checkpoint")
         task = Task(content="Test task", active_form="Testing")
@@ -181,7 +180,7 @@ class TestDatetimeConsistency:
         try:
             # Test checkpoint filtering
             created_tz_aware = (
-                loaded_checkpoint.created_at.replace(tzinfo=timezone.utc)
+                loaded_checkpoint.created_at.replace(tzinfo=UTC)
                 if loaded_checkpoint.created_at.tzinfo is None
                 else loaded_checkpoint.created_at
             )
@@ -189,7 +188,7 @@ class TestDatetimeConsistency:
 
             # Test task filtering
             task_created_tz_aware = (
-                loaded_task.created_at.replace(tzinfo=timezone.utc)
+                loaded_task.created_at.replace(tzinfo=UTC)
                 if loaded_task.created_at.tzinfo is None
                 else loaded_task.created_at
             )
@@ -256,7 +255,7 @@ class TestDatetimeConsistency:
         file_path = checkpoint_storage._get_file_path(checkpoint.id)
         assert file_path.exists(), "JSON file should exist"
 
-        with open(file_path, "r") as f:
+        with open(file_path) as f:
             json_data = json.load(f)
 
         created_at_str = json_data.get("created_at")

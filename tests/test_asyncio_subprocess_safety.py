@@ -1,11 +1,12 @@
 """Tests for AsyncIO-safe subprocess handling to prevent deadlocks in MCP tools."""
 
 import asyncio
-import pytest
 import subprocess
 import sys
 from pathlib import Path
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
+
+import pytest
 
 # Add src to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
@@ -77,7 +78,7 @@ class TestAsyncIOSubprocessSafety:
 
         # Run multiple async operations concurrently
         tasks = []
-        for i in range(3):
+        for _i in range(3):
             tasks.append(checkpoint_tool._get_git_info_safe(project_path))
             tasks.append(checkpoint_tool._get_recently_modified_files_safe(project_path))
 

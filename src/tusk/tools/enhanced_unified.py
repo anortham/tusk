@@ -2,13 +2,10 @@
 
 import json
 import logging
-from datetime import datetime, timezone
-from typing import List, Union, Annotated, Optional
-from uuid import uuid4
+from datetime import UTC, datetime
+from typing import Annotated
 
-from ..models.task import Task, TaskStatus, TaskPriority
-from ..models.checkpoint import Checkpoint
-from ..models.plan import Plan, PlanStatus, PlanStep
+from ..models.task import Task, TaskPriority, TaskStatus
 from .base import BaseTool
 from .enhancement import ToolEnhancer
 
@@ -26,12 +23,12 @@ class EnhancedUnifiedTaskTool(BaseTool):
             action: Annotated[
                 str, "The operation to perform: add, list, start, complete, update, search"
             ],
-            task: Annotated[Union[str, None], "Task description when adding new tasks"] = None,
-            task_id: Annotated[Union[str, None], "Unique task identifier for operations"] = None,
+            task: Annotated[str | None, "Task description when adding new tasks"] = None,
+            task_id: Annotated[str | None, "Unique task identifier for operations"] = None,
             status: Annotated[
-                Union[str, None], "New status when updating: pending, in_progress, completed"
+                str | None, "New status when updating: pending, in_progress, completed"
             ] = None,
-            query: Annotated[Union[str, None], "Search query text for finding tasks"] = None,
+            query: Annotated[str | None, "Search query text for finding tasks"] = None,
             limit: Annotated[int, "Maximum number of results to return"] = 10,
         ) -> str:
             """Manage high-level tasks that persist across sessions.
@@ -118,7 +115,7 @@ class EnhancedUnifiedTaskTool(BaseTool):
                 logger.error(f"Task operation failed: {e}")
                 return json.dumps({"success": False, "error": str(e)}, ensure_ascii=False, indent=2)
 
-    async def _add_task(self, task: Optional[str]) -> str:
+    async def _add_task(self, task: str | None) -> str:
         """Add a new task."""
         if not task:
             return json.dumps(
@@ -219,7 +216,7 @@ class EnhancedUnifiedTaskTool(BaseTool):
 
         return json.dumps(result, ensure_ascii=False, indent=2)
 
-    async def _start_task(self, task_id: Optional[str]) -> str:
+    async def _start_task(self, task_id: str | None) -> str:
         """Start working on a task."""
         if not task_id:
             return json.dumps(
@@ -284,7 +281,7 @@ class EnhancedUnifiedTaskTool(BaseTool):
                 {"success": False, "error": "Failed to start task"}, ensure_ascii=False, indent=2
             )
 
-    async def _complete_task(self, task_id: Optional[str]) -> str:
+    async def _complete_task(self, task_id: str | None) -> str:
         """Complete a task."""
         if not task_id:
             return json.dumps(
@@ -348,7 +345,7 @@ class EnhancedUnifiedTaskTool(BaseTool):
                 {"success": False, "error": "Failed to complete task"}, ensure_ascii=False, indent=2
             )
 
-    async def _update_task(self, task_id: Optional[str], status: Optional[str]) -> str:
+    async def _update_task(self, task_id: str | None, status: str | None) -> str:
         """Update a task's status."""
         if not task_id:
             return json.dumps(
@@ -412,7 +409,7 @@ class EnhancedUnifiedTaskTool(BaseTool):
                         "content": task_obj.content,
                         "old_status": old_status.value,
                         "new_status": new_status.value,
-                        "updated_at": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M"),
+                        "updated_at": datetime.now(UTC).strftime("%Y-%m-%d %H:%M"),
                     },
                     "message": f"Updated {task_obj.content}: {old_status.value} -> {new_status.value}",
                 },
@@ -424,7 +421,7 @@ class EnhancedUnifiedTaskTool(BaseTool):
                 {"success": False, "error": "Failed to update task"}, ensure_ascii=False, indent=2
             )
 
-    async def _search_tasks(self, query: Optional[str], limit: int) -> str:
+    async def _search_tasks(self, query: str | None, limit: int) -> str:
         """Search for tasks by query."""
         if not query:
             return json.dumps(

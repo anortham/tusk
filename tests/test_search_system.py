@@ -1,16 +1,15 @@
 """Tests for Tusk search system using Whoosh."""
 
 import tempfile
+from datetime import UTC, datetime
 from pathlib import Path
-from unittest.mock import Mock, patch
-from datetime import datetime, timezone
+from unittest.mock import patch
 
 import pytest
 
 from src.tusk.config import TuskConfig
-from src.tusk.models import Checkpoint, Task, Plan
-from src.tusk.models.task import TaskStatus, TaskPriority
-from src.tusk.models.plan import PlanStatus
+from src.tusk.models import Checkpoint, Plan, Task
+from src.tusk.models.task import TaskPriority
 from src.tusk.storage.search import SearchEngine, SearchResult
 
 
@@ -196,8 +195,8 @@ class TestSearchEngineQuerying:
 
         # Search only for checkpoints
         results = search_engine.search("test", limit=5, doc_types=["checkpoint"])
-        checkpoint_results = [r for r in results if r.doc_id == sample_checkpoint.id]
-        task_results = [r for r in results if r.doc_id == sample_task.id]
+        [r for r in results if r.doc_id == sample_checkpoint.id]
+        [r for r in results if r.doc_id == sample_task.id]
 
         # Should find checkpoint but not task (if checkpoint contains "test")
         # Note: our sample checkpoint might not contain "test", so this verifies filtering works
@@ -272,7 +271,7 @@ class TestSearchEngineAdvanced:
             description="Old checkpoint from long ago",
         )
         # Manually set an old timestamp
-        old_timestamp = datetime.now(timezone.utc).replace(year=2020)
+        old_timestamp = datetime.now(UTC).replace(year=2020)
         old_checkpoint.created_at = old_timestamp
 
         search_engine.index_checkpoint(old_checkpoint)
@@ -319,7 +318,7 @@ class TestSearchEngineAdvanced:
 
         # Old content should not be found
         results = search_engine.search("authentication", limit=5)
-        matching_results = [r for r in results if r.doc_id == sample_checkpoint.id]
+        [r for r in results if r.doc_id == sample_checkpoint.id]
         # Might be 0 if authentication was completely replaced
 
         # New content should be found
@@ -352,17 +351,16 @@ class TestSearchEngineErrorHandling:
     def test_index_invalid_document_type(self, search_engine):
         """Test indexing with invalid document type."""
         # Try to index a non-supported object
-        invalid_doc = {"not": "a supported document"}
 
         # Should handle gracefully without crashing
-        result = search_engine._index_document(
+        search_engine._index_document(
             doc_id="invalid",
             doc_type="unknown",
             content="test content",
             title="test title",
             tags=[],
             workspace_id="test_workspace",
-            created_at=datetime.now(timezone.utc),
+            created_at=datetime.now(UTC),
         )
         # Should return False or handle gracefully
 

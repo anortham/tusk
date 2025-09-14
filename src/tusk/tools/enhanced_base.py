@@ -1,8 +1,9 @@
 """Enhanced base tool with automatic docstring parameter enhancement."""
 
+import inspect
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING
-import inspect
+
 import docstring_parser
 from fastmcp.utilities.logging import get_logger
 

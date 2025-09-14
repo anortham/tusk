@@ -1,10 +1,8 @@
 """Tusk FastMCP server with adaptive memory tools."""
 
-import asyncio
 import logging
 import sys
-from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from fastmcp import FastMCP
 from fastmcp.utilities.logging import get_logger
@@ -19,7 +17,7 @@ logger = get_logger(__name__)
 class TuskServer:
     """Tusk memory server using FastMCP 2.0."""
 
-    def __init__(self, config: Optional[TuskConfig] = None):
+    def __init__(self, config: TuskConfig | None = None):
         self.config = config or TuskConfig.from_env()
         self.config.ensure_directories()
 
@@ -120,14 +118,14 @@ Every checkpoint saved, task completed, and plan executed builds lasting progres
     def _register_tools(self) -> None:
         """Register enhanced unified MCP tools with rich parameter descriptions."""
         # Import all enhanced tools
-        from .tools.unified import UnifiedCleanupTool  # Keep original cleanup for now
         from .tools.enhanced_all import (
             EnhancedUnifiedCheckpointTool,
-            EnhancedUnifiedRecallTool,
             EnhancedUnifiedPlanTool,
+            EnhancedUnifiedRecallTool,
             EnhancedUnifiedStandupTool,
         )
         from .tools.enhanced_unified import EnhancedUnifiedTaskTool
+        from .tools.unified import UnifiedCleanupTool  # Keep original cleanup for now
 
         # Create enhanced tool instances with rich parameter descriptions
         plan_tool = EnhancedUnifiedPlanTool(self)
@@ -161,7 +159,7 @@ Every checkpoint saved, task completed, and plan executed builds lasting progres
         logger.info(f"Starting Tusk server with SSE transport on {host}:{port}")
         await self.mcp.run(transport="sse", host=host, port=port)
 
-    def get_workspace_stats(self) -> Dict[str, Any]:
+    def get_workspace_stats(self) -> dict[str, Any]:
         """Get statistics about the current data."""
         return {
             "checkpoints": self.checkpoint_storage.count(),
@@ -170,7 +168,7 @@ Every checkpoint saved, task completed, and plan executed builds lasting progres
             "search_stats": self.search_engine.get_index_stats(),
         }
 
-    def cleanup_expired_data(self) -> Dict[str, int]:
+    def cleanup_expired_data(self) -> dict[str, int]:
         """Clean up expired data across all storage systems."""
         results = {
             "checkpoints_removed": self.checkpoint_storage.cleanup_expired(),

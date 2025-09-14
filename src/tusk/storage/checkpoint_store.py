@@ -1,10 +1,8 @@
 """Storage for checkpoint data with date-based organization."""
 
-from datetime import timezone
 import logging
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import List, Optional
 
 from ..models.checkpoint import Checkpoint
 from .base import BaseStorage
@@ -38,7 +36,7 @@ class CheckpointStorage(BaseStorage[Checkpoint]):
                     return file_path
 
         # If not found, use today's date
-        today = datetime.now(timezone.utc)
+        today = datetime.now(UTC)
         return self._get_date_dir(today) / f"{item_id}.json"
 
     def save(self, checkpoint: Checkpoint) -> bool:
@@ -65,8 +63,8 @@ class CheckpointStorage(BaseStorage[Checkpoint]):
             return False
 
     def list_by_date_range(
-        self, start_date: Optional[datetime] = None, end_date: Optional[datetime] = None
-    ) -> List[Checkpoint]:
+        self, start_date: datetime | None = None, end_date: datetime | None = None
+    ) -> list[Checkpoint]:
         """List checkpoints within a date range."""
         checkpoints = []
         storage_dir = self.data_dir / self.get_storage_subdir()
@@ -101,7 +99,7 @@ class CheckpointStorage(BaseStorage[Checkpoint]):
         checkpoints.sort(key=lambda c: c.created_at, reverse=True)
         return checkpoints
 
-    def list_recent(self, limit: int = 10) -> List[Checkpoint]:
+    def list_recent(self, limit: int = 10) -> list[Checkpoint]:
         """List most recent checkpoints."""
         all_checkpoints = self.load_all()
 
@@ -109,21 +107,21 @@ class CheckpointStorage(BaseStorage[Checkpoint]):
         all_checkpoints.sort(key=lambda c: c.created_at, reverse=True)
         return all_checkpoints[:limit]
 
-    def find_by_session(self, session_id: str) -> List[Checkpoint]:
+    def find_by_session(self, session_id: str) -> list[Checkpoint]:
         """Find checkpoints by session ID."""
         all_checkpoints = self.load_all()
         session_checkpoints = [c for c in all_checkpoints if c.session_id == session_id]
         session_checkpoints.sort(key=lambda c: c.created_at, reverse=True)
         return session_checkpoints
 
-    def find_by_git_branch(self, branch: str) -> List[Checkpoint]:
+    def find_by_git_branch(self, branch: str) -> list[Checkpoint]:
         """Find checkpoints by git branch."""
         all_checkpoints = self.load_all()
         branch_checkpoints = [c for c in all_checkpoints if c.git_branch == branch]
         branch_checkpoints.sort(key=lambda c: c.created_at, reverse=True)
         return branch_checkpoints
 
-    def find_by_tags(self, tags: List[str]) -> List[Checkpoint]:
+    def find_by_tags(self, tags: list[str]) -> list[Checkpoint]:
         """Find checkpoints that have any of the specified tags."""
         all_checkpoints = self.load_all()
         matching_checkpoints = []
@@ -157,7 +155,7 @@ class CheckpointStorage(BaseStorage[Checkpoint]):
                         file_path.unlink()
                         removed_count += 1
                         logger.info(f"Removed expired checkpoint {checkpoint_id}")
-                    except IOError as e:
+                    except OSError as e:
                         logger.error(f"Error removing expired checkpoint {checkpoint_id}: {e}")
 
             # Remove empty date directories
@@ -170,7 +168,7 @@ class CheckpointStorage(BaseStorage[Checkpoint]):
 
         return removed_count
 
-    def list_ids(self) -> List[str]:
+    def list_ids(self) -> list[str]:
         """List all checkpoint IDs across all date directories."""
         ids = []
         storage_dir = self.data_dir / self.get_storage_subdir()

@@ -2,13 +2,11 @@
 
 import json
 import logging
-from datetime import datetime, timezone
-from typing import Optional, List
-from uuid import uuid4
+from datetime import UTC, datetime
 
-from ..models.task import Task, TaskStatus, TaskPriority
 from ..models.checkpoint import Checkpoint
 from ..models.plan import Plan, PlanStatus, PlanStep
+from ..models.task import Task, TaskPriority, TaskStatus
 from .base import BaseTool
 
 logger = logging.getLogger(__name__)
@@ -23,10 +21,10 @@ class UnifiedTaskTool(BaseTool):
         @mcp_server.tool
         async def task(
             action: str,
-            task: Optional[str] = None,
-            task_id: Optional[str] = None,
-            status: Optional[str] = None,
-            query: Optional[str] = None,
+            task: str | None = None,
+            task_id: str | None = None,
+            status: str | None = None,
+            query: str | None = None,
             limit: int = 10,
         ) -> str:
             """Manage tasks efficiently with one simple tool.
@@ -74,7 +72,7 @@ class UnifiedTaskTool(BaseTool):
                 logger.error(f"Task operation failed: {e}")
                 return json.dumps({"success": False, "error": str(e)}, ensure_ascii=False, indent=2)
 
-    async def _add_task(self, task: Optional[str]) -> str:
+    async def _add_task(self, task: str | None) -> str:
         """Add a new task."""
         if not task:
             return json.dumps(
@@ -175,7 +173,7 @@ class UnifiedTaskTool(BaseTool):
 
         return json.dumps(result, ensure_ascii=False, indent=2)
 
-    async def _start_task(self, task_id: Optional[str]) -> str:
+    async def _start_task(self, task_id: str | None) -> str:
         """Start working on a task."""
         if not task_id:
             return json.dumps(
@@ -237,7 +235,7 @@ class UnifiedTaskTool(BaseTool):
                 {"success": False, "error": "Failed to update task"}, ensure_ascii=False, indent=2
             )
 
-    async def _complete_task(self, task_id: Optional[str]) -> str:
+    async def _complete_task(self, task_id: str | None) -> str:
         """Mark a task as completed."""
         if not task_id:
             return json.dumps(
@@ -296,7 +294,7 @@ class UnifiedTaskTool(BaseTool):
                 {"success": False, "error": "Failed to update task"}, ensure_ascii=False, indent=2
             )
 
-    async def _update_task(self, task_id: Optional[str], status: Optional[str]) -> str:
+    async def _update_task(self, task_id: str | None, status: str | None) -> str:
         """Update a task's status."""
         if not task_id:
             return json.dumps(
@@ -347,7 +345,7 @@ class UnifiedTaskTool(BaseTool):
             task.status = TaskStatus.PENDING
             task.started_at = None
             task.completed_at = None
-            task.updated_at = datetime.now(timezone.utc)
+            task.updated_at = datetime.now(UTC)
 
         if self.task_storage.save(task):
             self.search_engine.index_task(task)
@@ -375,7 +373,7 @@ class UnifiedTaskTool(BaseTool):
                 {"success": False, "error": "Failed to update task"}, ensure_ascii=False, indent=2
             )
 
-    async def _search_tasks(self, query: Optional[str], limit: int) -> str:
+    async def _search_tasks(self, query: str | None, limit: int) -> str:
         """Search tasks by content."""
         if not query:
             return json.dumps(
@@ -430,9 +428,9 @@ class UnifiedCheckpointTool(BaseTool):
         @mcp_server.tool
         async def checkpoint(
             action: str,
-            description: Optional[str] = None,
+            description: str | None = None,
             limit: int = 5,
-            query: Optional[str] = None,
+            query: str | None = None,
         ) -> str:
             """Save and retrieve work progress checkpoints.
 
@@ -468,7 +466,7 @@ class UnifiedCheckpointTool(BaseTool):
                 logger.error(f"Checkpoint operation failed: {e}")
                 return json.dumps({"success": False, "error": str(e)}, ensure_ascii=False, indent=2)
 
-    async def _save_checkpoint(self, description: Optional[str]) -> str:
+    async def _save_checkpoint(self, description: str | None) -> str:
         """Save a progress checkpoint."""
         if not description:
             return json.dumps(
@@ -486,7 +484,7 @@ class UnifiedCheckpointTool(BaseTool):
             project_id=project_id,
             project_path=project_path,
             description=description,
-            session_id=f"session_{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')}",
+            session_id=f"session_{datetime.now(UTC).strftime('%Y%m%d_%H%M%S')}",
         )
 
         checkpoint.set_ttl(self.config.default_checkpoint_ttl)
@@ -554,7 +552,7 @@ class UnifiedCheckpointTool(BaseTool):
             indent=2,
         )
 
-    async def _search_checkpoints(self, query: Optional[str], limit: int) -> str:
+    async def _search_checkpoints(self, query: str | None, limit: int) -> str:
         """Search checkpoints by content."""
         if not query:
             return json.dumps(
@@ -616,8 +614,8 @@ class UnifiedRecallTool(BaseTool):
         async def recall(
             context: str = "recent",
             days_back: int = 7,
-            session_id: Optional[str] = None,
-            git_branch: Optional[str] = None,
+            session_id: str | None = None,
+            git_branch: str | None = None,
         ) -> str:
             """Smart memory recall - gets the context you need automatically.
 
@@ -658,7 +656,6 @@ class UnifiedRecallTool(BaseTool):
 
     async def _recall_quick(self) -> str:
         """Quick recall of the most recent context (last 2 days)."""
-        from datetime import timedelta
 
         context_data = await self._build_recall_context(
             days_back=2, include_tasks=True, include_plans=True, include_checkpoints=True
@@ -705,8 +702,8 @@ class UnifiedRecallTool(BaseTool):
         include_tasks: bool,
         include_plans: bool,
         include_checkpoints: bool,
-        session_id: Optional[str] = None,
-        git_branch: Optional[str] = None,
+        session_id: str | None = None,
+        git_branch: str | None = None,
     ) -> dict:
         """Build the context information for recall."""
         from datetime import timedelta
@@ -714,7 +711,7 @@ class UnifiedRecallTool(BaseTool):
         context = {
             "project_id": self.config.get_current_project_id(),
             "project_path": self.config.get_current_project_path(),
-            "recall_time": datetime.now(timezone.utc),
+            "recall_time": datetime.now(UTC),
             "filter_applied": bool(session_id or git_branch),
             "checkpoints": [],
             "tasks": [],
@@ -723,7 +720,7 @@ class UnifiedRecallTool(BaseTool):
         }
 
         # Calculate time range
-        end_date = datetime.now(timezone.utc)
+        end_date = datetime.now(UTC)
         start_date = end_date - timedelta(days=days_back)
 
         # Get checkpoints
@@ -904,7 +901,7 @@ class UnifiedStandupTool(BaseTool):
         self,
         days_back: int,
         include_completed: bool,
-        project_ids: Optional[List[str]] = None,
+        project_ids: list[str] | None = None,
     ) -> dict:
         """Build standup report data using cross-project search."""
         # Use search engine for cross-project aggregation
@@ -963,7 +960,7 @@ class UnifiedStandupTool(BaseTool):
 
         # Get project registry for friendly names
         registry = self.config.load_projects_registry()
-        project_names = {path: project_id for path, project_id in registry.items()}
+        dict(registry.items())
 
         return {
             "timeframe": days_back,
@@ -1088,12 +1085,12 @@ class UnifiedPlanTool(BaseTool):
         @mcp_server.tool
         async def plan(
             action: str,
-            title: Optional[str] = None,
-            description: Optional[str] = None,
-            plan_id: Optional[str] = None,
-            step_description: Optional[str] = None,
-            step_id: Optional[str] = None,
-            query: Optional[str] = None,
+            title: str | None = None,
+            description: str | None = None,
+            plan_id: str | None = None,
+            step_description: str | None = None,
+            step_id: str | None = None,
+            query: str | None = None,
             limit: int = 10,
         ) -> str:
             """Plan complex work with structured multi-step approach.
@@ -1148,7 +1145,7 @@ class UnifiedPlanTool(BaseTool):
                 logger.error(f"Plan operation failed: {e}")
                 return json.dumps({"success": False, "error": str(e)}, ensure_ascii=False, indent=2)
 
-    async def _create_plan(self, title: Optional[str], description: Optional[str]) -> str:
+    async def _create_plan(self, title: str | None, description: str | None) -> str:
         """Create a new plan."""
         if not title:
             return json.dumps(
@@ -1262,7 +1259,7 @@ class UnifiedPlanTool(BaseTool):
             indent=2,
         )
 
-    async def _activate_plan(self, plan_id: Optional[str]) -> str:
+    async def _activate_plan(self, plan_id: str | None) -> str:
         """Activate a plan to focus on it."""
         if not plan_id:
             return json.dumps(
@@ -1292,7 +1289,7 @@ class UnifiedPlanTool(BaseTool):
             )
 
         plan.status = PlanStatus.ACTIVE
-        plan.updated_at = datetime.now(timezone.utc)
+        plan.updated_at = datetime.now(UTC)
 
         if self.plan_storage.save(plan):
             self.search_engine.index_plan(plan)
@@ -1331,7 +1328,7 @@ class UnifiedPlanTool(BaseTool):
                 {"success": False, "error": "Failed to activate plan"}, ensure_ascii=False, indent=2
             )
 
-    async def _complete_plan(self, plan_id: Optional[str]) -> str:
+    async def _complete_plan(self, plan_id: str | None) -> str:
         """Mark a plan as completed."""
         if not plan_id:
             return json.dumps(
@@ -1361,13 +1358,13 @@ class UnifiedPlanTool(BaseTool):
             )
 
         plan.status = PlanStatus.COMPLETED
-        plan.updated_at = datetime.now(timezone.utc)
+        plan.updated_at = datetime.now(UTC)
 
         # Mark all steps as completed
         for step in plan.steps:
             if not step.completed:
                 step.completed = True
-                step.completed_at = datetime.now(timezone.utc)
+                step.completed_at = datetime.now(UTC)
 
         if self.plan_storage.save(plan):
             self.search_engine.index_plan(plan)
@@ -1394,7 +1391,7 @@ class UnifiedPlanTool(BaseTool):
                 {"success": False, "error": "Failed to complete plan"}, ensure_ascii=False, indent=2
             )
 
-    async def _add_step(self, plan_id: Optional[str], step_description: Optional[str]) -> str:
+    async def _add_step(self, plan_id: str | None, step_description: str | None) -> str:
         """Add a step to a plan."""
         if not plan_id:
             return json.dumps(
@@ -1422,7 +1419,7 @@ class UnifiedPlanTool(BaseTool):
         new_step = PlanStep(description=step_description, completed=False)
 
         plan.steps.append(new_step)
-        plan.updated_at = datetime.now(timezone.utc)
+        plan.updated_at = datetime.now(UTC)
 
         if self.plan_storage.save(plan):
             self.search_engine.index_plan(plan)
@@ -1449,7 +1446,7 @@ class UnifiedPlanTool(BaseTool):
                 indent=2,
             )
 
-    async def _complete_step(self, step_id: Optional[str]) -> str:
+    async def _complete_step(self, step_id: str | None) -> str:
         """Mark a plan step as completed."""
         if not step_id:
             return json.dumps(
@@ -1496,8 +1493,8 @@ class UnifiedPlanTool(BaseTool):
             )
 
         target_step.completed = True
-        target_step.completed_at = datetime.now(timezone.utc)
-        target_plan.updated_at = datetime.now(timezone.utc)
+        target_step.completed_at = datetime.now(UTC)
+        target_plan.updated_at = datetime.now(UTC)
 
         if self.plan_storage.save(target_plan):
             self.search_engine.index_plan(target_plan)
@@ -1534,7 +1531,7 @@ class UnifiedPlanTool(BaseTool):
                 {"success": False, "error": "Failed to complete step"}, ensure_ascii=False, indent=2
             )
 
-    async def _search_plans(self, query: Optional[str], limit: int) -> str:
+    async def _search_plans(self, query: str | None, limit: int) -> str:
         """Search plans by content."""
         if not query:
             return json.dumps(
