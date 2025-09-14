@@ -173,8 +173,15 @@ stages:
             displayName: 'Verify Python installation'
 
           - script: |
-              python -m pip install --upgrade pip build twine
-              pip install -e ".[dev]"
+              echo "Upgrading pip with user permissions..."
+              python -m pip install --user --upgrade pip build twine
+              echo "Pip version after upgrade:"
+              pip --version
+            displayName: 'Upgrade pip with user install'
+
+          - script: |
+              echo "Installing dependencies with user permissions..."
+              pip install --user -e ".[dev]" --verbose --no-cache-dir
             displayName: 'Install dependencies'
 
           - script: |
@@ -250,9 +257,9 @@ stages:
             displayName: 'Verify Python installation'
 
           - script: |
-              python -m pip install --upgrade pip
-              pip install -e ".[dev]"
-            displayName: 'Install dependencies'
+              echo "Installing core dependencies for integration tests..."
+              pip install --user -e . --no-cache-dir --verbose
+            displayName: 'Install dependencies for integration tests'
 
           - script: |
               # Test server startup
