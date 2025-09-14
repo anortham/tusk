@@ -20,7 +20,7 @@ Tusk is a Python-based MCP server providing **persistent memory** for AI agents 
 
 ### Data Models (Pydantic)
 - `Checkpoint`: Work context snapshots with highlights
-- `Todo`: Cross-session task management
+- `Task`: Cross-session task management (renamed from Todo)
 - `Plan`: Persistent multi-step planning
 - `Highlight`: Important moments/decisions
 
@@ -61,21 +61,28 @@ src/tusk/
 4. **Cross-Session**: Memory that survives context resets
 5. **Human-Readable**: JSON for transparency
 
-### Tool Transformation Examples
+### Actual Tool Implementation Pattern
 ```python
-# Beginner mode - simplified
-simple_checkpoint = Tool.from_tool(
-    checkpoint_create,
-    name="save",
-    transform_args={
-        "workspace": ArgTransform(hidden=True, default=current_workspace),
-        "highlights": ArgTransform(hidden=True),  # Auto-extract
-    }
-)
-
-# Expert mode - full control
-expert_checkpoint = checkpoint_create  # Original with all options
+# Current implementation uses enhanced tools with rich parameter descriptions
+@mcp_server.tool
+async def checkpoint(
+    action: Annotated[str, "Operations: 'save', 'list', 'search'"],
+    description: Annotated[Union[str, None], "Progress description for save"] = None,
+    limit: Annotated[int, "Max results for list/search (5-20)"] = 5,
+    query: Annotated[Union[str, None], "Search text"] = None
+) -> str:
+    """Save and retrieve work progress checkpoints."""
+    # Implementation with AsyncIO-safe subprocess calls
 ```
+
+### Test Coverage
+Comprehensive test suite with 191 tests covering:
+- **AsyncIO subprocess safety** (prevents MCP hanging)
+- **Git integration** (cross-platform compatibility)
+- **Checkpoint hanging regression** (stress tests)
+- **Storage operations** (JSON + Whoosh)
+- **Model validation** (Pydantic edge cases)
+- **Tool functionality** (end-to-end MCP)
 
 ### Error Handling
 - Use structured logging to ~/.coa/tusk/logs/ directory
@@ -107,27 +114,28 @@ mypy src
 tusk-server
 ```
 
-## Live Development Limitations
+## Development Best Practices
 
-**IMPORTANT**: When the MCP server is running live in a Claude session, code changes to Python modules **will not take effect immediately**. Python imports are cached and the MCP server process continues running with the old code.
+### Testing Changes
+1. **Write tests first**: `tests/test_*.py`
+2. **Run test suite**: `pytest` (191 tests should pass)
+3. **Test AsyncIO safety**: Especially for subprocess operations
+4. **Restart Claude**: For MCP tool changes to take effect
 
-**To see code changes:**
-- Restart Claude completely to reload the MCP server
-- Or restart the `tusk-server` process manually
+### Code Quality Standards
+```bash
+# Before committing
+black src tests              # Format code
+ruff check src tests --fix   # Lint and fix
+mypy src                     # Type checking
+pytest                       # Run all tests
+```
 
-**This affects:**
-- Tool implementations (`src/tusk/tools/`)
-- Server configuration (`src/tusk/server.py`)
-- Model changes (`src/tusk/models/`)
-- Any Python module modifications
-
-**Testing changes during development:**
-1. Make code changes
-2. Restart Claude session 
-3. Test the changes
-4. Repeat cycle
-
-This is a standard limitation of live Python processes - not specific to Tusk.
+### Debugging MCP Tools
+- **Logs**: Check `~/.coa/tusk/logs/tusk.log`
+- **Verbose**: Add `--verbose` flag to tool operations
+- **AsyncIO**: Use `asyncio.to_thread()` for subprocess calls
+- **Timeouts**: Always set reasonable timeouts (3-5 seconds)
 
 ## Integration Points
 
@@ -148,18 +156,42 @@ This is a standard limitation of live Python processes - not specific to Tusk.
 
 ## Current Status
 
-✅ Project structure and configuration  
-✅ Pydantic models with validation  
-🔄 Storage system with JSON + Whoosh  
-⏳ FastMCP server setup  
-⏳ Core tools with transformations  
-⏳ Migration from existing Goldfish  
+✅ **Project structure and configuration**
+✅ **Pydantic models with validation**
+✅ **Storage system with JSON + Whoosh**
+✅ **FastMCP server setup with tool transformations**
+✅ **Core tools implemented** (checkpoint, task, plan, recall, standup)
+✅ **Comprehensive testing** (191 tests passing)
+✅ **AsyncIO-safe subprocess handling** (prevents hanging)
+✅ **Azure DevOps CI/CD pipeline**
+⏳ **Migration from existing Goldfish systems**
 
-## Next Steps
+## Critical Development Information
 
-1. Implement storage layer with Whoosh
-2. Create FastMCP server with tool transformations
-3. Build core tools (checkpoint, task, plan, recall, standup)
-4. Add behavioral guidance and progressive disclosure
-5. Create migration scripts from existing systems
-6. Add comprehensive testing and documentation
+### AsyncIO Subprocess Safety ⚠️
+**CRITICAL**: All subprocess calls in MCP tools must use AsyncIO-safe patterns to prevent hanging:
+
+```python
+# ❌ WRONG - Will hang in MCP context
+result = subprocess.run(['git', 'status'], capture_output=True)
+
+# ✅ CORRECT - AsyncIO-safe using thread pool
+async def safe_subprocess():
+    def run_command():
+        return subprocess.run(['git', 'status'], capture_output=True)
+    return await asyncio.to_thread(run_command)
+
+result = await asyncio.wait_for(safe_subprocess(), timeout=5.0)
+```
+
+**Why this matters**: Direct subprocess calls in async MCP tool functions cause deadlocks. Always use `asyncio.to_thread()` for subprocess operations.
+
+### Live Development Cycle
+**IMPORTANT**: MCP server code changes require Claude restart to take effect:
+
+1. **Make code changes**
+2. **Restart Claude Desktop completely** (critical - cached imports)
+3. **Test changes**
+4. **Run test suite**: `pytest`
+
+Python import caching means live changes won't be seen until restart.
