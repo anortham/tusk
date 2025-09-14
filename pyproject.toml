@@ -22,6 +22,7 @@ dependencies = [
     "portalocker>=2.8.0",
     "python-json-logger>=2.0.7",
     "typing-extensions>=4.9.0",
+    "docstring-parser>=0.15",
 ]
 
 [project.optional-dependencies]
