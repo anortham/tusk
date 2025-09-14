@@ -7,7 +7,7 @@ Tusk is a Python-based MCP (Model Context Protocol) server that provides persist
 ## Features
 
 - **Checkpoints**: Save work context with highlights for later restoration
-- **Todos**: Cross-session task management that survives context switches  
+- **Tasks**: Cross-session task management that survives context switches  
 - **Plans**: Persistent planning that doesn't get lost when contexts reset
 - **Recall**: Intelligent session restoration with context replay
 - **Standup**: Daily/weekly work summaries across all features
@@ -30,7 +30,7 @@ Tusk is a Python-based MCP (Model Context Protocol) server that provides persist
 4. **Start using memory**:
    - Use `recall` to restore previous session context
    - Create `checkpoints` to save important work
-   - Manage `todos` that persist across sessions
+   - Manage `tasks` that persist across sessions
    - Build `plans` that survive context resets
 
 ## Architecture
@@ -50,7 +50,7 @@ Event-sourced snapshots of your work context:
 - Git branch information
 - TTL-based expiration
 
-### Todos
+### Tasks
 Cross-session task management:
 - Tasks that survive context windows
 - Status tracking and updates

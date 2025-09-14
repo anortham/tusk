@@ -15,7 +15,7 @@ from src.tusk.models.task import TaskStatus, TaskPriority
 from src.tusk.models.plan import PlanStatus
 from src.tusk.storage import CheckpointStorage, TaskStorage, PlanStorage, SearchEngine
 from src.tusk.tools.unified import (
-    UnifiedTodoTool, 
+    UnifiedTaskTool, 
     UnifiedCheckpointTool, 
     UnifiedRecallTool, 
     UnifiedStandupTool,
@@ -43,13 +43,13 @@ def mock_server(temp_config):
     
     # Use real storage for integration testing
     mock_server.checkpoint_storage = CheckpointStorage(temp_config)
-    mock_server.todo_storage = TaskStorage(temp_config)
+    mock_server.task_storage = TaskStorage(temp_config)
     mock_server.plan_storage = PlanStorage(temp_config)
     mock_server.search_engine = SearchEngine(temp_config)
     
     # Mock search engine methods to avoid index initialization issues
     mock_server.search_engine.index_checkpoint = Mock()
-    mock_server.search_engine.index_todo = Mock()
+    mock_server.search_engine.index_task = Mock()
     mock_server.search_engine.index_plan = Mock()
     mock_server.search_engine.search = Mock(return_value=[])
     
@@ -68,12 +68,12 @@ class MockMCPServer:
         return func
 
 
-class TestUnifiedTodoTool:
+class TestUnifiedTaskTool:
     """Test the unified todo tool with all actions."""
     
     def test_tool_initialization(self, mock_server):
         """Test that unified todo tool initializes correctly."""
-        tool = UnifiedTodoTool(mock_server)
+        tool = UnifiedTaskTool(mock_server)
         
         assert tool.server == mock_server
         assert tool.config == mock_server.config
@@ -81,27 +81,27 @@ class TestUnifiedTodoTool:
     
     def test_tool_registration(self, mock_server):
         """Test that todo tool registers correctly."""
-        tool = UnifiedTodoTool(mock_server)
+        tool = UnifiedTaskTool(mock_server)
         mock_mcp = MockMCPServer()
         
         tool.register(mock_mcp)
         
-        # Should register exactly one tool called 'todo'
-        assert "todo" in mock_mcp.registered_tools
+        # Should register exactly one tool called 'task'
+        assert "task" in mock_mcp.registered_tools
         assert len(mock_mcp.registered_tools) == 1
-        assert callable(mock_mcp.registered_tools["todo"])
+        assert callable(mock_mcp.registered_tools["task"])
     
     @pytest.mark.asyncio
     async def test_add_task_success(self, mock_server):
         """Test adding a task successfully."""
-        tool = UnifiedTodoTool(mock_server)
+        tool = UnifiedTaskTool(mock_server)
         mock_mcp = MockMCPServer()
         tool.register(mock_mcp)
         
-        todo_func = mock_mcp.registered_tools["todo"]
+        task_func = mock_mcp.registered_tools["task"]
         
         # Test successful add
-        result = await todo_func(action="add", task="Test task content")
+        result = await task_func(action="add", task="Test task content")
         
         # Parse JSON response
         response = json.loads(result)
@@ -117,14 +117,14 @@ class TestUnifiedTodoTool:
     @pytest.mark.asyncio
     async def test_add_task_missing_content(self, mock_server):
         """Test adding a task without content fails."""
-        tool = UnifiedTodoTool(mock_server)
+        tool = UnifiedTaskTool(mock_server)
         mock_mcp = MockMCPServer()
         tool.register(mock_mcp)
         
-        todo_func = mock_mcp.registered_tools["todo"]
+        task_func = mock_mcp.registered_tools["task"]
         
         # Test missing task content
-        result = await todo_func(action="add", task=None)
+        result = await task_func(action="add", task=None)
         
         response = json.loads(result)
         assert response["success"] is False
@@ -133,13 +133,13 @@ class TestUnifiedTodoTool:
     @pytest.mark.asyncio
     async def test_list_tasks_empty(self, mock_server):
         """Test listing tasks when none exist."""
-        tool = UnifiedTodoTool(mock_server)
+        tool = UnifiedTaskTool(mock_server)
         mock_mcp = MockMCPServer()
         tool.register(mock_mcp)
         
-        todo_func = mock_mcp.registered_tools["todo"]
+        task_func = mock_mcp.registered_tools["task"]
         
-        result = await todo_func(action="list")
+        result = await task_func(action="list")
         
         response = json.loads(result)
         assert response["success"] is True
@@ -149,26 +149,26 @@ class TestUnifiedTodoTool:
     @pytest.mark.asyncio
     async def test_complete_workflow(self, mock_server):
         """Test the complete workflow: add -> start -> complete."""
-        tool = UnifiedTodoTool(mock_server)
+        tool = UnifiedTaskTool(mock_server)
         mock_mcp = MockMCPServer()
         tool.register(mock_mcp)
         
-        todo_func = mock_mcp.registered_tools["todo"]
+        task_func = mock_mcp.registered_tools["task"]
         
         # Step 1: Add a task
-        result = await todo_func(action="add", task="Complete workflow test")
+        result = await task_func(action="add", task="Complete workflow test")
         response = json.loads(result)
         task_id = response["task"]["id"]
         
         # Step 2: Start the task
-        result = await todo_func(action="start", task_id=task_id)
+        result = await task_func(action="start", task_id=task_id)
         response = json.loads(result)
         assert response["success"] is True
         assert response["action"] == "task_started"
         assert response["task"]["status"] == "in_progress"
         
         # Step 3: Complete the task
-        result = await todo_func(action="complete", task_id=task_id)
+        result = await task_func(action="complete", task_id=task_id)
         response = json.loads(result)
         assert response["success"] is True
         assert response["action"] == "task_completed"
@@ -178,13 +178,13 @@ class TestUnifiedTodoTool:
     @pytest.mark.asyncio
     async def test_invalid_action(self, mock_server):
         """Test invalid action returns error."""
-        tool = UnifiedTodoTool(mock_server)
+        tool = UnifiedTaskTool(mock_server)
         mock_mcp = MockMCPServer()
         tool.register(mock_mcp)
         
-        todo_func = mock_mcp.registered_tools["todo"]
+        task_func = mock_mcp.registered_tools["task"]
         
-        result = await todo_func(action="invalid_action")
+        result = await task_func(action="invalid_action")
         
         response = json.loads(result)
         assert response["success"] is False
@@ -298,7 +298,7 @@ class TestUnifiedRecallTool:
         # assert response["workspace"] == "test_workspace"
         assert "summary" in response
         assert "checkpoints" in response
-        assert "todos" in response
+        assert "tasks" in response
     
     @pytest.mark.asyncio
     async def test_recall_week_context(self, mock_server):
@@ -373,7 +373,7 @@ class TestUnifiedStandupTool:
         summary = response["cross_project_summary"]
         assert "total_projects" in summary
         assert "total_checkpoints" in summary
-        assert "total_todos" in summary
+        assert "total_tasks" in summary
         assert "total_completed" in summary
         assert "total_plans" in summary
     
@@ -691,7 +691,7 @@ class TestToolIntegration:
         """Test a complete workflow across all 5 tools."""
         # Initialize all tools
         plan_tool = UnifiedPlanTool(mock_server)
-        todo_tool = UnifiedTodoTool(mock_server)
+        todo_tool = UnifiedTaskTool(mock_server)
         checkpoint_tool = UnifiedCheckpointTool(mock_server)
         recall_tool = UnifiedRecallTool(mock_server)
         standup_tool = UnifiedStandupTool(mock_server)
@@ -726,8 +726,8 @@ class TestToolIntegration:
         await plan_func(action="activate", plan_id=plan_id)
         
         # Step 4: Create a todo from the plan
-        todo_func = mock_mcp.registered_tools["todo"]
-        result = await todo_func(action="add", task="Integration test task from plan")
+        task_func = mock_mcp.registered_tools["task"]
+        result = await task_func(action="add", task="Integration test task from plan")
         response = json.loads(result)
         task_id = response["task"]["id"]
         
@@ -736,7 +736,7 @@ class TestToolIntegration:
         await checkpoint_func(action="save", description="Started integration test with plan")
         
         # Step 6: Start the todo
-        await todo_func(action="start", task_id=task_id)
+        await task_func(action="start", task_id=task_id)
         
         # Step 7: Get recall context
         recall_func = mock_mcp.registered_tools["recall"]
@@ -745,7 +745,7 @@ class TestToolIntegration:
         
         # Verify recall includes our work from all tools
         assert recall_response["success"] is True
-        assert recall_response["summary"]["todos_count"] >= 1
+        assert recall_response["summary"]["tasks_count"] >= 1
         assert recall_response["summary"]["checkpoints_count"] >= 1
         assert recall_response["summary"]["plans_count"] >= 1
         
@@ -761,14 +761,14 @@ class TestToolIntegration:
         
         # Check cross-project summary structure (data may be empty in test environment)
         summary = standup_response["cross_project_summary"]
-        assert "total_todos" in summary
+        assert "total_tasks" in summary
         assert "total_checkpoints" in summary
         assert "total_plans" in summary
         assert "total_projects" in summary
         assert "total_completed" in summary
         
         # Verify the values are non-negative integers
-        assert summary["total_todos"] >= 0
+        assert summary["total_tasks"] >= 0
         assert summary["total_checkpoints"] >= 0
         assert summary["total_plans"] >= 0
 
@@ -779,20 +779,20 @@ class TestErrorHandling:
     @pytest.mark.asyncio
     async def test_todo_nonexistent_task_operations(self, mock_server):
         """Test operations on nonexistent tasks."""
-        tool = UnifiedTodoTool(mock_server)
+        tool = UnifiedTaskTool(mock_server)
         mock_mcp = MockMCPServer()
         tool.register(mock_mcp)
         
-        todo_func = mock_mcp.registered_tools["todo"]
+        task_func = mock_mcp.registered_tools["task"]
         
         # Try to start nonexistent task
-        result = await todo_func(action="start", task_id="nonexistent")
+        result = await task_func(action="start", task_id="nonexistent")
         response = json.loads(result)
         assert response["success"] is False
         assert "not found" in response["error"]
         
         # Try to complete nonexistent task
-        result = await todo_func(action="complete", task_id="nonexistent")
+        result = await task_func(action="complete", task_id="nonexistent")
         response = json.loads(result)
         assert response["success"] is False
         assert "not found" in response["error"]
@@ -801,20 +801,20 @@ class TestErrorHandling:
     async def test_missing_required_parameters(self, mock_server):
         """Test missing required parameters across tools."""
         # Todo tool
-        todo_tool = UnifiedTodoTool(mock_server)
+        todo_tool = UnifiedTaskTool(mock_server)
         mock_mcp_todo = MockMCPServer()
         todo_tool.register(mock_mcp_todo)
         
-        todo_func = mock_mcp_todo.registered_tools["todo"]
+        task_func = mock_mcp_todo.registered_tools["task"]
         
         # Missing task_id for start
-        result = await todo_func(action="start", task_id=None)
+        result = await task_func(action="start", task_id=None)
         response = json.loads(result)
         assert response["success"] is False
         assert "Task ID is required" in response["error"]
         
         # Missing query for search
-        result = await todo_func(action="search", query=None)
+        result = await task_func(action="search", query=None)
         response = json.loads(result)
         assert response["success"] is False
         assert "Search query is required" in response["error"]

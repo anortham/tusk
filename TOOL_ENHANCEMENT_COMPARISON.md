@@ -20,7 +20,7 @@ class EnhancedBaseTool(BaseTool):
 
 # Tool Definition with Rich Docstring
 @mcp_server.tool
-async def todo(action: str, task: Optional[str] = None, ...) -> str:
+async def task(action: str, task: Optional[str] = None, ...) -> str:
     """Manage tasks efficiently with one simple tool.
 
     Args:
@@ -34,7 +34,7 @@ async def todo(action: str, task: Optional[str] = None, ...) -> str:
     """
 
 # Post-registration enhancement
-self.enhance_registered_tools(mcp_server, ['todo'])
+self.enhance_registered_tools(mcp_server, ['task'])
 ```
 
 ## Before vs After Comparison
@@ -170,13 +170,13 @@ dependencies = [
 ### Files Created
 - `src/tusk/tools/enhancement.py` - Core enhancement utilities
 - `src/tusk/tools/enhanced_base.py` - Enhanced base class
-- `src/tusk/tools/enhanced_simple.py` - Enhanced todo tool
+- `src/tusk/tools/enhanced_simple.py` - Enhanced task tool
 - `src/tusk/tools/enhanced_all.py` - All other enhanced tools
 
 ### Server Integration
 ```python
 # Server now uses enhanced tools by default
-from .tools.enhanced_simple import EnhancedUnifiedTodoTool
+from .tools.enhanced_simple import EnhancedUnifiedTaskTool
 from .tools.enhanced_all import (
     EnhancedUnifiedCheckpointTool,
     EnhancedUnifiedRecallTool,
@@ -192,7 +192,7 @@ from .tools.enhanced_all import (
 $ python test_all_enhanced.py
 
 === SUMMARY ===
-[OK] todo
+[OK] task
 [OK] checkpoint
 [OK] recall
 [OK] plan
@@ -206,7 +206,7 @@ $ python test_all_enhanced.py
 ```
 INFO Enhanced 1 tools with rich parameter descriptions  # x5 tools
 INFO Registered 5 enhanced unified tools with rich parameter descriptions:
-     plan, todo, checkpoint, recall, standup
+     plan, task, checkpoint, recall, standup
 ```
 
 ## Comparison to Serena's Approach

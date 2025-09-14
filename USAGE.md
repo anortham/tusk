@@ -6,7 +6,7 @@ Tusk provides persistent memory for AI agents through five core tools:
 
 - **`recall`** - Restore context from previous sessions  
 - **`checkpoint`** - Save work context with highlights
-- **`todo`** - Manage tasks across sessions
+- **`task`** - Manage tasks across sessions
 - **`plan`** - Create persistent multi-step projects  
 - **`standup`** - Generate work summaries
 
@@ -82,7 +82,7 @@ You'll get a comprehensive summary:
 
 📊 Context Summary
 - 3 checkpoints from last 7 days
-- 2 active todos (1 in progress, 1 pending)
+- 2 active tasks (1 in progress, 1 pending)
 - 1 active plans
 
 🔨 What I Worked On
@@ -101,8 +101,8 @@ You'll get a comprehensive summary:
 - Deploy to staging environment
 
 🎯 Suggested Next Actions:
-- Continue with in-progress todos
-- Pick up pending todos
+- Continue with in-progress tasks
+- Pick up pending tasks
 - Create a new checkpoint when you complete significant work
 ```
 
@@ -148,7 +148,7 @@ complete_task abc123
 
 #### Expert Mode
 ```
-create_todo "Implement OAuth integration" \
+create_task "Implement OAuth integration" \
   --active-form "Implementing OAuth integration" \
   --priority "high" \
   --tags "auth,oauth,integration" \
@@ -159,17 +159,17 @@ create_todo "Implement OAuth integration" \
 #### Advanced Todo Management
 ```
 # List by status
-list_todos --status pending
-list_todos --status completed
+list_tasks --status pending
+list_tasks --status completed
 
 # Update status
-update_todo_status abc123 blocked --notes "Waiting for API keys"
+update_task_status abc123 blocked --notes "Waiting for API keys"
 
-# Search todos
-search_todos "oauth integration"
+# Search tasks
+search_tasks "oauth integration"
 
 # Summary statistics
-get_todo_summary
+get_task_summary
 ```
 
 ### Plans - Multi-Step Projects
@@ -233,7 +233,7 @@ recall_session "session_20250115_143022"
 recall_branch "feature/auth-system"
 
 # Control what's included
-recall --include-todos=false --include-plans=true
+recall --include-tasks=false --include-plans=true
 ```
 
 ### Standup - Work Summaries
@@ -250,7 +250,7 @@ standup --timeframe weekly --include-completed=true
 work_summary --days-back 5
 
 # What you'll get:
-# - Activity overview (checkpoints, todos, plan steps)
+# - Activity overview (checkpoints, tasks, plan steps)
 # - What you worked on (completed items)
 # - What you're working on (active items)  
 # - Blockers and issues
@@ -265,7 +265,7 @@ Tusk indexes all your content for fast search:
 
 ```
 search_checkpoints "performance optimization"
-search_todos "bug fix"
+search_tasks "bug fix"
 search_plans "user experience"
 ```
 
@@ -342,8 +342,8 @@ When creating checkpoints, include highlights for:
 - Important discoveries
 
 ### 4. Active Todo Management
-- Start todos when you begin working
-- Complete todos when finished
+- Start tasks when you begin working
+- Complete tasks when finished
 - Use descriptive active forms
 - Add notes for context
 
@@ -351,14 +351,14 @@ When creating checkpoints, include highlights for:
 For complex work:
 - Create plans with clear goals
 - Break into manageable steps
-- Link todos to plan steps
+- Link tasks to plan steps
 - Track progress regularly
 
 ### 6. Use Search
 Don't rely on memory - search your history:
 - Find past solutions to similar problems
 - Locate relevant checkpoints
-- Track todo patterns
+- Track task patterns
 
 ## Example Workflow
 
@@ -410,7 +410,7 @@ recall
 
 2. **Continue Work**
 ```
-# See active todos and plan progress
+# See active tasks and plan progress
 # Continue with next steps
 ```
 
@@ -418,12 +418,12 @@ This workflow ensures continuity across sessions and provides rich context for f
 
 ## Tips and Tricks
 
-- Use descriptive names for checkpoints and todos
+- Use descriptive names for checkpoints and tasks
 - Tag items consistently for better search
 - Regular standups help track productivity  
 - Export data occasionally as backup
 - Use different workspaces for different projects
-- Link todos to checkpoints and plans for relationship tracking
+- Link tasks to checkpoints and plans for relationship tracking
 
 ## Getting Help
 

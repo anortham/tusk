@@ -27,7 +27,7 @@ This directory contains Claude Code hooks and custom commands that integrate wit
 **Usage:** Automatically triggered when you submit prompts. Detects patterns like "plan mode", "implementation plan", "strategy", etc.
 
 ### Stop Hook (`hooks/stop.py`) 
-**Purpose:** Analyzes responses to detect work completion and suggest todo/plan updates.
+**Purpose:** Analyzes responses to detect work completion and suggest task/plan updates.
 
 **Features:**
 - Detects completion language patterns
@@ -70,9 +70,9 @@ Save current work state as a checkpoint:
 
 ### `/tasks [add|complete|list]`
 Manage persistent tasks:
-- `add "task"` - Create new persistent todo
-- `complete <id>` - Mark todo as completed
-- `list` - Show current todo status
+- `add "task"` - Create new persistent task
+- `complete <id>` - Mark task as completed
+- `list` - Show current task status
 
 ### `/search <query> [scope]`
 Search all persistent memory:

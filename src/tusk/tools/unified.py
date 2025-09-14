@@ -15,13 +15,13 @@ logger = logging.getLogger(__name__)
 
 
 class UnifiedTaskTool(BaseTool):
-    """Unified todo tool - handles all todo operations via action parameter."""
+    """Unified task tool - handles all task operations via action parameter."""
     
     def register(self, mcp_server) -> None:
-        """Register the unified todo tool."""
+        """Register the unified task tool."""
         
         @mcp_server.tool
-        async def todo(
+        async def task(
             action: str,
             task: Optional[str] = None,
             task_id: Optional[str] = None,
@@ -40,12 +40,12 @@ class UnifiedTaskTool(BaseTool):
                 limit: Max results (for list/search actions)
             
             Examples:
-                todo(action="add", task="Fix the bug in login system")
-                todo(action="list")
-                todo(action="start", task_id="abc123")
-                todo(action="complete", task_id="abc123")
-                todo(action="update", task_id="abc123", status="in_progress")
-                todo(action="search", query="bug", limit=5)
+                task(action="add", task="Fix the bug in login system")
+                task(action="list")
+                task(action="start", task_id="abc123")
+                task(action="complete", task_id="abc123")
+                task(action="update", task_id="abc123", status="in_progress")
+                task(action="search", query="bug", limit=5)
             """
             try:
                 if action == "add":
@@ -67,7 +67,7 @@ class UnifiedTaskTool(BaseTool):
                     }, ensure_ascii=False, indent=2)
                     
             except Exception as e:
-                logger.error(f"Todo operation failed: {e}")
+                logger.error(f"Task operation failed: {e}")
                 return json.dumps({
                     "success": False,
                     "error": str(e)
@@ -85,31 +85,31 @@ class UnifiedTaskTool(BaseTool):
         project_id = self.config.get_current_project_id()
         project_path = self.config.get_current_project_path()
         
-        todo = Todo(
+        task = Task(
             workspace_id="",
             project_id=project_id,
             project_path=project_path,
             content=task,
             active_form=f"Working on {task.lower()}",
-            priority=TodoPriority.MEDIUM,
-            status=TodoStatus.PENDING,
+            priority=TaskPriority.MEDIUM,
+            status=TaskStatus.PENDING,
         )
         
-        if self.task_storage.save(todo):
-            self.search_engine.index_task(todo)
-            logger.info(f"Created todo {todo.id}")
+        if self.task_storage.save(task):
+            self.search_engine.index_task(task)
+            logger.info(f"Created task {task.id}")
             
             return json.dumps({
                 "success": True,
                 "action": "task_added",
                 "task": {
-                    "id": todo.id,
-                    "content": task,
-                    "priority": todo.priority.value,
-                    "status": todo.status.value,
-                    "created_at": todo.created_at.strftime("%Y-%m-%d %H:%M")
+                    "id": task.id,
+                    "content": task.content,
+                    "priority": task.priority.value,
+                    "status": task.status.value,
+                    "created_at": task.created_at.strftime("%Y-%m-%d %H:%M")
                 },
-                "message": f"Added task: {task}"
+                "message": f"Added task: {task.content}"
             }, ensure_ascii=False, indent=2)
         else:
             return json.dumps({
@@ -119,50 +119,50 @@ class UnifiedTaskTool(BaseTool):
     
     async def _list_tasks(self, limit: int) -> str:
         """List active tasks."""
-        active_todos = self.task_storage.get_active_tasks()[:limit]
+        active_tasks = self.task_storage.get_active_tasks()[:limit]
         
-        if not active_todos:
+        if not active_tasks:
             return json.dumps({
                 "success": True,
                 "total_tasks": 0,
                 "message": "No active tasks",
-                "suggestion": "Use todo(action='add', task='your task') to create one!"
+                "suggestion": "Use task(action='add', task='your task') to create one!"
             }, ensure_ascii=False, indent=2)
         
         # Group by status
-        in_progress = [t for t in active_todos if t.status == TodoStatus.IN_PROGRESS]
-        pending = [t for t in active_todos if t.status == TodoStatus.PENDING]
+        in_progress = [t for t in active_tasks if t.status == TaskStatus.IN_PROGRESS]
+        pending = [t for t in active_tasks if t.status == TaskStatus.PENDING]
         
         result = {
             "success": True,
-            "total_tasks": len(active_todos),
+            "total_tasks": len(active_tasks),
             "tasks": {
                 "in_progress": [
                     {
-                        "id": todo.id,
-                        "content": todo.content,
-                        "active_form": todo.active_form,
-                        "priority": todo.priority.value,
-                        "created_at": todo.created_at.strftime("%Y-%m-%d %H:%M"),
-                        "started_at": todo.started_at.strftime("%Y-%m-%d %H:%M") if todo.started_at else None
+                        "id": task.id,
+                        "content": task.content,
+                        "active_form": task.active_form,
+                        "priority": task.priority.value,
+                        "created_at": task.created_at.strftime("%Y-%m-%d %H:%M"),
+                        "started_at": task.started_at.strftime("%Y-%m-%d %H:%M") if task.started_at else None
                     }
-                    for todo in in_progress
+                    for task in in_progress
                 ],
                 "pending": [
                     {
-                        "id": todo.id,
-                        "content": todo.content,
-                        "priority": todo.priority.value,
-                        "created_at": todo.created_at.strftime("%Y-%m-%d %H:%M")
+                        "id": task.id,
+                        "content": task.content,
+                        "priority": task.priority.value,
+                        "created_at": task.created_at.strftime("%Y-%m-%d %H:%M")
                     }
-                    for todo in pending
+                    for task in pending
                 ]
             },
             "counts": {
                 "in_progress": len(in_progress),
                 "pending": len(pending)
             },
-            "suggestion": "Use todo(action='start', task_id='ID') or todo(action='complete', task_id='ID')"
+            "suggestion": "Use task(action='start', task_id='ID') or task(action='complete', task_id='ID')"
         }
         
         return json.dumps(result, ensure_ascii=False, indent=2)
@@ -175,42 +175,42 @@ class UnifiedTaskTool(BaseTool):
                 "error": "Task ID is required for start action"
             }, ensure_ascii=False, indent=2)
         
-        todo = self.task_storage.load(task_id)
-        if not todo:
+        task = self.task_storage.load(task_id)
+        if not task:
             return json.dumps({
                 "success": False,
                 "error": f"Task {task_id} not found"
             }, ensure_ascii=False, indent=2)
         
-        if todo.status == TodoStatus.IN_PROGRESS:
+        if task.status == TaskStatus.IN_PROGRESS:
             return json.dumps({
                 "success": True,
                 "action": "task_already_started",
                 "task": {
-                    "id": todo.id,
-                    "content": todo.content,
-                    "active_form": todo.active_form,
-                    "status": todo.status.value
+                    "id": task.id,
+                    "content": task.content,
+                    "active_form": task.active_form,
+                    "status": task.status.value
                 },
-                "message": f"Already working on: {todo.get_display_form()}"
+                "message": f"Already working on: {task.get_display_form()}"
             }, ensure_ascii=False, indent=2)
         
-        todo.mark_in_progress()
+        task.mark_in_progress()
         
-        if self.task_storage.save(todo):
-            self.search_engine.index_task(todo)
+        if self.task_storage.save(task):
+            self.search_engine.index_task(task)
             
             return json.dumps({
                 "success": True,
                 "action": "task_started",
                 "task": {
-                    "id": todo.id,
-                    "content": todo.content,
-                    "active_form": todo.active_form,
-                    "status": todo.status.value,
-                    "started_at": todo.started_at.strftime("%Y-%m-%d %H:%M") if todo.started_at else None
+                    "id": task.id,
+                    "content": task.content,
+                    "active_form": task.active_form,
+                    "status": task.status.value,
+                    "started_at": task.started_at.strftime("%Y-%m-%d %H:%M") if task.started_at else None
                 },
-                "message": f"Started working on: {todo.get_display_form()}"
+                "message": f"Started working on: {task.get_display_form()}"
             }, ensure_ascii=False, indent=2)
         else:
             return json.dumps({
@@ -226,40 +226,40 @@ class UnifiedTaskTool(BaseTool):
                 "error": "Task ID is required for complete action"
             }, ensure_ascii=False, indent=2)
         
-        todo = self.task_storage.load(task_id)
-        if not todo:
+        task = self.task_storage.load(task_id)
+        if not task:
             return json.dumps({
                 "success": False,
                 "error": f"Task {task_id} not found"
             }, ensure_ascii=False, indent=2)
         
-        if todo.status == TodoStatus.COMPLETED:
+        if task.status == TaskStatus.COMPLETED:
             return json.dumps({
                 "success": True,
                 "action": "task_already_completed",
                 "task": {
-                    "id": todo.id,
-                    "content": todo.content,
-                    "status": todo.status.value
+                    "id": task.id,
+                    "content": task.content,
+                    "status": task.status.value
                 },
-                "message": f"Task already completed: {todo.content}"
+                "message": f"Task already completed: {task.content}"
             }, ensure_ascii=False, indent=2)
         
-        todo.mark_completed()
+        task.mark_completed()
         
-        if self.task_storage.save(todo):
-            self.search_engine.index_task(todo)
+        if self.task_storage.save(task):
+            self.search_engine.index_task(task)
             
             return json.dumps({
                 "success": True,
                 "action": "task_completed",
                 "task": {
-                    "id": todo.id,
-                    "content": todo.content,
-                    "status": todo.status.value,
-                    "completed_at": todo.completed_at.strftime("%Y-%m-%d %H:%M") if todo.completed_at else None
+                    "id": task.id,
+                    "content": task.content,
+                    "status": task.status.value,
+                    "completed_at": task.completed_at.strftime("%Y-%m-%d %H:%M") if task.completed_at else None
                 },
-                "message": f"Completed: {todo.content}",
+                "message": f"Completed: {task.content}",
                 "celebration": "Great job! The task is now done."
             }, ensure_ascii=False, indent=2)
         else:
@@ -283,50 +283,50 @@ class UnifiedTaskTool(BaseTool):
             }, ensure_ascii=False, indent=2)
         
         # Validate status
-        from ..models.todo import TodoStatus
+        from ..models.task import TaskStatus
         try:
-            new_status = TodoStatus(status.lower())
+            new_status = TaskStatus(status.lower())
         except ValueError:
             return json.dumps({
                 "success": False,
                 "error": f"Invalid status: {status}. Valid values: pending, in_progress, completed"
             }, ensure_ascii=False, indent=2)
         
-        todo = self.task_storage.load(task_id)
-        if not todo:
+        task = self.task_storage.load(task_id)
+        if not task:
             return json.dumps({
                 "success": False,
                 "error": f"Task {task_id} not found"
             }, ensure_ascii=False, indent=2)
         
-        old_status = todo.status
+        old_status = task.status
         
         # Update the status using the appropriate method
-        if new_status == TodoStatus.IN_PROGRESS:
-            todo.mark_in_progress()
-        elif new_status == TodoStatus.COMPLETED:
-            todo.mark_completed()
-        elif new_status == TodoStatus.PENDING:
+        if new_status == TaskStatus.IN_PROGRESS:
+            task.mark_in_progress()
+        elif new_status == TaskStatus.COMPLETED:
+            task.mark_completed()
+        elif new_status == TaskStatus.PENDING:
             # Reset to pending
-            todo.status = TodoStatus.PENDING
-            todo.started_at = None
-            todo.completed_at = None
-            todo.updated_at = datetime.now(timezone.utc)
+            task.status = TaskStatus.PENDING
+            task.started_at = None
+            task.completed_at = None
+            task.updated_at = datetime.now(timezone.utc)
         
-        if self.task_storage.save(todo):
-            self.search_engine.index_task(todo)
+        if self.task_storage.save(task):
+            self.search_engine.index_task(task)
             
             return json.dumps({
                 "success": True,
                 "action": "task_updated",
                 "task": {
-                    "id": todo.id,
-                    "content": todo.content,
+                    "id": task.id,
+                    "content": task.content,
                     "old_status": old_status.value,
-                    "new_status": todo.status.value,
-                    "updated_at": todo.updated_at.strftime("%Y-%m-%d %H:%M") if todo.updated_at else None
+                    "new_status": task.status.value,
+                    "updated_at": task.updated_at.strftime("%Y-%m-%d %H:%M") if task.updated_at else None
                 },
-                "message": f"Updated task status from {old_status.value} to {todo.status.value}"
+                "message": f"Updated task status from {old_status.value} to {task.status.value}"
             }, ensure_ascii=False, indent=2)
         else:
             return json.dumps({
@@ -345,7 +345,7 @@ class UnifiedTaskTool(BaseTool):
         results = self.search_engine.search(
             query=query,
             limit=limit,
-            doc_types=["todo"]
+            doc_types=["task"]
         )
         
         if not results:
@@ -353,28 +353,28 @@ class UnifiedTaskTool(BaseTool):
                 "success": True,
                 "query": query,
                 "total_results": 0,
-                "todos": [],
-                "message": f"No todos found for query: '{query}'"
+                "tasks": [],
+                "message": f"No tasks found for query: '{query}'"
             }, ensure_ascii=False, indent=2)
         
-        todos = []
+        tasks = []
         for search_result in results:
-            todo = self.task_storage.load(search_result.doc_id)
-            if todo:
-                todos.append({
-                    "id": todo.id,
-                    "content": todo.content,
-                    "status": todo.status.value,
-                    "priority": todo.priority.value,
-                    "created_at": todo.created_at.strftime("%Y-%m-%d %H:%M"),
+            task = self.task_storage.load(search_result.doc_id)
+            if task:
+                tasks.append({
+                    "id": task.id,
+                    "content": task.content,
+                    "status": task.status.value,
+                    "priority": task.priority.value,
+                    "created_at": task.created_at.strftime("%Y-%m-%d %H:%M"),
                     "score": search_result.score
                 })
         
         return json.dumps({
             "success": True,
             "query": query,
-            "total_results": len(todos),
-            "todos": todos
+            "total_results": len(tasks),
+            "tasks": tasks
         }, ensure_ascii=False, indent=2)
 
 
@@ -598,17 +598,17 @@ class UnifiedRecallTool(BaseTool):
         
         context_data = await self._build_recall_context(
             days_back=2,
-            include_todos=True,
+            include_tasks=True,
             include_plans=True,
             include_checkpoints=True
         )
         return self._build_recall_response(context_data)
     
-    async def _recall_timeframe(self, days_back: int, include_todos: bool, include_plans: bool, include_checkpoints: bool) -> str:
+    async def _recall_timeframe(self, days_back: int, include_tasks: bool, include_plans: bool, include_checkpoints: bool) -> str:
         """Recall context for a specific timeframe."""
         context_data = await self._build_recall_context(
             days_back=days_back,
-            include_todos=include_todos,
+            include_tasks=include_tasks,
             include_plans=include_plans,
             include_checkpoints=include_checkpoints
         )
@@ -618,7 +618,7 @@ class UnifiedRecallTool(BaseTool):
         """Recall context from a specific session."""
         context_data = await self._build_recall_context(
             days_back=30,  # Broader search for session-specific recall
-            include_todos=True,
+            include_tasks=True,
             include_plans=True,
             include_checkpoints=True,
             session_id=session_id
@@ -629,7 +629,7 @@ class UnifiedRecallTool(BaseTool):
         """Recall context for work on a specific git branch."""
         context_data = await self._build_recall_context(
             days_back=days_back,
-            include_todos=True,
+            include_tasks=True,
             include_plans=True,
             include_checkpoints=True,
             git_branch=git_branch
@@ -639,7 +639,7 @@ class UnifiedRecallTool(BaseTool):
     async def _build_recall_context(
         self,
         days_back: int,
-        include_todos: bool,
+        include_tasks: bool,
         include_plans: bool,
         include_checkpoints: bool,
         session_id: Optional[str] = None,
@@ -654,7 +654,7 @@ class UnifiedRecallTool(BaseTool):
             "recall_time": datetime.now(timezone.utc),
             "filter_applied": bool(session_id or git_branch),
             "checkpoints": [],
-            "todos": [],
+            "tasks": [],
             "plans": [],
             "summary": {},
         }
@@ -672,28 +672,28 @@ class UnifiedRecallTool(BaseTool):
             else:
                 context["checkpoints"] = self.checkpoint_storage.list_by_date_range(start_date, end_date)
         
-        # Get todos
-        if include_todos:
-            all_todos = self.task_storage.get_active_tasks()
+        # Get tasks
+        if include_tasks:
+            all_tasks = self.task_storage.get_active_tasks()
             
-            # Filter todos by timeframe or specific criteria
+            # Filter tasks by timeframe or specific criteria
             if session_id or git_branch:
-                # For specific filters, get all active todos
-                context["todos"] = all_todos
+                # For specific filters, get all active tasks
+                context["tasks"] = all_tasks
             else:
                 # For time-based, filter by creation/update time
-                filtered_todos = []
-                for todo in all_todos:
-                    if (todo.created_at >= start_date or 
-                        (todo.updated_at and todo.updated_at >= start_date)):
-                        filtered_todos.append(todo)
-                context["todos"] = filtered_todos
+                filtered_tasks = []
+                for task in all_tasks:
+                    if (task.created_at >= start_date or 
+                        (task.updated_at and task.updated_at >= start_date)):
+                        filtered_tasks.append(task)
+                context["tasks"] = filtered_tasks
         
         # Get plans
         if include_plans:
             active_plans = self.plan_storage.find_active()
             
-            # Filter similar to todos
+            # Filter similar to tasks
             if session_id or git_branch:
                 context["plans"] = active_plans
             else:
@@ -705,12 +705,12 @@ class UnifiedRecallTool(BaseTool):
                 context["plans"] = filtered_plans
         
         # Build summary stats
-        from ..models.todo import TodoStatus
+        from ..models.task import TaskStatus
         context["summary"] = {
             "checkpoints_count": len(context["checkpoints"]),
-            "todos_count": len(context["todos"]),
-            "active_todos": len([t for t in context["todos"] if t.status == TodoStatus.IN_PROGRESS]),
-            "pending_todos": len([t for t in context["todos"] if t.status == TodoStatus.PENDING]),
+            "tasks_count": len(context["tasks"]),
+            "active_tasks": len([t for t in context["tasks"] if t.status == TaskStatus.IN_PROGRESS]),
+            "pending_tasks": len([t for t in context["tasks"] if t.status == TaskStatus.PENDING]),
             "plans_count": len(context["plans"]),
             "days_covered": days_back,
             "session_filter": session_id,
@@ -721,7 +721,7 @@ class UnifiedRecallTool(BaseTool):
     
     def _build_recall_response(self, context: dict) -> str:
         """Build JSON response for recall context."""
-        from ..models.todo import TodoStatus
+        from ..models.task import TaskStatus
         return json.dumps({
             "success": True,
             "project_id": context["project_id"],
@@ -739,23 +739,23 @@ class UnifiedRecallTool(BaseTool):
                 }
                 for cp in sorted(context["checkpoints"], key=lambda c: c.created_at, reverse=True)[:5]
             ],
-            "todos": {
+            "tasks": {
                 "in_progress": [
                     {
-                        "id": todo.id,
-                        "content": todo.content,
-                        "active_form": todo.active_form,
-                        "created_at": todo.created_at.strftime("%Y-%m-%d %H:%M")
+                        "id": task.id,
+                        "content": task.content,
+                        "active_form": task.active_form,
+                        "created_at": task.created_at.strftime("%Y-%m-%d %H:%M")
                     }
-                    for todo in context["todos"] if todo.status == TodoStatus.IN_PROGRESS
+                    for task in context["tasks"] if task.status == TaskStatus.IN_PROGRESS
                 ],
                 "pending": [
                     {
-                        "id": todo.id,
-                        "content": todo.content,
-                        "created_at": todo.created_at.strftime("%Y-%m-%d %H:%M")
+                        "id": task.id,
+                        "content": task.content,
+                        "created_at": task.created_at.strftime("%Y-%m-%d %H:%M")
                     }
-                    for todo in context["todos"] if todo.status == TodoStatus.PENDING
+                    for task in context["tasks"] if task.status == TaskStatus.PENDING
                 ]
             },
             "plans": [
@@ -839,7 +839,7 @@ class UnifiedStandupTool(BaseTool):
         
         # Group results by type and project
         checkpoints_by_project = {}
-        todos_by_project = {}
+        tasks_by_project = {}
         plans_by_project = {}
         
         # Get actual objects from search results
@@ -855,13 +855,13 @@ class UnifiedStandupTool(BaseTool):
                             checkpoints_by_project[project_id] = []
                         checkpoints_by_project[project_id].append(checkpoint)
                 
-                elif result.doc_type == "todo":
-                    todo = self.task_storage.load(result.doc_id)
-                    if todo:
-                        project_id = todo.project_id or "unknown"
-                        if project_id not in todos_by_project:
-                            todos_by_project[project_id] = []
-                        todos_by_project[project_id].append(todo)
+                elif result.doc_type == "task":
+                    task = self.task_storage.load(result.doc_id)
+                    if task:
+                        project_id = task.project_id or "unknown"
+                        if project_id not in tasks_by_project:
+                            tasks_by_project[project_id] = []
+                        tasks_by_project[project_id].append(task)
                 
                 elif result.doc_type == "plan":
                     plan = self.plan_storage.load(result.doc_id)
@@ -875,13 +875,13 @@ class UnifiedStandupTool(BaseTool):
                 logger.warning(f"Failed to load {result.doc_type} {result.doc_id}: {e}")
                 continue
         
-        # Filter completed todos if requested
-        completed_todos_by_project = {}
+        # Filter completed tasks if requested
+        completed_tasks_by_project = {}
         if include_completed:
-            for project_id, todos in todos_by_project.items():
-                completed = [t for t in todos if t.status.value == "completed"]
+            for project_id, tasks in tasks_by_project.items():
+                completed = [t for t in tasks if t.status.value == "completed"]
                 if completed:
-                    completed_todos_by_project[project_id] = completed
+                    completed_tasks_by_project[project_id] = completed
         
         # Get project registry for friendly names
         registry = self.config.load_projects_registry()
@@ -890,46 +890,46 @@ class UnifiedStandupTool(BaseTool):
         return {
             "timeframe": days_back,
             "checkpoints_by_project": checkpoints_by_project,
-            "todos_by_project": todos_by_project,
-            "completed_todos_by_project": completed_todos_by_project,
+            "tasks_by_project": tasks_by_project,
+            "completed_tasks_by_project": completed_tasks_by_project,
             "plans_by_project": plans_by_project,
             "project_registry": registry,
             "total_projects": len(set(list(checkpoints_by_project.keys()) + 
-                                   list(todos_by_project.keys()) + 
+                                   list(tasks_by_project.keys()) + 
                                    list(plans_by_project.keys()))),
         }
     
     def _build_standup_response(self, data: dict, timeframe: str) -> str:
         """Build JSON response for cross-project standup report."""
-        from ..models.todo import TodoStatus
+        from ..models.task import TaskStatus
         
         # Calculate totals across all projects
         total_checkpoints = sum(len(cps) for cps in data["checkpoints_by_project"].values())
-        total_todos = sum(len(todos) for todos in data["todos_by_project"].values())
-        total_completed = sum(len(todos) for todos in data["completed_todos_by_project"].values())
+        total_tasks = sum(len(tasks) for tasks in data["tasks_by_project"].values())
+        total_completed = sum(len(tasks) for tasks in data["completed_tasks_by_project"].values())
         total_plans = sum(len(plans) for plans in data["plans_by_project"].values())
         
         # Build project-specific data
         projects_data = {}
         for project_id in set(list(data["checkpoints_by_project"].keys()) + 
-                             list(data["todos_by_project"].keys()) + 
+                             list(data["tasks_by_project"].keys()) + 
                              list(data["plans_by_project"].keys())):
             
             project_checkpoints = data["checkpoints_by_project"].get(project_id, [])
-            project_todos = data["todos_by_project"].get(project_id, [])
-            project_completed = data["completed_todos_by_project"].get(project_id, [])
+            project_tasks = data["tasks_by_project"].get(project_id, [])
+            project_completed = data["completed_tasks_by_project"].get(project_id, [])
             project_plans = data["plans_by_project"].get(project_id, [])
             
-            # Categorize todos for this project
-            in_progress = [t for t in project_todos if t.status == TodoStatus.IN_PROGRESS]
-            pending = [t for t in project_todos if t.status == TodoStatus.PENDING]
+            # Categorize tasks for this project
+            in_progress = [t for t in project_tasks if t.status == TaskStatus.IN_PROGRESS]
+            pending = [t for t in project_tasks if t.status == TaskStatus.PENDING]
             
             projects_data[project_id] = {
                 "summary": {
                     "checkpoints": len(project_checkpoints),
-                    "todos_in_progress": len(in_progress),
-                    "todos_pending": len(pending),
-                    "todos_completed": len(project_completed),
+                    "tasks_in_progress": len(in_progress),
+                    "tasks_pending": len(pending),
+                    "tasks_completed": len(project_completed),
                     "plans_active": len(project_plans)
                 },
                 "recent_activity": {
@@ -942,22 +942,22 @@ class UnifiedStandupTool(BaseTool):
                         }
                         for cp in sorted(project_checkpoints, key=lambda c: c.created_at, reverse=True)[:5]
                     ],
-                    "todos_in_progress": [
+                    "tasks_in_progress": [
                         {
-                            "id": todo.id,
-                            "content": todo.content,
-                            "active_form": todo.active_form,
-                            "started_at": todo.started_at.strftime("%Y-%m-%d %H:%M") if todo.started_at else None
+                            "id": task.id,
+                            "content": task.content,
+                            "active_form": task.active_form,
+                            "started_at": task.started_at.strftime("%Y-%m-%d %H:%M") if task.started_at else None
                         }
-                        for todo in in_progress[:5]
+                        for task in in_progress[:5]
                     ],
-                    "todos_completed": [
+                    "tasks_completed": [
                         {
-                            "id": todo.id,
-                            "content": todo.content,
-                            "completed_at": todo.completed_at.strftime("%Y-%m-%d %H:%M") if todo.completed_at else None
+                            "id": task.id,
+                            "content": task.content,
+                            "completed_at": task.completed_at.strftime("%Y-%m-%d %H:%M") if task.completed_at else None
                         }
-                        for todo in project_completed[:5]
+                        for task in project_completed[:5]
                     ]
                 }
             }
@@ -969,7 +969,7 @@ class UnifiedStandupTool(BaseTool):
             "cross_project_summary": {
                 "total_projects": data["total_projects"],
                 "total_checkpoints": total_checkpoints,
-                "total_todos": total_todos,
+                "total_tasks": total_tasks,
                 "total_completed": total_completed,
                 "total_plans": total_plans
             },
@@ -1194,7 +1194,7 @@ class UnifiedPlanTool(BaseTool):
                     ]
                 },
                 "message": f"Activated plan: {plan.title}",
-                "next_steps": "Start working on the plan steps. Use todo(action='add') to create specific tasks for each step."
+                "next_steps": "Start working on the plan steps. Use task(action='add') to create specific tasks for each step."
             }, ensure_ascii=False, indent=2)
         else:
             return json.dumps({

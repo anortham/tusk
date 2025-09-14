@@ -15,11 +15,11 @@ import pytest
 
 from src.tusk.config import TuskConfig
 from src.tusk.models.plan import Plan, PlanStep, PlanStatus
-from src.tusk.models.todo import Todo, TodoStatus, TodoPriority
+from src.tusk.models.task import Todo, TodoStatus, TodoPriority
 from src.tusk.models.checkpoint import Checkpoint
 from src.tusk.models.highlight import Highlight, HighlightCategory, HighlightImportance
 from src.tusk.storage.plan_store import PlanStorage
-from src.tusk.storage.todo_store import TodoStorage
+from src.tusk.storage.task_store import TaskStorage
 from src.tusk.storage.checkpoint_store import CheckpointStorage
 from src.tusk.storage.search import SearchEngine
 
@@ -30,7 +30,7 @@ class MockTuskServer:
     def __init__(self, config):
         self.config = config
         self.plan_storage = PlanStorage(config)
-        self.todo_storage = TodoStorage(config)
+        self.task_storage = TaskStorage(config)
         self.checkpoint_storage = CheckpointStorage(config)
         self.search_engine = SearchEngine(config)
 
@@ -101,8 +101,8 @@ def create_sample_data(mock_server):
     mock_server.checkpoint_storage.save(recent_checkpoint)
     mock_server.checkpoint_storage.save(old_checkpoint)
 
-    # Create active todos
-    in_progress_todo = Todo(
+    # Create active tasks
+    in_progress_task = Todo(
         content="Write comprehensive tests for recall",
         active_form="Writing comprehensive tests for recall",
         status=TodoStatus.IN_PROGRESS,
@@ -111,7 +111,7 @@ def create_sample_data(mock_server):
         created_at=recent_time
     )
 
-    pending_todo = Todo(
+    pending_task = Todo(
         content="Review PR for database changes",
         active_form="Reviewing PR for database changes",
         status=TodoStatus.PENDING,
@@ -120,7 +120,7 @@ def create_sample_data(mock_server):
         created_at=recent_time
     )
 
-    completed_todo = Todo(
+    completed_task = Todo(
         content="Set up CI/CD pipeline",
         active_form="Setting up CI/CD pipeline",
         status=TodoStatus.COMPLETED,
@@ -130,9 +130,9 @@ def create_sample_data(mock_server):
         completed_at=recent_time
     )
 
-    mock_server.todo_storage.save(in_progress_todo)
-    mock_server.todo_storage.save(pending_todo)
-    mock_server.todo_storage.save(completed_todo)
+    mock_server.task_storage.save(in_progress_task)
+    mock_server.task_storage.save(pending_task)
+    mock_server.task_storage.save(completed_task)
 
     # Create recent plans with mixed step completion
     active_plan = Plan(
@@ -195,7 +195,7 @@ def create_sample_data(mock_server):
 
     return {
         'checkpoints': [recent_checkpoint, old_checkpoint],
-        'todos': [in_progress_todo, pending_todo, completed_todo],
+        'tasks': [in_progress_task, pending_task, completed_task],
         'plans': [active_plan, draft_plan, old_plan]
     }
 
@@ -219,7 +219,7 @@ class TestRecallFunctionality:
         # Verify summary data
         summary = result_data["summary"]
         assert summary["checkpoints_count"] == 1  # Only recent checkpoint
-        assert summary["active_todos"] >= 2  # In progress and pending todos
+        assert summary["active_tasks"] >= 2  # In progress and pending tasks
         assert summary["recent_plans"] >= 2  # Active and draft plans from recent time
         assert summary["context_available"] is True
 
@@ -230,17 +230,17 @@ class TestRecallFunctionality:
         assert "Fixed authentication bug" in checkpoint_data["description"]
         assert checkpoint_data["project_id"] == "main-project"
 
-        # Verify active todos
-        active_todos = result_data["active_todos"]
-        assert len(active_todos) >= 1
+        # Verify active tasks
+        active_tasks = result_data["active_tasks"]
+        assert len(active_tasks) >= 1
 
-        # Find the in-progress todo
-        in_progress_todos = [t for t in active_todos if t["status"] == "in_progress"]
-        assert len(in_progress_todos) >= 1
+        # Find the in-progress task
+        in_progress_tasks = [t for t in active_tasks if t["status"] == "in_progress"]
+        assert len(in_progress_tasks) >= 1
 
-        in_progress_todo = in_progress_todos[0]
-        assert "comprehensive tests" in in_progress_todo["content"]
-        assert in_progress_todo["active_form"] is not None
+        in_progress_task = in_progress_tasks[0]
+        assert "comprehensive tests" in in_progress_task["content"]
+        assert in_progress_task["active_form"] is not None
 
         # Verify recent plans (this tests the fixed PlanStep.status bug)
         recent_plans = result_data["recent_plans"]
@@ -265,7 +265,7 @@ class TestRecallFunctionality:
         assert result_data["success"] is True
         assert result_data["summary"]["context_available"] is False
         assert result_data["checkpoints"] == []
-        assert result_data["active_todos"] == []
+        assert result_data["active_tasks"] == []
         assert result_data["recent_plans"] == []
         assert "No recent context found" in result_data["message"]
 
@@ -390,7 +390,7 @@ if __name__ == "__main__":
 
         print(f"Success: {result_data['success']}")
         print(f"Checkpoints: {result_data['summary']['checkpoints_count']}")
-        print(f"Active todos: {result_data['summary']['active_todos']}")
+        print(f"Active tasks: {result_data['summary']['active_tasks']}")
         print(f"Recent plans: {result_data['summary']['recent_plans']}")
 
         if result_data["recent_plans"]:

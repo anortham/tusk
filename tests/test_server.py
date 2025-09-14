@@ -90,7 +90,7 @@ class TestMCPIntegration:
         """Test that all tools can be imported without errors."""
         try:
             from src.tusk.tools.unified import (
-                UnifiedTodoTool,
+                UnifiedTaskTool,
                 UnifiedCheckpointTool, 
                 UnifiedRecallTool,
                 UnifiedStandupTool,
@@ -99,7 +99,7 @@ class TestMCPIntegration:
             
             # All tools imported successfully
             tools = [
-                UnifiedTodoTool,
+                UnifiedTaskTool,
                 UnifiedCheckpointTool,
                 UnifiedRecallTool, 
                 UnifiedStandupTool,
@@ -161,13 +161,13 @@ class TestServerStartupSequence:
         
         # Should be able to create storage instances
         checkpoint_storage = CheckpointStorage(config)
-        todo_storage = TaskStorage(config)
+        task_storage = TaskStorage(config)
         plan_storage = PlanStorage(config)
         search_engine = SearchEngine(config)
         
         # All should be properly initialized
         assert checkpoint_storage is not None
-        assert todo_storage is not None
+        assert task_storage is not None
         assert plan_storage is not None 
         assert search_engine is not None
     

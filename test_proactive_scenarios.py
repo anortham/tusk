@@ -24,12 +24,12 @@ def test_complex_task_scenario():
 def test_multiple_tasks_scenario():
     """
     Scenario: User provides list of tasks to do
-    Expected: AI should convert each to a todo item
+    Expected: AI should convert each to a task item
 
     User: "Today I need to: 1) Fix the login bug, 2) Update docs, 3) Deploy to staging"
-    AI should: create individual todos for each item
+    AI should: create individual tasks for each item
     """
-    print("[OK] Multiple Tasks - Should convert list items to todos")
+    print("[OK] Multiple Tasks - Should convert list items to tasks")
 
 def test_achievement_scenario():
     """

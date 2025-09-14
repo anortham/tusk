@@ -3,9 +3,9 @@
 import asyncio
 import inspect
 import json
-from src.tusk.tools.enhanced_simple import EnhancedUnifiedTodoTool
+from src.tusk.tools.enhanced_simple import EnhancedUnifiedTaskTool
 from src.tusk.config import TuskConfig
-from src.tusk.storage import CheckpointStorage, PlanStorage, SearchEngine, TodoStorage
+from src.tusk.storage import CheckpointStorage, PlanStorage, SearchEngine, TaskStorage
 from fastmcp import FastMCP
 
 class MockServer:
@@ -17,7 +17,7 @@ class MockServer:
 
         self.config = config
         self.checkpoint_storage = CheckpointStorage(config)
-        self.todo_storage = TodoStorage(config)
+        self.task_storage = TaskStorage(config)
         self.plan_storage = PlanStorage(config)
         self.search_engine = SearchEngine(config)
 
@@ -32,16 +32,16 @@ def test_enhancement():
     server = MockServer()
 
     # Create enhanced tool
-    enhanced_todo = EnhancedUnifiedTodoTool(server)
+    enhanced_task = EnhancedUnifiedTaskTool(server)
 
     # Register the tool
-    enhanced_todo.register(server.mcp)
+    enhanced_task.register(server.mcp)
 
     # Check if tool was registered
     if hasattr(server.mcp, '_tool_manager') and hasattr(server.mcp._tool_manager, '_tools'):
         tools = server.mcp._tool_manager._tools
-        if 'todo' in tools:
-            tool = tools['todo']
+        if 'task' in tools:
+            tool = tools['task']
             print(f"[OK] Todo tool found: {tool}")
 
             # Check parameters schema

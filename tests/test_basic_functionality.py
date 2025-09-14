@@ -66,6 +66,7 @@ class TestCheckpointStorage:
         storage = CheckpointStorage(temp_config)
         
         # Create multiple checkpoints
+        import time
         checkpoints = []
         for i in range(3):
             checkpoint = Checkpoint(
@@ -73,6 +74,8 @@ class TestCheckpointStorage:
             )
             checkpoints.append(checkpoint)
             storage.save(checkpoint)
+            # Small delay to ensure unique timestamp-based IDs
+            time.sleep(0.001)
         
         # List recent
         recent = storage.list_recent(limit=2)
@@ -84,14 +87,14 @@ class TestCheckpointStorage:
 
 
 class TestTaskStorage:
-    """Test todo storage functionality."""
+    """Test task storage functionality."""
     
-    def test_create_and_load_todo(self, temp_config):
-        """Test creating and loading a todo."""
+    def test_create_and_load_task(self, temp_config):
+        """Test creating and loading a task."""
         storage = TaskStorage(temp_config)
         
-        # Create todo
-        todo = Task(
+        # Create task
+        task = Task(
             content="Write unit tests",
             active_form="Writing unit tests",
             priority=TaskPriority.HIGH,
@@ -99,64 +102,64 @@ class TestTaskStorage:
             notes="Focus on storage layer first",
         )
         
-        # Save todo
-        assert storage.save(todo)
+        # Save task
+        assert storage.save(task)
         
-        # Load todo
-        loaded = storage.load(todo.id)
+        # Load task
+        loaded = storage.load(task.id)
         assert loaded is not None
-        assert loaded.id == todo.id
+        assert loaded.id == task.id
         assert loaded.content == "Write unit tests"
         assert loaded.priority == TaskPriority.HIGH
         assert "testing" in loaded.tags
         assert loaded.notes == "Focus on storage layer first"
     
-    def test_todo_status_transitions(self, temp_config):
-        """Test todo status transitions."""
+    def test_task_status_transitions(self, temp_config):
+        """Test task status transitions."""
         storage = TaskStorage(temp_config)
         
-        # Create todo
-        todo = Task(
+        # Create task
+        task = Task(
             content="Test status transitions",
             active_form="Testing status transitions",
         )
         
         # Initial status should be pending
-        assert todo.status == TaskStatus.PENDING
-        assert todo.started_at is None
-        assert todo.completed_at is None
+        assert task.status == TaskStatus.PENDING
+        assert task.started_at is None
+        assert task.completed_at is None
         
         # Mark in progress
-        todo.mark_in_progress()
-        assert todo.status == TaskStatus.IN_PROGRESS
-        assert todo.started_at is not None
+        task.mark_in_progress()
+        assert task.status == TaskStatus.IN_PROGRESS
+        assert task.started_at is not None
         
         # Mark completed
-        todo.mark_completed()
-        assert todo.status == TaskStatus.COMPLETED
-        assert todo.completed_at is not None
+        task.mark_completed()
+        assert task.status == TaskStatus.COMPLETED
+        assert task.completed_at is not None
         
         # Save and reload
-        storage.save(todo)
-        loaded = storage.load(todo.id)
+        storage.save(task)
+        loaded = storage.load(task.id)
         assert loaded.status == TaskStatus.COMPLETED
         assert loaded.completed_at is not None
     
-    def test_find_todos_by_status(self, temp_config):
-        """Test finding todos by status."""
+    def test_find_tasks_by_status(self, temp_config):
+        """Test finding tasks by status."""
         storage = TaskStorage(temp_config)
         
-        # Create todos with different statuses
-        todo1 = Task(content="Pending task", active_form="Working on pending")
-        todo2 = Task(content="Active task", active_form="Working on active")
-        todo2.mark_in_progress()
-        todo3 = Task(content="Done task", active_form="Working on done")
-        todo3.mark_completed()
+        # Create tasks with different statuses
+        task1 = Task(content="Pending task", active_form="Working on pending")
+        task2 = Task(content="Active task", active_form="Working on active")
+        task2.mark_in_progress()
+        task3 = Task(content="Done task", active_form="Working on done")
+        task3.mark_completed()
         
         # Save all
-        storage.save(todo1)
-        storage.save(todo2)
-        storage.save(todo3)
+        storage.save(task1)
+        storage.save(task2)
+        storage.save(task3)
         
         # Find by status
         pending = storage.find_pending()
@@ -292,25 +295,25 @@ class TestModelValidation:
         checkpoint.add_highlight(highlight)
         assert len(checkpoint.highlights) == 1
     
-    def test_todo_validation(self):
-        """Test todo model validation."""
-        # Valid todo
-        todo = Task(
+    def test_task_validation(self):
+        """Test task model validation."""
+        # Valid task
+        task = Task(
             workspace_id="",
-            content="Test todo",
-            active_form="Testing todo",
+            content="Test task",
+            active_form="Testing task",
         )
         
-        assert todo.workspace_id == ""
-        assert todo.content == "Test todo"
-        assert todo.status == TaskStatus.PENDING
-        assert todo.priority == TaskPriority.MEDIUM
+        assert task.workspace_id == ""
+        assert task.content == "Test task"
+        assert task.status == TaskStatus.PENDING
+        assert task.priority == TaskPriority.MEDIUM
         
         # Test display forms
-        assert todo.get_display_form() == "Test todo"  # Pending state
+        assert task.get_display_form() == "Test task"  # Pending state
         
-        todo.mark_in_progress()
-        assert todo.get_display_form() == "Testing todo"  # In progress state
+        task.mark_in_progress()
+        assert task.get_display_form() == "Testing task"  # In progress state
     
     def test_plan_validation(self):
         """Test plan model validation."""

@@ -16,7 +16,7 @@ class HighlightCategory(str, Enum):
     INSIGHT = "insight"
     ERROR = "error"
     REFACTOR = "refactor"
-    TODO = "todo"
+    TASK = "task"
     PLAN_STEP = "plan_step"
     DISCOVERY = "discovery"
     GENERAL = "general"
@@ -68,9 +68,9 @@ class Highlight(BaseModel):
         description="Files related to this highlight"
     )
     
-    related_todo_id: Optional[str] = Field(
+    related_task_id: Optional[str] = Field(
         default=None,
-        description="ID of related todo item"
+        description="ID of related task item"
     )
     
     def __str__(self) -> str:

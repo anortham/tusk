@@ -24,7 +24,7 @@ class SearchResult:
     
     def __init__(self, doc_id: str, doc_type: str, score: float, highlights: Dict[str, str]):
         self.doc_id = doc_id
-        self.doc_type = doc_type  # 'checkpoint', 'todo', 'plan'
+        self.doc_type = doc_type  # 'checkpoint', 'task', 'plan'
         self.score = score
         self.highlights = highlights  # Field -> highlighted text
     
@@ -45,7 +45,7 @@ class SearchEngine:
         self.schema = fields.Schema(
             # Document identification
             doc_id=fields.ID(stored=True, unique=True),
-            doc_type=fields.ID(stored=True),  # checkpoint, todo, plan
+            doc_type=fields.ID(stored=True),  # checkpoint, task, plan
             
             # Main content fields
             title=fields.TEXT(stored=True, phrase=True),

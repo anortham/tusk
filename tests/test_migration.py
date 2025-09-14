@@ -73,9 +73,9 @@ class TestMigrationFunctionality:
             project_path="/path/to/test-project"
         )
         
-        todo = Task(
-            content="Test todo",
-            active_form="Testing todo",
+        task = Task(
+            content="Test task",
+            active_form="Testing task",
             project_id="test-project", 
             project_path="/path/to/test-project"
         )
@@ -90,8 +90,8 @@ class TestMigrationFunctionality:
         # Verify project fields are set
         assert checkpoint.project_id == "test-project"
         assert checkpoint.project_path == "/path/to/test-project"
-        assert todo.project_id == "test-project"
-        assert todo.project_path == "/path/to/test-project"
+        assert task.project_id == "test-project"
+        assert task.project_path == "/path/to/test-project"
         assert plan.project_id == "test-project"
         assert plan.project_path == "/path/to/test-project"
     
@@ -170,15 +170,15 @@ class TestCrossProjectEdgeCases:
         """Test handling of very long project paths."""
         long_path = "/very/long/path/that/goes/deep/into/nested/directories/and/keeps/going/until/it/reaches/maximum/length"
         
-        todo = Task(
+        task = Task(
             content="Todo with long project path",
             active_form="Testing long path",
             project_id="long-path-project",
             project_path=long_path
         )
         
-        assert todo.project_path == long_path
-        assert len(todo.project_path) > 80  # Verify it's actually long
+        assert task.project_path == long_path
+        assert len(task.project_path) > 80  # Verify it's actually long
     
     def test_special_characters_in_project_fields(self):
         """Test handling of special characters in project fields."""
@@ -206,9 +206,9 @@ class TestCrossProjectEdgeCases:
             project_path=project_path
         )
         
-        todo = Task(
-            content="Test todo", 
-            active_form="Testing todo",
+        task = Task(
+            content="Test task", 
+            active_form="Testing task",
             project_id=project_id,
             project_path=project_path
         )
@@ -221,7 +221,7 @@ class TestCrossProjectEdgeCases:
         )
         
         # All should have same project info
-        models = [checkpoint, todo, plan]
+        models = [checkpoint, task, plan]
         for model in models:
             assert model.project_id == project_id
             assert model.project_path == project_path

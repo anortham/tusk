@@ -118,7 +118,7 @@ tusk-server
 
 The server will start and display:
 ```
-INFO - Tusk server starting with stats: {'workspace': 'default', 'checkpoints': 0, 'todos': 0, 'plans': 0}
+INFO - Tusk server starting with stats: {'workspace': 'default', 'checkpoints': 0, 'tasks': 0, 'plans': 0}
 INFO - Starting Tusk server with stdio transport
 ```
 
@@ -144,7 +144,7 @@ Should create your first checkpoint.
 add_task "Set up my first project"
 ```
 
-Should create your first todo.
+Should create your first task.
 
 ## Directory Structure
 
@@ -156,8 +156,8 @@ After installation and first use, Tusk creates this structure:
 │   ├── checkpoints/
 │   │   └── {date}/
 │   │       └── {checkpoint_id}.json
-│   ├── todos/
-│   │   └── todos.json
+│   ├── tasks/
+│   │   └── tasks.json
 │   ├── plans/
 │   │   └── {plan_id}.json
 │   └── index/              # Whoosh search index

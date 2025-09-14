@@ -41,12 +41,12 @@ class TestDatetimeConsistency:
         assert checkpoint.created_at.tzinfo == timezone.utc, "Should use UTC timezone"
         
         # Test Todo
-        todo = Task(
-            content="Test todo",
-            active_form="Testing todo"
+        task = Task(
+            content="Test task",
+            active_form="Testing task"
         )
-        assert todo.created_at.tzinfo is not None, "Todo.created_at should be timezone-aware"
-        assert todo.created_at.tzinfo == timezone.utc, "Should use UTC timezone"
+        assert task.created_at.tzinfo is not None, "Todo.created_at should be timezone-aware"
+        assert task.created_at.tzinfo == timezone.utc, "Should use UTC timezone"
         
         # Test Plan
         plan = Plan(
@@ -63,9 +63,9 @@ class TestDatetimeConsistency:
             description="Test checkpoint for roundtrip"
         )
         
-        todo = Task(
-            content="Test todo",
-            active_form="Testing todo"
+        task = Task(
+            content="Test task",
+            active_form="Testing task"
         )
         
         plan = Plan(
@@ -75,30 +75,30 @@ class TestDatetimeConsistency:
         
         # Save and reload via storage
         checkpoint_storage = CheckpointStorage(temp_config)
-        todo_storage = TaskStorage(temp_config) 
+        task_storage = TaskStorage(temp_config) 
         plan_storage = PlanStorage(temp_config)
         
         assert checkpoint_storage.save(checkpoint), "Should save checkpoint"
-        assert todo_storage.save(todo), "Should save todo"
+        assert task_storage.save(task), "Should save task"
         assert plan_storage.save(plan), "Should save plan"
         
         # Reload from storage
         loaded_checkpoint = checkpoint_storage.load(checkpoint.id)
-        loaded_todo = todo_storage.load(todo.id)
+        loaded_task = task_storage.load(task.id)
         loaded_plan = plan_storage.load(plan.id)
         
         assert loaded_checkpoint is not None, "Should load checkpoint"
-        assert loaded_todo is not None, "Should load todo"  
+        assert loaded_task is not None, "Should load task"  
         assert loaded_plan is not None, "Should load plan"
         
         # Check timezone preservation - THIS WILL FAIL with current implementation
         assert loaded_checkpoint.created_at.tzinfo is not None, "Loaded checkpoint should have timezone"
-        assert loaded_todo.created_at.tzinfo is not None, "Loaded todo should have timezone"
+        assert loaded_task.created_at.tzinfo is not None, "Loaded task should have timezone"
         assert loaded_plan.created_at.tzinfo is not None, "Loaded plan should have timezone"
         
         # Check exact datetime equality
         assert loaded_checkpoint.created_at == checkpoint.created_at, "Datetime should be identical"
-        assert loaded_todo.created_at == todo.created_at, "Datetime should be identical"
+        assert loaded_task.created_at == task.created_at, "Datetime should be identical"
         assert loaded_plan.created_at == plan.created_at, "Datetime should be identical"
     
     def test_sorting_mixed_timezone_datetimes(self, temp_config):
@@ -106,6 +106,7 @@ class TestDatetimeConsistency:
         checkpoint_storage = CheckpointStorage(temp_config)
         
         # Create multiple checkpoints with different creation times
+        import time
         checkpoints = []
         for i in range(3):
             checkpoint = Checkpoint(
@@ -115,6 +116,8 @@ class TestDatetimeConsistency:
             checkpoint.created_at = datetime.now(timezone.utc) + timedelta(minutes=i)
             checkpoints.append(checkpoint)
             checkpoint_storage.save(checkpoint)
+            # Small delay to ensure unique timestamp-based IDs
+            time.sleep(0.001)
         
         # Load all and attempt sorting - THIS WILL FAIL if timezone info is lost
         loaded_checkpoints = checkpoint_storage.load_all()
@@ -163,24 +166,24 @@ class TestDatetimeConsistency:
         
         # Create mixed timezone data
         checkpoint_storage = CheckpointStorage(temp_config)
-        todo_storage = TaskStorage(temp_config)
+        task_storage = TaskStorage(temp_config)
         
         # Create test data with different timestamps
         base_time = datetime.now(timezone.utc)
         
         checkpoint = Checkpoint(description="Test checkpoint")
-        todo = Task(content="Test todo", active_form="Testing")
+        task = Task(content="Test task", active_form="Testing")
         
         # Manually set different creation times to test filtering
         checkpoint.created_at = base_time - timedelta(days=1)
-        todo.created_at = base_time - timedelta(days=3)
+        task.created_at = base_time - timedelta(days=3)
         
         checkpoint_storage.save(checkpoint)
-        todo_storage.save(todo)
+        task_storage.save(task)
         
         # Reload to get the serialization/deserialization effect
         loaded_checkpoint = checkpoint_storage.load(checkpoint.id)
-        loaded_todo = todo_storage.load(todo.id)
+        loaded_task = task_storage.load(task.id)
         
         # Test the filtering logic that fails in recall
         start_date = base_time - timedelta(days=2)
@@ -191,13 +194,13 @@ class TestDatetimeConsistency:
             created_tz_aware = loaded_checkpoint.created_at.replace(tzinfo=timezone.utc) if loaded_checkpoint.created_at.tzinfo is None else loaded_checkpoint.created_at
             checkpoint_in_range = created_tz_aware >= start_date
             
-            # Test todo filtering  
-            todo_created_tz_aware = loaded_todo.created_at.replace(tzinfo=timezone.utc) if loaded_todo.created_at.tzinfo is None else loaded_todo.created_at
-            todo_in_range = todo_created_tz_aware >= start_date
+            # Test task filtering  
+            task_created_tz_aware = loaded_task.created_at.replace(tzinfo=timezone.utc) if loaded_task.created_at.tzinfo is None else loaded_task.created_at
+            task_in_range = task_created_tz_aware >= start_date
             
             # Should be able to determine which items are in range
             assert isinstance(checkpoint_in_range, bool), "Should get boolean result for checkpoint"
-            assert isinstance(todo_in_range, bool), "Should get boolean result for todo"
+            assert isinstance(task_in_range, bool), "Should get boolean result for task"
             
         except TypeError as e:
             if "can't compare offset-naive and offset-aware datetimes" in str(e):
@@ -207,29 +210,29 @@ class TestDatetimeConsistency:
     def test_cross_model_datetime_comparisons(self, temp_config):
         """Test comparing datetimes between different model types."""
         checkpoint = Checkpoint(description="Test")
-        todo = Task(content="Test", active_form="Testing")
+        task = Task(content="Test", active_form="Testing")
         plan = Plan(title="Test", description="Test")
         
         # Save and reload to simulate real usage
         checkpoint_storage = CheckpointStorage(temp_config)
-        todo_storage = TaskStorage(temp_config)
+        task_storage = TaskStorage(temp_config)
         plan_storage = PlanStorage(temp_config)
         
         checkpoint_storage.save(checkpoint)
-        todo_storage.save(todo)
+        task_storage.save(task)
         plan_storage.save(plan)
         
         loaded_checkpoint = checkpoint_storage.load(checkpoint.id)
-        loaded_todo = todo_storage.load(todo.id)
+        loaded_task = task_storage.load(task.id)
         loaded_plan = plan_storage.load(plan.id)
         
         # These comparisons should work without timezone errors
         try:
-            # Compare checkpoint and todo datetimes
-            if loaded_checkpoint.created_at < loaded_todo.created_at:
+            # Compare checkpoint and task datetimes
+            if loaded_checkpoint.created_at < loaded_task.created_at:
                 older_item = "checkpoint"
             else:
-                older_item = "todo"
+                older_item = "task"
             
             # Compare with plan
             if loaded_plan.created_at < loaded_checkpoint.created_at:
@@ -237,7 +240,7 @@ class TestDatetimeConsistency:
             else:
                 oldest_item = older_item
                 
-            assert oldest_item in ["checkpoint", "todo", "plan"], "Should determine oldest item"
+            assert oldest_item in ["checkpoint", "task", "plan"], "Should determine oldest item"
         except TypeError as e:
             if "can't compare offset-naive and offset-aware datetimes" in str(e):
                 pytest.fail("Timezone comparison error between model types")
@@ -268,39 +271,39 @@ class TestDatetimeConsistency:
         assert "Z" in created_at_str or "+00:00" in created_at_str, \
             f"JSON should contain explicit timezone info, got: {created_at_str}"
     
-    def test_todo_status_transitions_preserve_timezone(self, temp_config):
-        """Test that todo status changes preserve timezone info."""
-        todo = Task(
-            content="Test todo transitions",
+    def test_task_status_transitions_preserve_timezone(self, temp_config):
+        """Test that task status changes preserve timezone info."""
+        task = Task(
+            content="Test task transitions",
             active_form="Testing transitions"
         )
         
-        todo_storage = TaskStorage(temp_config)
-        todo_storage.save(todo)
+        task_storage = TaskStorage(temp_config)
+        task_storage.save(task)
         
         # Transition to in_progress
-        todo.mark_in_progress()
-        assert todo.started_at is not None, "Should have started_at"
-        assert todo.started_at.tzinfo is not None, "started_at should be timezone-aware"
+        task.mark_in_progress()
+        assert task.started_at is not None, "Should have started_at"
+        assert task.started_at.tzinfo is not None, "started_at should be timezone-aware"
         
-        todo_storage.save(todo)
+        task_storage.save(task)
         
         # Reload and check timezone preservation
-        loaded_todo = todo_storage.load(todo.id)
-        assert loaded_todo.started_at is not None, "Should have started_at after reload"
-        assert loaded_todo.started_at.tzinfo is not None, "started_at should remain timezone-aware"
+        loaded_task = task_storage.load(task.id)
+        assert loaded_task.started_at is not None, "Should have started_at after reload"
+        assert loaded_task.started_at.tzinfo is not None, "started_at should remain timezone-aware"
         
-        # Complete the todo
-        loaded_todo.mark_completed()
-        assert loaded_todo.completed_at is not None, "Should have completed_at"
-        assert loaded_todo.completed_at.tzinfo is not None, "completed_at should be timezone-aware"
+        # Complete the task
+        loaded_task.mark_completed()
+        assert loaded_task.completed_at is not None, "Should have completed_at"
+        assert loaded_task.completed_at.tzinfo is not None, "completed_at should be timezone-aware"
         
-        todo_storage.save(loaded_todo)
+        task_storage.save(loaded_task)
         
         # Final reload and verification
-        final_todo = todo_storage.load(todo.id)
-        assert final_todo.completed_at is not None, "Should have completed_at after final reload"
-        assert final_todo.completed_at.tzinfo is not None, "completed_at should remain timezone-aware"
+        final_task = task_storage.load(task.id)
+        assert final_task.completed_at is not None, "Should have completed_at after final reload"
+        assert final_task.completed_at.tzinfo is not None, "completed_at should remain timezone-aware"
 
     def test_mixed_timezone_data_sorting_fails(self):
         """Test that demonstrates the actual error with mixed timezone data."""

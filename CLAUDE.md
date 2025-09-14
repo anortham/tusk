@@ -42,7 +42,7 @@ src/tusk/
 ~/.coa/tusk/
 └── {workspace_name}/
     ├── checkpoints/{date}/{id}.json
-    ├── todos/todos.json
+    ├── tasks/tasks.json
     ├── plans/{id}.json
     └── index/          # Whoosh search index
 ```
@@ -159,7 +159,7 @@ This is a standard limitation of live Python processes - not specific to Tusk.
 
 1. Implement storage layer with Whoosh
 2. Create FastMCP server with tool transformations
-3. Build core tools (checkpoint, todo, plan, recall, standup)
+3. Build core tools (checkpoint, task, plan, recall, standup)
 4. Add behavioral guidance and progressive disclosure
 5. Create migration scripts from existing systems
 6. Add comprehensive testing and documentation

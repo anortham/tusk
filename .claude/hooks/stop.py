@@ -52,10 +52,10 @@ class CompletionDetector:
     
     # Todo-specific completion patterns
     TODO_COMPLETION_PATTERNS = [
-        r'(?:todo|task)\s+(?:completed|finished|done)',
-        r'(?:marked|set)\s+(?:todo|task)\s+as\s+(?:complete|done|finished)',
+        r'(?:task|task)\s+(?:completed|finished|done)',
+        r'(?:marked|set)\s+(?:task|task)\s+as\s+(?:complete|done|finished)',
         r'(?:finished|completed)\s+(?:working on|implementing)\s+(.+)',
-        r'(?:task|todo)\s+(.+?)\s+(?:is now|is\s+)?(?:complete|finished|done)',
+        r'(?:task|task)\s+(.+?)\s+(?:is now|is\s+)?(?:complete|finished|done)',
     ]
     
     # Plan completion patterns
@@ -70,7 +70,7 @@ class CompletionDetector:
         """Detect completion indicators in text."""
         results = {
             'general_completions': [],
-            'todo_completions': [],
+            'task_completions': [],
             'plan_completions': []
         }
         
@@ -95,7 +95,7 @@ class CompletionDetector:
                 start = max(0, match.start() - 30)
                 end = min(len(text), match.end() + 30)
                 context = text[start:end].strip()
-                results['todo_completions'].append(context)
+                results['task_completions'].append(context)
         
         # Plan completion patterns
         for pattern in self.PLAN_COMPLETION_PATTERNS:
@@ -112,13 +112,13 @@ class CompletionDetector:
         """Generate actionable completion suggestions."""
         suggestions = []
         
-        if completions['todo_completions']:
-            suggestions.append("📝 Consider marking related todos as completed with `/todos complete <id>`")
+        if completions['task_completions']:
+            suggestions.append("📝 Consider marking related tasks as completed with `/tasks complete <id>`")
         
         if completions['plan_completions']:
             suggestions.append("📋 Review active plans and mark completed steps/milestones")
         
-        if completions['general_completions'] and not completions['todo_completions']:
+        if completions['general_completions'] and not completions['task_completions']:
             suggestions.append("🎯 Create a checkpoint to capture this completion: `/checkpoint \"<description>\"`")
         
         return suggestions

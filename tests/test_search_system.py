@@ -47,7 +47,7 @@ def sample_checkpoint():
 
 @pytest.fixture
 def sample_task():
-    """Create a sample todo for testing."""
+    """Create a sample task for testing."""
     return Task(
         content="Write comprehensive unit tests",
         active_form="Writing comprehensive unit tests",
@@ -129,12 +129,12 @@ class TestSearchEngineIndexing:
         assert any(r.doc_id == sample_checkpoint.id for r in results)
     
     def test_index_task(self, search_engine, sample_task):
-        """Test indexing a todo."""
+        """Test indexing a task."""
         result = search_engine.index_task(sample_task)
         
         assert result is True
         
-        # Verify the todo is searchable
+        # Verify the task is searchable
         results = search_engine.search("unit tests", limit=5)
         assert len(results) >= 1
         assert any(r.doc_id == sample_task.id for r in results)
@@ -165,7 +165,7 @@ class TestSearchEngineIndexing:
         doc_ids = [r.doc_id for r in results]
         assert sample_plan.id in doc_ids
         
-        # Search for "tests" should find the todo
+        # Search for "tests" should find the task
         test_results = search_engine.search("tests", limit=10)
         assert len(test_results) >= 1
         test_doc_ids = [r.doc_id for r in test_results]
@@ -197,10 +197,10 @@ class TestSearchEngineQuerying:
         checkpoint_results = [r for r in results if r.doc_id == sample_checkpoint.id]
         task_results = [r for r in results if r.doc_id == sample_task.id]
         
-        # Should find checkpoint but not todo (if checkpoint contains "test")
+        # Should find checkpoint but not task (if checkpoint contains "test")
         # Note: our sample checkpoint might not contain "test", so this verifies filtering works
         
-        # Search only for todos
+        # Search only for tasks
         results = search_engine.search("tests", limit=5, doc_types=["task"])
         assert any(r.doc_id == sample_task.id for r in results)
     
@@ -263,6 +263,8 @@ class TestSearchEngineAdvanced:
     
     def test_recent_search(self, search_engine):
         """Test searching for recent documents."""
+        import time
+
         # Create documents with different timestamps
         old_checkpoint = Checkpoint(
             description="Old checkpoint from long ago",
@@ -270,12 +272,15 @@ class TestSearchEngineAdvanced:
         # Manually set an old timestamp
         old_timestamp = datetime.now(timezone.utc).replace(year=2020)
         old_checkpoint.created_at = old_timestamp
-        
+
+        search_engine.index_checkpoint(old_checkpoint)
+        # Small delay to ensure unique timestamp-based IDs
+        time.sleep(0.001)
+
         recent_checkpoint = Checkpoint(
             description="Recent checkpoint from today",
         )
-        
-        search_engine.index_checkpoint(old_checkpoint)
+
         search_engine.index_checkpoint(recent_checkpoint)
         
         # Search for recent documents (last 30 days)
@@ -291,7 +296,7 @@ class TestSearchEngineAdvanced:
         """Test recent search with document type filtering."""
         search_engine.index_task(sample_task)
         
-        # Search for recent todos only
+        # Search for recent tasks only
         results = search_engine.search_recent(days=1, limit=5, doc_types=["task"])
         
         assert len(results) >= 1
@@ -477,11 +482,11 @@ class TestSearchEngineIntegration:
         auth_results = search_engine.search("authentication", limit=5)
         assert len(auth_results) == 3
         
-        # Search for "testing" should find mainly the todo
+        # Search for "testing" should find mainly the task
         test_results = search_engine.search("testing", limit=5)
         assert len(test_results) >= 1
-        todo_found = any(r.doc_id == documents[1].id for r in test_results)
-        assert todo_found
+        task_found = any(r.doc_id == documents[1].id for r in test_results)
+        assert task_found
         
         # Search for "security" should find checkpoint and plan
         security_results = search_engine.search("security", limit=5)

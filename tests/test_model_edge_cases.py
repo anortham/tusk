@@ -196,86 +196,86 @@ class TestCheckpointModelEdgeCases:
         assert len(checkpoint.highlights) == 50
 
 
-class TestTodoModelEdgeCases:
-    """Test Todo model edge cases."""
+class TestTaskModelEdgeCases:
+    """Test Task model edge cases."""
     
-    def test_todo_status_transition_validation(self):
+    def test_task_status_transition_validation(self):
         """Test that status transitions follow business rules."""
-        todo = Task(content="Test todo", active_form="Testing todo")
+        task = Task(content="Test task", active_form="Testing task")
         
         # Should start as pending
-        assert todo.status == TaskStatus.PENDING
+        assert task.status == TaskStatus.PENDING
         
         # Valid transition: pending -> in_progress
-        todo.mark_in_progress()
-        assert todo.status == TaskStatus.IN_PROGRESS
-        assert todo.started_at is not None
+        task.mark_in_progress()
+        assert task.status == TaskStatus.IN_PROGRESS
+        assert task.started_at is not None
         
         # Valid transition: in_progress -> completed
-        todo.mark_completed()
-        assert todo.status == TaskStatus.COMPLETED
-        assert todo.completed_at is not None
+        task.mark_completed()
+        assert task.status == TaskStatus.COMPLETED
+        assert task.completed_at is not None
         
         # Invalid transitions should be handled gracefully
         # (Current implementation may not prevent all invalid transitions)
     
-    def test_todo_display_form_logic(self):
-        """Test todo display form changes based on status."""
-        todo = Task(content="Write tests", active_form="Writing tests")
+    def test_task_display_form_logic(self):
+        """Test task display form changes based on status."""
+        task = Task(content="Write tests", active_form="Writing tests")
         
         # Pending: should show content
-        assert todo.get_display_form() == "Write tests"
+        assert task.get_display_form() == "Write tests"
         
         # In progress: should show active_form
-        todo.mark_in_progress()
-        assert todo.get_display_form() == "Writing tests"
+        task.mark_in_progress()
+        assert task.get_display_form() == "Writing tests"
         
         # Completed: should show content
-        todo.mark_completed()
-        assert todo.get_display_form() == "Write tests"
+        task.mark_completed()
+        assert task.get_display_form() == "Write tests"
     
-    def test_todo_priority_levels(self):
+    def test_task_priority_levels(self):
         """Test all priority levels are supported."""
         priorities = [TaskPriority.LOW, TaskPriority.MEDIUM, TaskPriority.HIGH]
         
         for priority in priorities:
-            todo = Task(content="Test", active_form="Testing", priority=priority)
-            assert todo.priority == priority
+            task = Task(content="Test", active_form="Testing", priority=priority)
+            assert task.priority == priority
     
-    def test_todo_time_tracking(self):
-        """Test todo time tracking functionality."""
-        todo = Task(content="Time test", active_form="Testing time")
+    def test_task_time_tracking(self):
+        """Test task time tracking functionality."""
+        task = Task(content="Time test", active_form="Testing time")
         
         # Initially no time tracking
-        assert todo.started_at is None
-        assert todo.completed_at is None
+        assert task.started_at is None
+        assert task.completed_at is None
         
         # Mark in progress
         start_time = datetime.now(timezone.utc)
-        todo.mark_in_progress()
-        assert todo.started_at is not None
-        assert todo.started_at >= start_time
+        task.mark_in_progress()
+        assert task.started_at is not None
+        assert task.started_at >= start_time
         
         # Mark completed
         completion_time = datetime.now(timezone.utc)
-        todo.mark_completed()
-        assert todo.completed_at is not None
-        assert todo.completed_at >= completion_time
-        assert todo.completed_at >= todo.started_at
+        task.mark_completed()
+        assert task.completed_at is not None
+        assert task.completed_at >= completion_time
+        assert task.completed_at >= task.started_at
     
-    def test_todo_with_extensive_metadata(self):
-        """Test todo with lots of metadata."""
-        todo = Task(
-            content="Complex todo",
-            active_form="Working on complex todo",
+    def test_task_with_extensive_metadata(self):
+        """Test task with lots of metadata."""
+        task = Task(
+            content="Complex task",
+            active_form="Working on complex task",
             priority=TaskPriority.HIGH,
             tags=["urgent", "important", "complex", "testing"],
-            notes="This is a very detailed todo with extensive notes about what needs to be done and why it's important."
+            notes="This is a very detailed task with extensive notes about what needs to be done and why it's important."
         )
         
-        assert len(todo.tags) == 4
-        assert "urgent" in todo.tags
-        assert len(todo.notes) > 100
+        assert len(task.tags) == 4
+        assert "urgent" in task.tags
+        assert len(task.notes) > 100
 
 
 class TestPlanModelEdgeCases:
@@ -410,19 +410,19 @@ class TestModelTimestampConsistency:
     def test_all_models_use_utc_timestamps(self):
         """Test that all models create UTC timestamps by default."""
         checkpoint = Checkpoint(description="UTC test")
-        todo = Task(content="UTC test", active_form="Testing UTC")
+        task = Task(content="UTC test", active_form="Testing UTC")
         plan = Plan(title="UTC test", description="Testing UTC")
         highlight = Highlight(content="UTC test")
         
-        models = [checkpoint, todo, plan, highlight]
+        models = [checkpoint, task, plan, highlight]
         
         # Check different timestamp fields based on model type
         assert checkpoint.created_at.tzinfo == timezone.utc
         if checkpoint.updated_at is not None:
             assert checkpoint.updated_at.tzinfo == timezone.utc
-        assert todo.created_at.tzinfo == timezone.utc
-        if todo.updated_at is not None:
-            assert todo.updated_at.tzinfo == timezone.utc
+        assert task.created_at.tzinfo == timezone.utc
+        if task.updated_at is not None:
+            assert task.updated_at.tzinfo == timezone.utc
         assert plan.created_at.tzinfo == timezone.utc
         if plan.updated_at is not None:
             assert plan.updated_at.tzinfo == timezone.utc
@@ -442,16 +442,16 @@ class TestModelTimestampConsistency:
     
     def test_updated_at_changes_on_modification(self):
         """Test that updated_at changes when models are modified."""
-        todo = Task(content="Update test", active_form="Testing updates")
-        original_updated = todo.updated_at
+        task = Task(content="Update test", active_form="Testing updates")
+        original_updated = task.updated_at
         
-        # Modify the todo
-        todo.mark_in_progress()
+        # Modify the task
+        task.mark_in_progress()
         
         # updated_at should change (if implemented) or stay the same
-        assert todo.updated_at is not None
-        if hasattr(todo, '_update_timestamp'):
-            assert todo.updated_at >= original_updated
+        assert task.updated_at is not None
+        if hasattr(task, '_update_timestamp'):
+            assert task.updated_at >= original_updated
 
 
 class TestModelValidationEdgeCases:
@@ -463,10 +463,10 @@ class TestModelValidationEdgeCases:
         checkpoint = Checkpoint(description="")
         assert checkpoint.description == ""
         
-        # Empty content in todo
-        todo = Task(content="", active_form="")
-        assert todo.content == ""
-        assert todo.active_form == ""
+        # Empty content in task
+        task = Task(content="", active_form="")
+        assert task.content == ""
+        assert task.active_form == ""
     
     def test_unicode_content_handling(self):
         """Test handling of Unicode content."""
@@ -475,8 +475,8 @@ class TestModelValidationEdgeCases:
         checkpoint = Checkpoint(description=unicode_content)
         assert checkpoint.description == unicode_content
         
-        todo = Task(content=unicode_content, active_form=unicode_content)
-        assert todo.content == unicode_content
+        task = Task(content=unicode_content, active_form=unicode_content)
+        assert task.content == unicode_content
         
         highlight = Highlight(content=unicode_content)
         assert highlight.content == unicode_content
@@ -489,8 +489,8 @@ class TestModelValidationEdgeCases:
         checkpoint = Checkpoint(description=long_string)
         assert len(checkpoint.description) == 100000
         
-        todo = Task(content=long_string, active_form="Working on long content")
-        assert len(todo.content) == 100000
+        task = Task(content=long_string, active_form="Working on long content")
+        assert len(task.content) == 100000
     
     def test_special_characters_in_ids(self):
         """Test that generated IDs don't contain problematic characters."""

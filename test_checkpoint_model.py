@@ -25,7 +25,7 @@ class TestHighlightModel:
         assert highlight.context is None
         assert len(highlight.tags) == 0
         assert len(highlight.related_files) == 0
-        assert highlight.related_todo_id is None
+        assert highlight.related_task_id is None
 
     def test_highlight_creation_full(self):
         """Test highlight creation with all fields."""
@@ -39,7 +39,7 @@ class TestHighlightModel:
             context="After 3 days of debugging, finally got the token refresh working",
             tags=["oauth2", "auth0", "authentication", "security"],
             related_files=["src/auth/oauth.py", "config/auth0.json"],
-            related_todo_id="todo-123"
+            related_task_id="task-123"
         )
 
         assert highlight.content == "Implemented OAuth2 integration with Auth0"
@@ -49,7 +49,7 @@ class TestHighlightModel:
         assert highlight.context == "After 3 days of debugging, finally got the token refresh working"
         assert highlight.tags == ["oauth2", "auth0", "authentication", "security"]
         assert highlight.related_files == ["src/auth/oauth.py", "config/auth0.json"]
-        assert highlight.related_todo_id == "todo-123"
+        assert highlight.related_task_id == "task-123"
 
     def test_highlight_categories(self):
         """Test all highlight categories."""
@@ -238,7 +238,7 @@ class TestCheckpointModel:
                 content="User authentication module completed",
                 category=HighlightCategory.COMPLETION,
                 importance=HighlightImportance.HIGH,
-                related_todo_id="auth-implementation-todo"
+                related_task_id="auth-implementation-task"
             )
         ]
 

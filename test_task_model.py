@@ -14,7 +14,7 @@ class TestTaskModel:
     """Test the Task model's core functionality."""
 
     def test_task_creation(self):
-        """Test basic todo creation with required fields."""
+        """Test basic task creation with required fields."""
         task = Task(
             content="Write comprehensive tests",
             active_form="Writing comprehensive tests"
@@ -29,7 +29,7 @@ class TestTaskModel:
         assert len(task.tags) == 0  # Default empty tags
 
     def test_task_creation_with_all_fields(self):
-        """Test todo creation with all optional fields."""
+        """Test task creation with all optional fields."""
         task = Task(
             content="Implement OAuth2 authentication",
             active_form="Implementing OAuth2 authentication",
@@ -39,7 +39,7 @@ class TestTaskModel:
             notes="Critical for production release",
             estimated_duration="2d",
             checkpoint_id="checkpoint-123",
-            parent_todo_id="parent-456",
+            parent_task_id="parent-456",
             plan_id="plan-789"
         )
 
@@ -51,11 +51,11 @@ class TestTaskModel:
         assert task.notes == "Critical for production release"
         assert task.estimated_duration == "2d"
         assert task.checkpoint_id == "checkpoint-123"
-        assert task.parent_todo_id == "parent-456"
+        assert task.parent_task_id == "parent-456"
         assert task.plan_id == "plan-789"
 
     def test_task_status_transitions(self):
-        """Test todo status transition methods."""
+        """Test task status transition methods."""
         task = Task(
             content="Test status transitions",
             active_form="Testing status transitions"
@@ -80,7 +80,7 @@ class TestTaskModel:
         assert task.updated_at is not None
 
     def test_task_blocked_status(self):
-        """Test marking todo as blocked."""
+        """Test marking task as blocked."""
         task = Task(
             content="Blocked task",
             active_form="Working on blocked task"
@@ -98,7 +98,7 @@ class TestTaskModel:
         assert "Blocked: Dependencies not ready" in task.notes
 
     def test_task_note_management(self):
-        """Test adding notes to todos."""
+        """Test adding notes to tasks."""
         task = Task(
             content="Note management test",
             active_form="Testing note management"
@@ -120,7 +120,7 @@ class TestTaskModel:
         from datetime import timedelta
         from src.tusk.models.types import utc_now
 
-        # Create todo with future due date
+        # Create task with future due date
         future_date = utc_now() + timedelta(days=1)
         task = Task(
             content="Future due date",
@@ -130,9 +130,9 @@ class TestTaskModel:
 
         assert not task.is_overdue()
 
-        # Create todo with past due date
+        # Create task with past due date
         past_date = utc_now() - timedelta(days=1)
-        overdue_todo = Task(
+        overdue_task = Task(
             content="Overdue task",
             active_form="Working on overdue task",
             due_date=past_date
@@ -140,12 +140,12 @@ class TestTaskModel:
 
         assert overdue_task.is_overdue()
 
-        # Complete overdue todo - should no longer be overdue
+        # Complete overdue task - should no longer be overdue
         overdue_task.mark_completed()
         assert not overdue_task.is_overdue()
 
         # Todo with no due date should not be overdue
-        no_due_date_todo = Task(
+        no_due_date_task = Task(
             content="No due date",
             active_form="Working without deadline"
         )
@@ -192,52 +192,52 @@ class TestTaskModel:
         assert "Use OAuth2 with JWT tokens" in search_text
 
     def test_task_string_representation(self):
-        """Test todo string representation with different statuses and priorities."""
-        # Test pending todo
-        pending_todo = Task(
+        """Test task string representation with different statuses and priorities."""
+        # Test pending task
+        pending_task = Task(
             content="Pending task",
             active_form="Working on pending task",
             priority=TaskPriority.HIGH
         )
 
-        str_repr = str(pending_todo)
+        str_repr = str(pending_task)
         assert "⏳" in str_repr  # Pending icon
         assert "!!!" in str_repr  # High priority markers (3 exclamation marks)
         assert "Pending task" in str_repr
 
-        # Test in-progress todo
-        in_progress_todo = Task(
+        # Test in-progress task
+        in_progress_task = Task(
             content="Active task",
             active_form="Working on active task",
             priority=TaskPriority.MEDIUM
         )
         in_progress_task.mark_in_progress()
 
-        str_repr = str(in_progress_todo)
+        str_repr = str(in_progress_task)
         assert "🔄" in str_repr  # In progress icon
         assert "Working on active task" in str_repr  # Should show active form
 
-        # Test completed todo
-        completed_todo = Task(
+        # Test completed task
+        completed_task = Task(
             content="Done task",
             active_form="Working on done task",
             priority=TaskPriority.LOW
         )
         completed_task.mark_completed()
 
-        str_repr = str(completed_todo)
+        str_repr = str(completed_task)
         assert "✅" in str_repr  # Completed icon
         assert "!" in str_repr  # Low priority (1 exclamation mark)
         assert "Done task" in str_repr  # Should show content, not active form
 
-        # Test blocked todo
-        blocked_todo = Task(
+        # Test blocked task
+        blocked_task = Task(
             content="Blocked task",
             active_form="Working on blocked task"
         )
         blocked_task.mark_blocked()
 
-        str_repr = str(blocked_todo)
+        str_repr = str(blocked_task)
         assert "🚫" in str_repr  # Blocked icon
 
     def test_task_priority_levels(self):
@@ -256,7 +256,7 @@ class TestTaskModel:
                 priority=priority
             )
 
-            str_repr = str(todo)
+            str_repr = str(task)
             assert expected_markers in str_repr
 
     def test_task_status_icons(self):
@@ -285,7 +285,7 @@ class TestTaskModel:
             elif status == TaskStatus.CANCELLED:
                 task.status = TaskStatus.CANCELLED  # Direct assignment for testing
 
-            str_repr = str(todo)
+            str_repr = str(task)
             # Note: We can't test emojis directly due to encoding issues in tests
             # but we can verify the string representation contains something
             assert len(str_repr) > 0
@@ -312,7 +312,7 @@ class TestTaskModel:
             active_form="Working with active form"
         )
 
-        assert hasattr(todo, 'active_form')
+        assert hasattr(task, 'active_form')
         assert task.active_form == "Working with active form"
 
         # Test that active_form is used in display form for in-progress tasks
@@ -357,8 +357,8 @@ if __name__ == "__main__":
 
     # Test basic functionality
     task = Task(
-        content="Test todo",
-        active_form="Testing todo functionality"
+        content="Test task",
+        active_form="Testing task functionality"
     )
 
     print(f"Initial status: {task.status}")
@@ -373,11 +373,11 @@ if __name__ == "__main__":
     print(f"Display form (completed): {task.get_display_form()}")
 
     # Test active_form attribute specifically
-    assert hasattr(todo, 'active_form')
+    assert hasattr(task, 'active_form')
     print(f"✅ active_form attribute exists: '{task.active_form}'")
 
     # Test string representation
-    str_repr = str(todo)
+    str_repr = str(task)
     print(f"String representation: {str_repr}")
 
     print("✅ Task model tests completed successfully!")

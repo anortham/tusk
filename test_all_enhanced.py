@@ -1,7 +1,7 @@
 """Test all enhanced tools to verify parameter descriptions."""
 
 import json
-from src.tusk.tools.enhanced_simple import EnhancedUnifiedTodoTool
+from src.tusk.tools.enhanced_simple import EnhancedUnifiedTaskTool
 from src.tusk.tools.enhanced_all import (
     EnhancedUnifiedCheckpointTool,
     EnhancedUnifiedRecallTool,
@@ -9,7 +9,7 @@ from src.tusk.tools.enhanced_all import (
     EnhancedUnifiedStandupTool
 )
 from src.tusk.config import TuskConfig
-from src.tusk.storage import CheckpointStorage, PlanStorage, SearchEngine, TodoStorage
+from src.tusk.storage import CheckpointStorage, PlanStorage, SearchEngine, TaskStorage
 from fastmcp import FastMCP
 
 class MockServer:
@@ -21,7 +21,7 @@ class MockServer:
 
         self.config = config
         self.checkpoint_storage = CheckpointStorage(config)
-        self.todo_storage = TodoStorage(config)
+        self.task_storage = TaskStorage(config)
         self.plan_storage = PlanStorage(config)
         self.search_engine = SearchEngine(config)
 
@@ -87,7 +87,7 @@ def main():
 
     # Test all enhanced tools
     tools_to_test = [
-        ("todo", EnhancedUnifiedTodoTool(server)),
+        ("task", EnhancedUnifiedTaskTool(server)),
         ("checkpoint", EnhancedUnifiedCheckpointTool(server)),
         ("recall", EnhancedUnifiedRecallTool(server)),
         ("plan", EnhancedUnifiedPlanTool(server)),

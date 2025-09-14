@@ -32,7 +32,7 @@ class TestCrossProjectFunctionality:
     def storage_and_search(self, temp_config):
         """Create storage instances and search engine for testing."""
         checkpoint_storage = CheckpointStorage(temp_config)
-        todo_storage = TaskStorage(temp_config)
+        task_storage = TaskStorage(temp_config)
         plan_storage = PlanStorage(temp_config)
         search_engine = SearchEngine(temp_config)
         search_engine._ensure_index()
@@ -40,7 +40,7 @@ class TestCrossProjectFunctionality:
         return {
             "config": temp_config,
             "checkpoint_storage": checkpoint_storage,
-            "todo_storage": todo_storage,
+            "task_storage": task_storage,
             "plan_storage": plan_storage,
             "search_engine": search_engine
         }
@@ -57,9 +57,9 @@ class TestCrossProjectFunctionality:
             project_path=test_project_path
         )
         
-        todo = Task(
-            content="Test todo",
-            active_form="Testing todo",
+        task = Task(
+            content="Test task",
+            active_form="Testing task",
             project_id=test_project_id,
             project_path=test_project_path
         )
@@ -74,8 +74,8 @@ class TestCrossProjectFunctionality:
         # Verify project fields are populated
         assert checkpoint.project_id == "test-project"
         assert checkpoint.project_path == "/path/to/test-project"
-        assert todo.project_id == "test-project"
-        assert todo.project_path == "/path/to/test-project"
+        assert task.project_id == "test-project"
+        assert task.project_path == "/path/to/test-project"
         assert plan.project_id == "test-project"
         assert plan.project_path == "/path/to/test-project"
     
@@ -104,16 +104,16 @@ class TestCrossProjectFunctionality:
             search_engine.index_checkpoint(checkpoint)
             created_items.append(("checkpoint", checkpoint.id, project_id))
             
-            # Create todo
-            todo = Task(
+            # Create task
+            task = Task(
                 content=f"Todo from {project_id}",
                 active_form=f"Working on {project_id}",
                 project_id=project_id,
                 project_path=project_path
             )
-            storages["todo_storage"].save(todo)
-            search_engine.index_task(todo)
-            created_items.append(("todo", todo.id, project_id))
+            storages["task_storage"].save(task)
+            search_engine.index_task(task)
+            created_items.append(("task", task.id, project_id))
             
             # Create plan
             plan = Plan(
@@ -141,8 +141,8 @@ class TestCrossProjectFunctionality:
             # Load the actual item to check project_id
             if result.doc_type == "checkpoint":
                 item = storages["checkpoint_storage"].load(result.doc_id)
-            elif result.doc_type == "todo":
-                item = storages["todo_storage"].load(result.doc_id)
+            elif result.doc_type == "task":
+                item = storages["task_storage"].load(result.doc_id)
             elif result.doc_type == "plan":
                 item = storages["plan_storage"].load(result.doc_id)
             
@@ -329,16 +329,16 @@ class TestCrossProjectFunctionality:
             storages["checkpoint_storage"].save(checkpoint)
             search_engine.index_checkpoint(checkpoint)
             
-            # Create recent todos
-            todo = Task(
+            # Create recent tasks
+            task = Task(
                 content=f"Implement feature Y in {project_id}",
                 active_form=f"Implementing feature Y in {project_id}",
                 status=TaskStatus.COMPLETED,
                 project_id=project_id,
                 project_path=f"/path/to/{project_id}"
             )
-            storages["todo_storage"].save(todo)
-            search_engine.index_task(todo)
+            storages["task_storage"].save(task)
+            search_engine.index_task(task)
             
             # Create plans
             plan = Plan(
@@ -370,8 +370,8 @@ class TestCrossProjectFunctionality:
             # Load the actual item to check project_id
             if result.doc_type == "checkpoint":
                 item = storages["checkpoint_storage"].load(result.doc_id)
-            elif result.doc_type == "todo":
-                item = storages["todo_storage"].load(result.doc_id)
+            elif result.doc_type == "task":
+                item = storages["task_storage"].load(result.doc_id)
             elif result.doc_type == "plan":
                 item = storages["plan_storage"].load(result.doc_id)
             
@@ -380,7 +380,7 @@ class TestCrossProjectFunctionality:
         
         # Verify standup shows work from all projects
         assert found_projects == {"project-web", "project-api", "project-mobile"}
-        assert item_types == {"checkpoint", "todo", "plan"}
+        assert item_types == {"checkpoint", "task", "plan"}
         
         # Test that we can manually filter results by project (simulating what standup would do)
         # This tests the core standup functionality - getting cross-project data and then filtering it
@@ -388,8 +388,8 @@ class TestCrossProjectFunctionality:
         for result in results:
             if result.doc_type == "checkpoint":
                 item = storages["checkpoint_storage"].load(result.doc_id)
-            elif result.doc_type == "todo":
-                item = storages["todo_storage"].load(result.doc_id)
+            elif result.doc_type == "task":
+                item = storages["task_storage"].load(result.doc_id)
             elif result.doc_type == "plan":
                 item = storages["plan_storage"].load(result.doc_id)
             
