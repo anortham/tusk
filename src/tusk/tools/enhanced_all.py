@@ -3,7 +3,7 @@
 import json
 import logging
 from datetime import datetime, timezone, timedelta
-from typing import Optional, List
+from typing import Optional, List, Union, Annotated
 from uuid import uuid4
 
 from ..models.task import Task, TaskStatus, TaskPriority
@@ -22,10 +22,10 @@ class EnhancedUnifiedCheckpointTool(EnhancedBaseTool):
 
         @mcp_server.tool
         async def checkpoint(
-            action: str,
-            description: str | None = None,
-            limit: int = 5,
-            query: str | None = None
+            action: Annotated[str, "Required. Operations: \"save\" (new checkpoint), \"list\" (recent checkpoints), \"search\" (find by content)"],
+            description: Annotated[Union[str, None], "Progress description for \"save\". Example: \"Fixed auth bug in login system\""] = None,
+            limit: Annotated[int, "Max results for \"list\"/\"search\" (default 5, range 3-20)"] = 5,
+            query: Annotated[Union[str, None], "Search text for \"search\" action. Searches checkpoint descriptions"] = None
         ) -> str:
             """Save and retrieve work progress checkpoints.
 
@@ -63,86 +63,108 @@ class EnhancedUnifiedCheckpointTool(EnhancedBaseTool):
         # Enhance with parameter descriptions
         self.enhance_registered_tools(mcp_server, ['checkpoint'])
 
-    def _get_git_info(self, project_path: str) -> tuple[Optional[str], Optional[str]]:
-        """Get current git branch and commit hash."""
+    async def _get_git_info_safe(self, project_path: str) -> tuple[Optional[str], Optional[str]]:
+        """Get current git branch and commit hash safely using thread pool to avoid AsyncIO deadlock."""
         try:
+            import asyncio
             import subprocess
             import os
 
             if not project_path or not os.path.exists(project_path):
                 return None, None
 
-            # Get current branch
-            branch_result = subprocess.run(
-                ['git', 'branch', '--show-current'],
-                capture_output=True,
-                text=True,
-                cwd=project_path,
-                timeout=5
-            )
+            def run_git_subprocess():
+                """Run git commands in a separate thread to avoid AsyncIO deadlock."""
+                try:
+                    # Get current branch
+                    branch_result = subprocess.run(
+                        ['git', 'branch', '--show-current'],
+                        capture_output=True,
+                        text=True,
+                        cwd=project_path,
+                        timeout=3  # Shorter timeout
+                    )
 
-            # Get current commit hash (short)
-            commit_result = subprocess.run(
-                ['git', 'rev-parse', '--short=8', 'HEAD'],
-                capture_output=True,
-                text=True,
-                cwd=project_path,
-                timeout=5
-            )
+                    # Get current commit hash (short)
+                    commit_result = subprocess.run(
+                        ['git', 'rev-parse', '--short=8', 'HEAD'],
+                        capture_output=True,
+                        text=True,
+                        cwd=project_path,
+                        timeout=3  # Shorter timeout
+                    )
 
-            branch = branch_result.stdout.strip() if branch_result.returncode == 0 else None
-            commit = commit_result.stdout.strip() if commit_result.returncode == 0 else None
+                    branch = branch_result.stdout.strip() if branch_result.returncode == 0 else None
+                    commit = commit_result.stdout.strip() if commit_result.returncode == 0 else None
 
-            return branch, commit
+                    return branch, commit
+
+                except Exception as e:
+                    logger.debug(f"Git subprocess failed: {e}")
+                    return None, None
+
+            # Run in thread pool to avoid AsyncIO deadlock
+            try:
+                branch, commit = await asyncio.wait_for(
+                    asyncio.to_thread(run_git_subprocess),
+                    timeout=5.0  # Overall timeout
+                )
+                return branch, commit
+            except asyncio.TimeoutError:
+                logger.debug("Git info timeout - operations took too long")
+                return None, None
 
         except Exception as e:
             logger.debug(f"Could not get git info: {e}")
             return None, None
 
-    def _get_recently_modified_files(self, project_path: str, max_files: int = 20) -> list[str]:
-        """Get recently modified files in the project."""
+    async def _get_recently_modified_files_safe(self, project_path: str, max_files: int = 20) -> list[str]:
+        """Get recently modified files safely using thread pool to avoid AsyncIO deadlock."""
         try:
+            import asyncio
             import subprocess
             import os
 
             if not project_path or not os.path.exists(project_path):
                 return []
 
-            # Get files modified in last 24 hours, sorted by modification time
-            cmd = [
-                'git', 'diff', '--name-only',
-                '--diff-filter=AM',  # Added or Modified
-                'HEAD~1..HEAD'  # Since last commit
-            ]
+            def run_file_detection():
+                """Run file detection in a separate thread to avoid AsyncIO deadlock."""
+                try:
+                    # Get files modified in last commit
+                    cmd = [
+                        'git', 'diff', '--name-only',
+                        '--diff-filter=AM',  # Added or Modified
+                        'HEAD~1..HEAD'  # Since last commit
+                    ]
+                    result = subprocess.run(
+                        cmd,
+                        capture_output=True,
+                        text=True,
+                        cwd=project_path,
+                        timeout=3  # Shorter timeout
+                    )
 
-            result = subprocess.run(
-                cmd,
-                capture_output=True,
-                text=True,
-                cwd=project_path,
-                timeout=5
-            )
+                    if result.returncode == 0 and result.stdout.strip():
+                        files = [f.strip() for f in result.stdout.strip().split('\n') if f.strip()]
+                        return files[:max_files]
 
-            if result.returncode == 0 and result.stdout.strip():
-                files = [f.strip() for f in result.stdout.strip().split('\n') if f.strip()]
-                return files[:max_files]
+                    return []
 
-            # Fallback: get recently modified files from filesystem
-            cmd_ls = ['find', '.', '-type', 'f', '-mtime', '-1', '-not', '-path', './.git/*']
-            result_ls = subprocess.run(
-                cmd_ls,
-                capture_output=True,
-                text=True,
-                cwd=project_path,
-                timeout=5
-            )
+                except Exception as e:
+                    logger.debug(f"File detection subprocess failed: {e}")
+                    return []
 
-            if result_ls.returncode == 0:
-                files = [f.strip().lstrip('./') for f in result_ls.stdout.strip().split('\n')
-                        if f.strip() and not f.startswith('./.git')]
-                return files[:max_files]
-
-            return []
+            # Run in thread pool to avoid AsyncIO deadlock
+            try:
+                files = await asyncio.wait_for(
+                    asyncio.to_thread(run_file_detection),
+                    timeout=4.0  # Overall timeout
+                )
+                return files
+            except asyncio.TimeoutError:
+                logger.debug("File detection timeout - operations took too long")
+                return []
 
         except Exception as e:
             logger.debug(f"Could not get recently modified files: {e}")
@@ -174,15 +196,15 @@ class EnhancedUnifiedCheckpointTool(EnhancedBaseTool):
                 "error": "Description is required for save action"
             }, ensure_ascii=False, indent=2)
 
-        # Get current project context
+        # Get current project context - testing project_path now
         project_id = self.config.get_current_project_id()
         project_path = self.config.get_current_project_path()
 
-        # Get git context
-        git_branch, git_commit = self._get_git_info(project_path)
+        # Get git context using async-safe method
+        git_branch, git_commit = await self._get_git_info_safe(project_path)
 
-        # Get recently modified files
-        active_files = self._get_recently_modified_files(project_path)
+        # Get recently modified files using async-safe method
+        active_files = await self._get_recently_modified_files_safe(project_path)
 
         # Build work context
         work_context = self._build_work_context(description, git_branch, git_commit, active_files)
