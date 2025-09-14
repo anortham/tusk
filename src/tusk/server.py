@@ -18,30 +18,30 @@ logger = get_logger(__name__)
 
 class TuskServer:
     """Tusk memory server using FastMCP 2.0."""
-    
+
     def __init__(self, config: Optional[TuskConfig] = None):
         self.config = config or TuskConfig.from_env()
         self.config.ensure_directories()
-        
+
         # Initialize storage
         self.checkpoint_storage = CheckpointStorage(self.config)
         self.task_storage = TaskStorage(self.config)
         self.plan_storage = PlanStorage(self.config)
         self.search_engine = SearchEngine(self.config)
-        
+
         # Comprehensive startup cleanup
         self._perform_startup_cleanup()
-        
+
         # Create FastMCP server with behavioral instructions
         instructions = self._get_instructions()
         self.mcp = FastMCP(
             name=self.config.server_name,
             instructions=instructions,
         )
-        
+
         # Register tools based on expertise level
         self._register_tools()
-        
+
         logger.info("Tusk server initialized")
 
     def _perform_startup_cleanup(self) -> None:
@@ -58,7 +58,7 @@ class TuskServer:
             try:
                 # Check if we can access the index - if not, force cleanup
                 stats = self.search_engine.get_index_stats()
-                if stats.get('total_docs', 0) == 0 and self.search_engine.cleanup_locks(force=True):
+                if stats.get("total_docs", 0) == 0 and self.search_engine.cleanup_locks(force=True):
                     cleanup_actions.append("force-removed all search index locks (empty index)")
             except Exception:
                 # Index access failed, force cleanup
@@ -116,7 +116,7 @@ class TuskServer:
 
 Every checkpoint saved, task completed, and plan executed builds lasting progress.
         """.strip()
-    
+
     def _register_tools(self) -> None:
         """Register enhanced unified MCP tools with rich parameter descriptions."""
         # Import all enhanced tools
@@ -125,7 +125,7 @@ Every checkpoint saved, task completed, and plan executed builds lasting progres
             EnhancedUnifiedCheckpointTool,
             EnhancedUnifiedRecallTool,
             EnhancedUnifiedPlanTool,
-            EnhancedUnifiedStandupTool
+            EnhancedUnifiedStandupTool,
         )
         from .tools.enhanced_unified import EnhancedUnifiedTaskTool
 
@@ -147,18 +147,20 @@ Every checkpoint saved, task completed, and plan executed builds lasting progres
         standup_tool.register(self.mcp)
         # cleanup_tool.register(self.mcp)  # Hidden during testing period
 
-        logger.info("Registered 5 enhanced unified tools with rich parameter descriptions: plan, task, checkpoint, recall, standup")
-    
+        logger.info(
+            "Registered 5 enhanced unified tools with rich parameter descriptions: plan, task, checkpoint, recall, standup"
+        )
+
     def run_stdio(self) -> None:
         """Run the server with stdio transport."""
         logger.info("Starting Tusk server with stdio transport")
         self.mcp.run(transport="stdio")
-    
+
     async def run_sse(self, host: str = "localhost", port: int = 3001) -> None:
         """Run the server with SSE transport."""
         logger.info(f"Starting Tusk server with SSE transport on {host}:{port}")
         await self.mcp.run(transport="sse", host=host, port=port)
-    
+
     def get_workspace_stats(self) -> Dict[str, Any]:
         """Get statistics about the current data."""
         return {
@@ -167,13 +169,13 @@ Every checkpoint saved, task completed, and plan executed builds lasting progres
             "plans": self.plan_storage.count(),
             "search_stats": self.search_engine.get_index_stats(),
         }
-    
+
     def cleanup_expired_data(self) -> Dict[str, int]:
         """Clean up expired data across all storage systems."""
         results = {
             "checkpoints_removed": self.checkpoint_storage.cleanup_expired(),
         }
-        
+
         logger.info(f"Cleanup completed: {results}")
         return results
 
@@ -183,20 +185,17 @@ def setup_logging(config: TuskConfig) -> None:
     # Create logs directory
     log_dir = config.get_log_dir()
     log_dir.mkdir(parents=True, exist_ok=True)
-    
+
     # Configure root logger
     logging.basicConfig(
         level=getattr(logging, config.log_level),
-        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
         handlers=[
             logging.StreamHandler(sys.stderr),
-            logging.FileHandler(
-                log_dir / "tusk.log",
-                encoding='utf-8'
-            )
-        ]
+            logging.FileHandler(log_dir / "tusk.log", encoding="utf-8"),
+        ],
     )
-    
+
     # Set specific logger levels
     logging.getLogger("whoosh").setLevel(logging.WARNING)
     logging.getLogger("fastmcp").setLevel(logging.INFO)
@@ -207,20 +206,20 @@ def main() -> None:
     try:
         # Load configuration
         config = TuskConfig.from_env()
-        
+
         # Setup logging
         setup_logging(config)
-        
+
         # Create and run server
         server = TuskServer(config)
-        
+
         # Log startup info
         stats = server.get_workspace_stats()
         logger.info(f"Tusk server starting with stats: {stats}")
-        
+
         # Run with stdio transport by default
         server.run_stdio()
-        
+
     except KeyboardInterrupt:
         logger.info("Tusk server stopped by user")
     except Exception as e:

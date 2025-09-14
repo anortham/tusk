@@ -9,7 +9,7 @@ if TYPE_CHECKING:
 
 class BaseTool(ABC):
     """Base class for Tusk memory tools."""
-    
+
     def __init__(self, server: "TuskServer"):
         self.server = server
         self.config = server.config
@@ -17,12 +17,12 @@ class BaseTool(ABC):
         self.task_storage = server.task_storage
         self.plan_storage = server.plan_storage
         self.search_engine = server.search_engine
-    
+
     @abstractmethod
     def register(self, mcp_server) -> None:
         """Register this tool's functions with the MCP server."""
         pass
-    
+
     def get_current_workspace(self) -> str:
         """Get the current workspace ID (deprecated - returns empty string)."""
         return ""

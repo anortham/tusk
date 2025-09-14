@@ -22,10 +22,19 @@ class EnhancedUnifiedCheckpointTool(EnhancedBaseTool):
 
         @mcp_server.tool
         async def checkpoint(
-            action: Annotated[str, "Required. Operations: \"save\" (new checkpoint), \"list\" (recent checkpoints), \"search\" (find by content)"],
-            description: Annotated[Union[str, None], "Progress description for \"save\". Example: \"Fixed auth bug in login system\""] = None,
-            limit: Annotated[int, "Max results for \"list\"/\"search\" (default 5, range 3-20)"] = 5,
-            query: Annotated[Union[str, None], "Search text for \"search\" action. Searches checkpoint descriptions"] = None
+            action: Annotated[
+                str,
+                'Required. Operations: "save" (new checkpoint), "list" (recent checkpoints), "search" (find by content)',
+            ],
+            description: Annotated[
+                Union[str, None],
+                'Progress description for "save". Example: "Fixed auth bug in login system"',
+            ] = None,
+            limit: Annotated[int, 'Max results for "list"/"search" (default 5, range 3-20)'] = 5,
+            query: Annotated[
+                Union[str, None],
+                'Search text for "search" action. Searches checkpoint descriptions',
+            ] = None,
         ) -> str:
             """Save and retrieve work progress checkpoints.
 
@@ -48,20 +57,21 @@ class EnhancedUnifiedCheckpointTool(EnhancedBaseTool):
                 elif action == "search":
                     return await self._search_checkpoints(query, limit)
                 else:
-                    return json.dumps({
-                        "success": False,
-                        "error": f"Unknown action: {action}. Use: save, list, search"
-                    }, ensure_ascii=False, indent=2)
+                    return json.dumps(
+                        {
+                            "success": False,
+                            "error": f"Unknown action: {action}. Use: save, list, search",
+                        },
+                        ensure_ascii=False,
+                        indent=2,
+                    )
 
             except Exception as e:
                 logger.error(f"Checkpoint operation failed: {e}")
-                return json.dumps({
-                    "success": False,
-                    "error": str(e)
-                }, ensure_ascii=False, indent=2)
+                return json.dumps({"success": False, "error": str(e)}, ensure_ascii=False, indent=2)
 
         # Enhance with parameter descriptions
-        self.enhance_registered_tools(mcp_server, ['checkpoint'])
+        self.enhance_registered_tools(mcp_server, ["checkpoint"])
 
     async def _get_git_info_safe(self, project_path: str) -> tuple[Optional[str], Optional[str]]:
         """Get current git branch and commit hash safely using thread pool to avoid AsyncIO deadlock."""
@@ -78,20 +88,20 @@ class EnhancedUnifiedCheckpointTool(EnhancedBaseTool):
                 try:
                     # Get current branch
                     branch_result = subprocess.run(
-                        ['git', 'branch', '--show-current'],
+                        ["git", "branch", "--show-current"],
                         capture_output=True,
                         text=True,
                         cwd=project_path,
-                        timeout=3  # Shorter timeout
+                        timeout=3,  # Shorter timeout
                     )
 
                     # Get current commit hash (short)
                     commit_result = subprocess.run(
-                        ['git', 'rev-parse', '--short=8', 'HEAD'],
+                        ["git", "rev-parse", "--short=8", "HEAD"],
                         capture_output=True,
                         text=True,
                         cwd=project_path,
-                        timeout=3  # Shorter timeout
+                        timeout=3,  # Shorter timeout
                     )
 
                     branch = branch_result.stdout.strip() if branch_result.returncode == 0 else None
@@ -106,8 +116,7 @@ class EnhancedUnifiedCheckpointTool(EnhancedBaseTool):
             # Run in thread pool to avoid AsyncIO deadlock
             try:
                 branch, commit = await asyncio.wait_for(
-                    asyncio.to_thread(run_git_subprocess),
-                    timeout=5.0  # Overall timeout
+                    asyncio.to_thread(run_git_subprocess), timeout=5.0  # Overall timeout
                 )
                 return branch, commit
             except asyncio.TimeoutError:
@@ -118,7 +127,9 @@ class EnhancedUnifiedCheckpointTool(EnhancedBaseTool):
             logger.debug(f"Could not get git info: {e}")
             return None, None
 
-    async def _get_recently_modified_files_safe(self, project_path: str, max_files: int = 20) -> list[str]:
+    async def _get_recently_modified_files_safe(
+        self, project_path: str, max_files: int = 20
+    ) -> list[str]:
         """Get recently modified files safely using thread pool to avoid AsyncIO deadlock."""
         try:
             import asyncio
@@ -133,20 +144,22 @@ class EnhancedUnifiedCheckpointTool(EnhancedBaseTool):
                 try:
                     # Get files modified in last commit
                     cmd = [
-                        'git', 'diff', '--name-only',
-                        '--diff-filter=AM',  # Added or Modified
-                        'HEAD~1..HEAD'  # Since last commit
+                        "git",
+                        "diff",
+                        "--name-only",
+                        "--diff-filter=AM",  # Added or Modified
+                        "HEAD~1..HEAD",  # Since last commit
                     ]
                     result = subprocess.run(
                         cmd,
                         capture_output=True,
                         text=True,
                         cwd=project_path,
-                        timeout=3  # Shorter timeout
+                        timeout=3,  # Shorter timeout
                     )
 
                     if result.returncode == 0 and result.stdout.strip():
-                        files = [f.strip() for f in result.stdout.strip().split('\n') if f.strip()]
+                        files = [f.strip() for f in result.stdout.strip().split("\n") if f.strip()]
                         return files[:max_files]
 
                     return []
@@ -158,8 +171,7 @@ class EnhancedUnifiedCheckpointTool(EnhancedBaseTool):
             # Run in thread pool to avoid AsyncIO deadlock
             try:
                 files = await asyncio.wait_for(
-                    asyncio.to_thread(run_file_detection),
-                    timeout=4.0  # Overall timeout
+                    asyncio.to_thread(run_file_detection), timeout=4.0  # Overall timeout
                 )
                 return files
             except asyncio.TimeoutError:
@@ -170,8 +182,13 @@ class EnhancedUnifiedCheckpointTool(EnhancedBaseTool):
             logger.debug(f"Could not get recently modified files: {e}")
             return []
 
-    def _build_work_context(self, description: str, git_branch: Optional[str],
-                           git_commit: Optional[str], active_files: list[str]) -> str:
+    def _build_work_context(
+        self,
+        description: str,
+        git_branch: Optional[str],
+        git_commit: Optional[str],
+        active_files: list[str],
+    ) -> str:
         """Build rich work context for the checkpoint."""
         context_parts = [f"Progress: {description}"]
 
@@ -191,10 +208,11 @@ class EnhancedUnifiedCheckpointTool(EnhancedBaseTool):
     async def _save_checkpoint(self, description: Optional[str]) -> str:
         """Save a progress checkpoint."""
         if not description:
-            return json.dumps({
-                "success": False,
-                "error": "Description is required for save action"
-            }, ensure_ascii=False, indent=2)
+            return json.dumps(
+                {"success": False, "error": "Description is required for save action"},
+                ensure_ascii=False,
+                indent=2,
+            )
 
         # Get current project context - testing project_path now
         project_id = self.config.get_current_project_id()
@@ -227,37 +245,44 @@ class EnhancedUnifiedCheckpointTool(EnhancedBaseTool):
             self.search_engine.index_checkpoint(checkpoint)
             logger.info(f"Created checkpoint {checkpoint.id}")
 
-            return json.dumps({
-                "success": True,
-                "action": "progress_saved",
-                "checkpoint": {
-                    "id": checkpoint.id,
-                    "description": description,
-                    "project_id": checkpoint.project_id,
-                    "created_at": checkpoint.created_at.strftime("%Y-%m-%d %H:%M"),
-                    "session_id": checkpoint.session_id
+            return json.dumps(
+                {
+                    "success": True,
+                    "action": "progress_saved",
+                    "checkpoint": {
+                        "id": checkpoint.id,
+                        "description": description,
+                        "project_id": checkpoint.project_id,
+                        "created_at": checkpoint.created_at.strftime("%Y-%m-%d %H:%M"),
+                        "session_id": checkpoint.session_id,
+                    },
+                    "message": f"Saved progress: {description}",
+                    "encouragement": "Great work! Your progress is now safely captured.",
                 },
-                "message": f"Saved progress: {description}",
-                "encouragement": "Great work! Your progress is now safely captured."
-            }, ensure_ascii=False, indent=2)
+                ensure_ascii=False,
+                indent=2,
+            )
         else:
-            return json.dumps({
-                "success": False,
-                "error": "Failed to save progress"
-            }, ensure_ascii=False, indent=2)
+            return json.dumps(
+                {"success": False, "error": "Failed to save progress"}, ensure_ascii=False, indent=2
+            )
 
     async def _list_checkpoints(self, limit: int) -> str:
         """List recent checkpoints."""
         checkpoints = self.checkpoint_storage.list_recent(limit)
 
         if not checkpoints:
-            return json.dumps({
-                "success": True,
-                "total_checkpoints": 0,
-                "checkpoints": [],
-                "message": "No saved progress found.",
-                "suggestion": "Use checkpoint(action='save', description='your achievement') to create one!"
-            }, ensure_ascii=False, indent=2)
+            return json.dumps(
+                {
+                    "success": True,
+                    "total_checkpoints": 0,
+                    "checkpoints": [],
+                    "message": "No saved progress found.",
+                    "suggestion": "Use checkpoint(action='save', description='your achievement') to create one!",
+                },
+                ensure_ascii=False,
+                indent=2,
+            )
 
         checkpoints_data = [
             {
@@ -265,66 +290,77 @@ class EnhancedUnifiedCheckpointTool(EnhancedBaseTool):
                 "description": checkpoint.description,
                 "created_at": checkpoint.created_at.strftime("%Y-%m-%d %H:%M"),
                 "project_id": checkpoint.project_id,
-                "session_id": getattr(checkpoint, 'session_id', ''),
-                "highlights_count": len(getattr(checkpoint, 'highlights', []))
+                "session_id": getattr(checkpoint, "session_id", ""),
+                "highlights_count": len(getattr(checkpoint, "highlights", [])),
             }
             for checkpoint in checkpoints
         ]
 
-        return json.dumps({
-            "success": True,
-            "total_checkpoints": len(checkpoints),
-            "checkpoints": checkpoints_data,
-            "message": f"Found {len(checkpoints)} recent checkpoints",
-            "suggestion": "Use checkpoint IDs to reference specific progress points"
-        }, ensure_ascii=False, indent=2)
+        return json.dumps(
+            {
+                "success": True,
+                "total_checkpoints": len(checkpoints),
+                "checkpoints": checkpoints_data,
+                "message": f"Found {len(checkpoints)} recent checkpoints",
+                "suggestion": "Use checkpoint IDs to reference specific progress points",
+            },
+            ensure_ascii=False,
+            indent=2,
+        )
 
     async def _search_checkpoints(self, query: Optional[str], limit: int) -> str:
         """Search checkpoints by content."""
         if not query:
-            return json.dumps({
-                "success": False,
-                "error": "Search query is required for search action"
-            }, ensure_ascii=False, indent=2)
+            return json.dumps(
+                {"success": False, "error": "Search query is required for search action"},
+                ensure_ascii=False,
+                indent=2,
+            )
 
-        results = self.search_engine.search(
-            query=query,
-            limit=limit,
-            doc_types=["checkpoint"]
-        )
+        results = self.search_engine.search(query=query, limit=limit, doc_types=["checkpoint"])
 
         if not results:
-            return json.dumps({
-                "success": True,
-                "query": query,
-                "total_results": 0,
-                "checkpoints": [],
-                "message": f"No checkpoints found matching '{query}'",
-                "suggestion": "Try broader search terms or use checkpoint(action='list') to see all checkpoints"
-            }, ensure_ascii=False, indent=2)
+            return json.dumps(
+                {
+                    "success": True,
+                    "query": query,
+                    "total_results": 0,
+                    "checkpoints": [],
+                    "message": f"No checkpoints found matching '{query}'",
+                    "suggestion": "Try broader search terms or use checkpoint(action='list') to see all checkpoints",
+                },
+                ensure_ascii=False,
+                indent=2,
+            )
 
         checkpoints_data = []
         for search_result in results:
             checkpoint = self.checkpoint_storage.load(search_result.doc_id)
             if checkpoint:
-                checkpoints_data.append({
-                    "id": checkpoint.id,
-                    "description": checkpoint.description,
-                    "created_at": checkpoint.created_at.strftime("%Y-%m-%d %H:%M"),
-                    "project_id": checkpoint.project_id,
-                    "session_id": getattr(checkpoint, 'session_id', ''),
-                    "score": search_result.score,
-                    "relevance": "High" if search_result.score > 0.8 else "Medium",
-                    "highlights_count": len(getattr(checkpoint, 'highlights', []))
-                })
+                checkpoints_data.append(
+                    {
+                        "id": checkpoint.id,
+                        "description": checkpoint.description,
+                        "created_at": checkpoint.created_at.strftime("%Y-%m-%d %H:%M"),
+                        "project_id": checkpoint.project_id,
+                        "session_id": getattr(checkpoint, "session_id", ""),
+                        "score": search_result.score,
+                        "relevance": "High" if search_result.score > 0.8 else "Medium",
+                        "highlights_count": len(getattr(checkpoint, "highlights", [])),
+                    }
+                )
 
-        return json.dumps({
-            "success": True,
-            "query": query,
-            "total_results": len(checkpoints_data),
-            "checkpoints": checkpoints_data,
-            "message": f"Found {len(checkpoints_data)} checkpoints matching '{query}'"
-        }, ensure_ascii=False, indent=2)
+        return json.dumps(
+            {
+                "success": True,
+                "query": query,
+                "total_results": len(checkpoints_data),
+                "checkpoints": checkpoints_data,
+                "message": f"Found {len(checkpoints_data)} checkpoints matching '{query}'",
+            },
+            ensure_ascii=False,
+            indent=2,
+        )
 
 
 class EnhancedUnifiedRecallTool(EnhancedBaseTool):
@@ -338,7 +374,7 @@ class EnhancedUnifiedRecallTool(EnhancedBaseTool):
             context: str = "recent",
             days_back: int = 7,
             session_id: str | None = None,
-            git_branch: str | None = None
+            git_branch: str | None = None,
         ) -> str:
             """Smart memory recall - gets the context you need automatically.
 
@@ -366,21 +402,22 @@ class EnhancedUnifiedRecallTool(EnhancedBaseTool):
                 elif context == "all":
                     return await self._recall_comprehensive(days_back)
                 else:
-                    return json.dumps({
-                        "success": False,
-                        "error": f"Invalid context '{context}' or missing required parameters. "
-                                 "Use: recent, week, session (with session_id), branch (with git_branch), all"
-                    }, ensure_ascii=False, indent=2)
+                    return json.dumps(
+                        {
+                            "success": False,
+                            "error": f"Invalid context '{context}' or missing required parameters. "
+                            "Use: recent, week, session (with session_id), branch (with git_branch), all",
+                        },
+                        ensure_ascii=False,
+                        indent=2,
+                    )
 
             except Exception as e:
                 logger.error(f"Recall operation failed: {e}")
-                return json.dumps({
-                    "success": False,
-                    "error": str(e)
-                }, ensure_ascii=False, indent=2)
+                return json.dumps({"success": False, "error": str(e)}, ensure_ascii=False, indent=2)
 
         # Enhance with parameter descriptions
-        self.enhance_registered_tools(mcp_server, ['recall'])
+        self.enhance_registered_tools(mcp_server, ["recall"])
 
     async def _recall_recent(self) -> str:
         """Quick recall of recent context (last 2 days)."""
@@ -388,8 +425,7 @@ class EnhancedUnifiedRecallTool(EnhancedBaseTool):
 
         # Get recent checkpoints
         recent_checkpoints = [
-            cp for cp in self.checkpoint_storage.list_recent(10)
-            if cp.created_at >= cutoff_date
+            cp for cp in self.checkpoint_storage.list_recent(10) if cp.created_at >= cutoff_date
         ]
 
         # Get active tasks
@@ -397,86 +433,111 @@ class EnhancedUnifiedRecallTool(EnhancedBaseTool):
 
         # Get recent plans
         recent_plans = [
-            plan for plan in self.plan_storage.find_recent(5)
-            if plan.created_at >= cutoff_date
+            plan for plan in self.plan_storage.find_recent(5) if plan.created_at >= cutoff_date
         ]
 
-        return json.dumps({
-            "success": True,
-            "context_type": "recent",
-            "timeframe": "last 2 days",
-            "summary": {
-                "checkpoints_count": len(recent_checkpoints),
-                "active_tasks": len(active_tasks),
-                "recent_plans": len(recent_plans),
-                "context_available": len(recent_checkpoints) > 0 or len(active_tasks) > 0 or len(recent_plans) > 0
+        return json.dumps(
+            {
+                "success": True,
+                "context_type": "recent",
+                "timeframe": "last 2 days",
+                "summary": {
+                    "checkpoints_count": len(recent_checkpoints),
+                    "active_tasks": len(active_tasks),
+                    "recent_plans": len(recent_plans),
+                    "context_available": len(recent_checkpoints) > 0
+                    or len(active_tasks) > 0
+                    or len(recent_plans) > 0,
+                },
+                "checkpoints": [
+                    {
+                        "id": cp.id,
+                        "description": cp.description,
+                        "created_at": cp.created_at.strftime("%Y-%m-%d %H:%M"),
+                        "project_id": cp.project_id,
+                    }
+                    for cp in recent_checkpoints[:3]
+                ],
+                "active_tasks": [
+                    {
+                        "id": task.id,
+                        "content": task.content,
+                        "status": task.status.value,
+                        "active_form": task.active_form if hasattr(task, "active_form") else None,
+                    }
+                    for task in active_tasks
+                ],
+                "recent_plans": [
+                    {
+                        "id": plan.id,
+                        "title": plan.title,
+                        "status": plan.status.value,
+                        "steps_completed": len([s for s in plan.steps if s.completed]),
+                    }
+                    for plan in recent_plans
+                ],
+                "message": (
+                    "Recent context loaded successfully"
+                    if (recent_checkpoints or active_tasks or recent_plans)
+                    else "No recent context found"
+                ),
             },
-            "checkpoints": [
-                {
-                    "id": cp.id,
-                    "description": cp.description,
-                    "created_at": cp.created_at.strftime("%Y-%m-%d %H:%M"),
-                    "project_id": cp.project_id
-                }
-                for cp in recent_checkpoints[:3]
-            ],
-            "active_tasks": [
-                {
-                    "id": task.id,
-                    "content": task.content,
-                    "status": task.status.value,
-                    "active_form": task.active_form if hasattr(task, 'active_form') else None
-                }
-                for task in active_tasks
-            ],
-            "recent_plans": [
-                {
-                    "id": plan.id,
-                    "title": plan.title,
-                    "status": plan.status.value,
-                    "steps_completed": len([s for s in plan.steps if s.completed])
-                }
-                for plan in recent_plans
-            ],
-            "message": "Recent context loaded successfully" if (recent_checkpoints or active_tasks or recent_plans) else "No recent context found"
-        }, ensure_ascii=False, indent=2)
+            ensure_ascii=False,
+            indent=2,
+        )
 
     async def _recall_timeframe(self, days_back: int) -> str:
         """Recall context for a specific timeframe."""
-        return json.dumps({
-            "success": True,
-            "context_type": "timeframe",
-            "days_back": days_back,
-            "message": f"Context recall for {days_back} days back - implementation needed"
-        }, ensure_ascii=False, indent=2)
+        return json.dumps(
+            {
+                "success": True,
+                "context_type": "timeframe",
+                "days_back": days_back,
+                "message": f"Context recall for {days_back} days back - implementation needed",
+            },
+            ensure_ascii=False,
+            indent=2,
+        )
 
     async def _recall_session(self, session_id: str) -> str:
         """Recall specific session context."""
-        return json.dumps({
-            "success": True,
-            "context_type": "session",
-            "session_id": session_id,
-            "message": "Session-specific recall - implementation needed"
-        }, ensure_ascii=False, indent=2)
+        return json.dumps(
+            {
+                "success": True,
+                "context_type": "session",
+                "session_id": session_id,
+                "message": "Session-specific recall - implementation needed",
+            },
+            ensure_ascii=False,
+            indent=2,
+        )
 
     async def _recall_branch(self, git_branch: str, days_back: int) -> str:
         """Recall context filtered by git branch."""
-        return json.dumps({
-            "success": True,
-            "context_type": "branch",
-            "git_branch": git_branch,
-            "days_back": days_back,
-            "message": "Branch-filtered recall - implementation needed"
-        }, ensure_ascii=False, indent=2)
+        return json.dumps(
+            {
+                "success": True,
+                "context_type": "branch",
+                "git_branch": git_branch,
+                "days_back": days_back,
+                "message": "Branch-filtered recall - implementation needed",
+            },
+            ensure_ascii=False,
+            indent=2,
+        )
 
     async def _recall_comprehensive(self, days_back: int) -> str:
         """Comprehensive context recall."""
-        return json.dumps({
-            "success": True,
-            "context_type": "comprehensive",
-            "days_back": days_back,
-            "message": "Comprehensive recall - implementation needed"
-        }, ensure_ascii=False, indent=2)
+        return json.dumps(
+            {
+                "success": True,
+                "context_type": "comprehensive",
+                "days_back": days_back,
+                "message": "Comprehensive recall - implementation needed",
+            },
+            ensure_ascii=False,
+            indent=2,
+        )
 
 
 class EnhancedUnifiedPlanTool(EnhancedBaseTool):
@@ -494,7 +555,7 @@ class EnhancedUnifiedPlanTool(EnhancedBaseTool):
             step_description: str | None = None,
             step_id: str | None = None,
             query: str | None = None,
-            limit: int = 10
+            limit: int = 10,
         ) -> str:
             """Plan complex work with structured multi-step approach.
 
@@ -530,28 +591,30 @@ class EnhancedUnifiedPlanTool(EnhancedBaseTool):
                 elif action == "search":
                     return await self._search_plans(query, limit)
                 else:
-                    return json.dumps({
-                        "success": False,
-                        "error": f"Unknown action: {action}. Use: create, list, activate, complete, add_step, complete_step, search"
-                    }, ensure_ascii=False, indent=2)
+                    return json.dumps(
+                        {
+                            "success": False,
+                            "error": f"Unknown action: {action}. Use: create, list, activate, complete, add_step, complete_step, search",
+                        },
+                        ensure_ascii=False,
+                        indent=2,
+                    )
 
             except Exception as e:
                 logger.error(f"Plan operation failed: {e}")
-                return json.dumps({
-                    "success": False,
-                    "error": str(e)
-                }, ensure_ascii=False, indent=2)
+                return json.dumps({"success": False, "error": str(e)}, ensure_ascii=False, indent=2)
 
         # Enhance with parameter descriptions
-        self.enhance_registered_tools(mcp_server, ['plan'])
+        self.enhance_registered_tools(mcp_server, ["plan"])
 
     async def _create_plan(self, title: Optional[str], description: Optional[str]) -> str:
         """Create a new plan."""
         if not title:
-            return json.dumps({
-                "success": False,
-                "error": "Title is required for create action"
-            }, ensure_ascii=False, indent=2)
+            return json.dumps(
+                {"success": False, "error": "Title is required for create action"},
+                ensure_ascii=False,
+                indent=2,
+            )
 
         # Get current project context
         project_id = self.config.get_current_project_id()
@@ -564,155 +627,198 @@ class EnhancedUnifiedPlanTool(EnhancedBaseTool):
             title=title,
             description=description or "",
             status=PlanStatus.ACTIVE,
-            steps=[]
+            steps=[],
         )
 
         if self.plan_storage.save(plan):
             self.search_engine.index_plan(plan)
             logger.info(f"Created plan {plan.id}")
 
-            return json.dumps({
-                "success": True,
-                "action": "plan_created",
-                "plan": {
-                    "id": plan.id,
-                    "title": title,
-                    "description": description,
-                    "status": plan.status.value,
-                    "created_at": plan.created_at.strftime("%Y-%m-%d %H:%M"),
-                    "project_id": plan.project_id,
-                    "steps_count": 0
+            return json.dumps(
+                {
+                    "success": True,
+                    "action": "plan_created",
+                    "plan": {
+                        "id": plan.id,
+                        "title": title,
+                        "description": description,
+                        "status": plan.status.value,
+                        "created_at": plan.created_at.strftime("%Y-%m-%d %H:%M"),
+                        "project_id": plan.project_id,
+                        "steps_count": 0,
+                    },
+                    "message": f"Created plan: {title}",
+                    "next_action": "Use plan(action='add_step', plan_id='{}', step_description='first step') to add steps".format(
+                        plan.id
+                    ),
                 },
-                "message": f"Created plan: {title}",
-                "next_action": "Use plan(action='add_step', plan_id='{}', step_description='first step') to add steps".format(plan.id)
-            }, ensure_ascii=False, indent=2)
+                ensure_ascii=False,
+                indent=2,
+            )
         else:
-            return json.dumps({
-                "success": False,
-                "error": "Failed to create plan"
-            }, ensure_ascii=False, indent=2)
+            return json.dumps(
+                {"success": False, "error": "Failed to create plan"}, ensure_ascii=False, indent=2
+            )
 
     async def _list_plans(self, limit: int) -> str:
         """List recent plans."""
         plans = self.plan_storage.find_recent(limit)
 
         if not plans:
-            return json.dumps({
-                "success": True,
-                "total_plans": 0,
-                "plans": [],
-                "message": "No plans found.",
-                "suggestion": "Use plan(action='create', title='your plan', description='details') to create one!"
-            }, ensure_ascii=False, indent=2)
+            return json.dumps(
+                {
+                    "success": True,
+                    "total_plans": 0,
+                    "plans": [],
+                    "message": "No plans found.",
+                    "suggestion": "Use plan(action='create', title='your plan', description='details') to create one!",
+                },
+                ensure_ascii=False,
+                indent=2,
+            )
 
         plans_data = []
         for plan in plans:
             total_steps = len(plan.steps)
             completed_steps = len([s for s in plan.steps if s.completed])
 
-            plans_data.append({
-                "id": plan.id,
-                "title": plan.title,
-                "description": plan.description,
-                "status": plan.status.value,
-                "created_at": plan.created_at.strftime("%Y-%m-%d %H:%M"),
-                "project_id": plan.project_id,
-                "progress": {
-                    "total_steps": total_steps,
-                    "completed_steps": completed_steps,
-                    "progress_percent": (completed_steps / total_steps * 100) if total_steps > 0 else 0
+            plans_data.append(
+                {
+                    "id": plan.id,
+                    "title": plan.title,
+                    "description": plan.description,
+                    "status": plan.status.value,
+                    "created_at": plan.created_at.strftime("%Y-%m-%d %H:%M"),
+                    "project_id": plan.project_id,
+                    "progress": {
+                        "total_steps": total_steps,
+                        "completed_steps": completed_steps,
+                        "progress_percent": (
+                            (completed_steps / total_steps * 100) if total_steps > 0 else 0
+                        ),
+                    },
                 }
-            })
+            )
 
-        return json.dumps({
-            "success": True,
-            "total_plans": len(plans),
-            "plans": plans_data,
-            "message": f"Found {len(plans)} plans"
-        }, ensure_ascii=False, indent=2)
+        return json.dumps(
+            {
+                "success": True,
+                "total_plans": len(plans),
+                "plans": plans_data,
+                "message": f"Found {len(plans)} plans",
+            },
+            ensure_ascii=False,
+            indent=2,
+        )
 
     async def _activate_plan(self, plan_id: Optional[str]) -> str:
         """Activate a plan."""
         if not plan_id:
-            return json.dumps({
-                "success": False,
-                "error": "Plan ID is required for activate action"
-            }, ensure_ascii=False, indent=2)
+            return json.dumps(
+                {"success": False, "error": "Plan ID is required for activate action"},
+                ensure_ascii=False,
+                indent=2,
+            )
 
-        return json.dumps({
-            "success": True,
-            "action": "plan_activated",
-            "plan_id": plan_id,
-            "message": "Plan activation - implementation needed"
-        }, ensure_ascii=False, indent=2)
+        return json.dumps(
+            {
+                "success": True,
+                "action": "plan_activated",
+                "plan_id": plan_id,
+                "message": "Plan activation - implementation needed",
+            },
+            ensure_ascii=False,
+            indent=2,
+        )
 
     async def _complete_plan(self, plan_id: Optional[str]) -> str:
         """Complete a plan."""
         if not plan_id:
-            return json.dumps({
-                "success": False,
-                "error": "Plan ID is required for complete action"
-            }, ensure_ascii=False, indent=2)
+            return json.dumps(
+                {"success": False, "error": "Plan ID is required for complete action"},
+                ensure_ascii=False,
+                indent=2,
+            )
 
-        return json.dumps({
-            "success": True,
-            "action": "plan_completed",
-            "plan_id": plan_id,
-            "message": "Plan completion - implementation needed"
-        }, ensure_ascii=False, indent=2)
+        return json.dumps(
+            {
+                "success": True,
+                "action": "plan_completed",
+                "plan_id": plan_id,
+                "message": "Plan completion - implementation needed",
+            },
+            ensure_ascii=False,
+            indent=2,
+        )
 
     async def _add_step(self, plan_id: Optional[str], step_description: Optional[str]) -> str:
         """Add a step to a plan."""
         if not plan_id:
-            return json.dumps({
-                "success": False,
-                "error": "Plan ID is required for add_step action"
-            }, ensure_ascii=False, indent=2)
+            return json.dumps(
+                {"success": False, "error": "Plan ID is required for add_step action"},
+                ensure_ascii=False,
+                indent=2,
+            )
 
         if not step_description:
-            return json.dumps({
-                "success": False,
-                "error": "Step description is required for add_step action"
-            }, ensure_ascii=False, indent=2)
+            return json.dumps(
+                {"success": False, "error": "Step description is required for add_step action"},
+                ensure_ascii=False,
+                indent=2,
+            )
 
-        return json.dumps({
-            "success": True,
-            "action": "step_added",
-            "plan_id": plan_id,
-            "step_description": step_description,
-            "message": "Step addition - implementation needed"
-        }, ensure_ascii=False, indent=2)
+        return json.dumps(
+            {
+                "success": True,
+                "action": "step_added",
+                "plan_id": plan_id,
+                "step_description": step_description,
+                "message": "Step addition - implementation needed",
+            },
+            ensure_ascii=False,
+            indent=2,
+        )
 
     async def _complete_step(self, step_id: Optional[str]) -> str:
         """Complete a plan step."""
         if not step_id:
-            return json.dumps({
-                "success": False,
-                "error": "Step ID is required for complete_step action"
-            }, ensure_ascii=False, indent=2)
+            return json.dumps(
+                {"success": False, "error": "Step ID is required for complete_step action"},
+                ensure_ascii=False,
+                indent=2,
+            )
 
-        return json.dumps({
-            "success": True,
-            "action": "step_completed",
-            "step_id": step_id,
-            "message": "Step completion - implementation needed"
-        }, ensure_ascii=False, indent=2)
+        return json.dumps(
+            {
+                "success": True,
+                "action": "step_completed",
+                "step_id": step_id,
+                "message": "Step completion - implementation needed",
+            },
+            ensure_ascii=False,
+            indent=2,
+        )
 
     async def _search_plans(self, query: Optional[str], limit: int) -> str:
         """Search plans by content."""
         if not query:
-            return json.dumps({
-                "success": False,
-                "error": "Search query is required for search action"
-            }, ensure_ascii=False, indent=2)
+            return json.dumps(
+                {"success": False, "error": "Search query is required for search action"},
+                ensure_ascii=False,
+                indent=2,
+            )
 
-        return json.dumps({
-            "success": True,
-            "query": query,
-            "total_results": 0,
-            "plans": [],
-            "message": f"Plan search for '{query}' - implementation needed"
-        }, ensure_ascii=False, indent=2)
+        return json.dumps(
+            {
+                "success": True,
+                "query": query,
+                "total_results": 0,
+                "plans": [],
+                "message": f"Plan search for '{query}' - implementation needed",
+            },
+            ensure_ascii=False,
+            indent=2,
+        )
 
 
 class EnhancedUnifiedStandupTool(EnhancedBaseTool):
@@ -723,9 +829,7 @@ class EnhancedUnifiedStandupTool(EnhancedBaseTool):
 
         @mcp_server.tool
         async def standup(
-            timeframe: str = "daily",
-            include_completed: bool = True,
-            days_back: int = 1
+            timeframe: str = "daily", include_completed: bool = True, days_back: int = 1
         ) -> str:
             """Generate a quick standup report of your recent work.
 
@@ -747,20 +851,21 @@ class EnhancedUnifiedStandupTool(EnhancedBaseTool):
                 elif timeframe == "custom":
                     return await self._generate_custom_standup(days_back, include_completed)
                 else:
-                    return json.dumps({
-                        "success": False,
-                        "error": f"Invalid timeframe: {timeframe}. Use: daily, weekly, custom"
-                    }, ensure_ascii=False, indent=2)
+                    return json.dumps(
+                        {
+                            "success": False,
+                            "error": f"Invalid timeframe: {timeframe}. Use: daily, weekly, custom",
+                        },
+                        ensure_ascii=False,
+                        indent=2,
+                    )
 
             except Exception as e:
                 logger.error(f"Standup operation failed: {e}")
-                return json.dumps({
-                    "success": False,
-                    "error": str(e)
-                }, ensure_ascii=False, indent=2)
+                return json.dumps({"success": False, "error": str(e)}, ensure_ascii=False, indent=2)
 
         # Enhance with parameter descriptions
-        self.enhance_registered_tools(mcp_server, ['standup'])
+        self.enhance_registered_tools(mcp_server, ["standup"])
 
     async def _generate_daily_standup(self, include_completed: bool) -> str:
         """Generate daily standup report."""
@@ -770,66 +875,98 @@ class EnhancedUnifiedStandupTool(EnhancedBaseTool):
         recent_checkpoints = []
         if include_completed:
             recent_checkpoints = [
-                cp for cp in self.checkpoint_storage.list_recent(10)
-                if cp.created_at >= cutoff_date
+                cp for cp in self.checkpoint_storage.list_recent(10) if cp.created_at >= cutoff_date
             ]
 
         active_tasks = self.task_storage.get_active_tasks()[:10]
 
-        return json.dumps({
-            "success": True,
-            "report_type": "daily_standup",
-            "timeframe": "last 24 hours",
-            "generated_at": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M"),
-            "summary": {
-                "achievements": len(recent_checkpoints),
-                "ongoing_tasks": len([t for t in active_tasks if t.status == TaskStatus.IN_PROGRESS]),
-                "pending_tasks": len([t for t in active_tasks if t.status == TaskStatus.PENDING]),
-                "projects_active": len(set(cp.project_id for cp in recent_checkpoints)) if recent_checkpoints else 0
+        return json.dumps(
+            {
+                "success": True,
+                "report_type": "daily_standup",
+                "timeframe": "last 24 hours",
+                "generated_at": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M"),
+                "summary": {
+                    "achievements": len(recent_checkpoints),
+                    "ongoing_tasks": len(
+                        [t for t in active_tasks if t.status == TaskStatus.IN_PROGRESS]
+                    ),
+                    "pending_tasks": len(
+                        [t for t in active_tasks if t.status == TaskStatus.PENDING]
+                    ),
+                    "projects_active": (
+                        len(set(cp.project_id for cp in recent_checkpoints))
+                        if recent_checkpoints
+                        else 0
+                    ),
+                },
+                "achievements": (
+                    [
+                        {
+                            "description": cp.description,
+                            "project_id": cp.project_id,
+                            "completed_at": cp.created_at.strftime("%Y-%m-%d %H:%M"),
+                        }
+                        for cp in recent_checkpoints[:5]
+                    ]
+                    if include_completed
+                    else []
+                ),
+                "ongoing_work": [
+                    {
+                        "content": task.content,
+                        "status": task.status.value,
+                        "active_form": getattr(task, "active_form", task.content),
+                        "project_id": task.project_id,
+                    }
+                    for task in active_tasks
+                    if task.status == TaskStatus.IN_PROGRESS
+                ],
+                "next_actions": [
+                    {
+                        "content": task.content,
+                        "priority": task.priority.value,
+                        "project_id": task.project_id,
+                    }
+                    for task in active_tasks
+                    if task.status == TaskStatus.PENDING
+                ][:3],
+                "blockers": [],  # Would implement blocker detection
+                "productivity_score": (
+                    "High"
+                    if (
+                        recent_checkpoints
+                        or any(t.status == TaskStatus.IN_PROGRESS for t in active_tasks)
+                    )
+                    else "Moderate"
+                ),
             },
-            "achievements": [
-                {
-                    "description": cp.description,
-                    "project_id": cp.project_id,
-                    "completed_at": cp.created_at.strftime("%Y-%m-%d %H:%M")
-                }
-                for cp in recent_checkpoints[:5]
-            ] if include_completed else [],
-            "ongoing_work": [
-                {
-                    "content": task.content,
-                    "status": task.status.value,
-                    "active_form": getattr(task, 'active_form', task.content),
-                    "project_id": task.project_id
-                }
-                for task in active_tasks if task.status == TaskStatus.IN_PROGRESS
-            ],
-            "next_actions": [
-                {
-                    "content": task.content,
-                    "priority": task.priority.value,
-                    "project_id": task.project_id
-                }
-                for task in active_tasks if task.status == TaskStatus.PENDING
-            ][:3],
-            "blockers": [],  # Would implement blocker detection
-            "productivity_score": "High" if (recent_checkpoints or any(t.status == TaskStatus.IN_PROGRESS for t in active_tasks)) else "Moderate"
-        }, ensure_ascii=False, indent=2)
+            ensure_ascii=False,
+            indent=2,
+        )
 
     async def _generate_weekly_standup(self, include_completed: bool) -> str:
         """Generate weekly standup report."""
-        return json.dumps({
-            "success": True,
-            "report_type": "weekly_standup",
-            "message": "Weekly standup generation - implementation needed"
-        }, ensure_ascii=False, indent=2)
+        return json.dumps(
+            {
+                "success": True,
+                "report_type": "weekly_standup",
+                "message": "Weekly standup generation - implementation needed",
+            },
+            ensure_ascii=False,
+            indent=2,
+        )
 
     async def _generate_custom_standup(self, days_back: int, include_completed: bool) -> str:
         """Generate custom timeframe standup report."""
-        return json.dumps({
-            "success": True,
-            "report_type": "custom_standup",
-            "days_back": days_back,
-            "include_completed": include_completed,
-            "message": "Custom standup generation - implementation needed"
-        }, ensure_ascii=False, indent=2)
+        return json.dumps(
+            {
+                "success": True,
+                "report_type": "custom_standup",
+                "days_back": days_back,
+                "include_completed": include_completed,
+                "message": "Custom standup generation - implementation needed",
+            },
+            ensure_ascii=False,
+            indent=2,
+        )

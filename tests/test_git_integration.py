@@ -37,12 +37,7 @@ class TestGitIntegration:
     def test_git_availability(self):
         """Test if git is available in the test environment."""
         try:
-            result = subprocess.run(
-                ['git', '--version'],
-                capture_output=True,
-                text=True,
-                timeout=5
-            )
+            result = subprocess.run(["git", "--version"], capture_output=True, text=True, timeout=5)
             git_available = result.returncode == 0
         except (FileNotFoundError, subprocess.TimeoutExpired):
             git_available = False
@@ -56,7 +51,7 @@ class TestGitIntegration:
     def test_git_repository_detection(self):
         """Test detection of git repository."""
         current_dir = Path.cwd()
-        git_dir = current_dir / '.git'
+        git_dir = current_dir / ".git"
 
         is_git_repo = git_dir.exists()
         pytest.is_git_repo = is_git_repo
@@ -72,7 +67,7 @@ class TestGitIntegration:
         branch, commit = await checkpoint_tool._get_git_info_safe(project_path)
 
         # If we're in a git repo and git is available, should get results
-        if getattr(pytest, 'git_available', False) and getattr(pytest, 'is_git_repo', False):
+        if getattr(pytest, "git_available", False) and getattr(pytest, "is_git_repo", False):
             assert branch is not None, "Should detect git branch in git repository"
             assert commit is not None, "Should detect git commit in git repository"
             assert isinstance(branch, str), "Branch should be a string"
@@ -95,16 +90,16 @@ class TestGitIntegration:
         assert isinstance(files, list), "Should return list of files"
 
         # If in git repo, might have files
-        if getattr(pytest, 'git_available', False) and getattr(pytest, 'is_git_repo', False):
+        if getattr(pytest, "git_available", False) and getattr(pytest, "is_git_repo", False):
             # Files should be valid paths if any are returned
             for file_path in files:
                 assert isinstance(file_path, str), "File paths should be strings"
                 assert len(file_path) > 0, "File paths should not be empty"
-                assert not file_path.startswith('/'), "Should be relative paths"
+                assert not file_path.startswith("/"), "Should be relative paths"
 
     def test_git_command_compatibility(self):
         """Test compatibility of git commands across different git versions."""
-        if not getattr(pytest, 'git_available', False):
+        if not getattr(pytest, "git_available", False):
             pytest.skip("Git not available")
 
         project_path = str(Path.cwd())
@@ -112,11 +107,11 @@ class TestGitIntegration:
         # Test git branch command
         try:
             branch_result = subprocess.run(
-                ['git', 'branch', '--show-current'],
+                ["git", "branch", "--show-current"],
                 capture_output=True,
                 text=True,
                 cwd=project_path,
-                timeout=5
+                timeout=5,
             )
             branch_works = branch_result.returncode == 0
         except subprocess.TimeoutExpired:
@@ -125,11 +120,11 @@ class TestGitIntegration:
         # Test git rev-parse command
         try:
             commit_result = subprocess.run(
-                ['git', 'rev-parse', '--short=8', 'HEAD'],
+                ["git", "rev-parse", "--short=8", "HEAD"],
                 capture_output=True,
                 text=True,
                 cwd=project_path,
-                timeout=5
+                timeout=5,
             )
             commit_works = commit_result.returncode == 0
         except subprocess.TimeoutExpired:
@@ -138,22 +133,24 @@ class TestGitIntegration:
         # Test git diff command
         try:
             diff_result = subprocess.run(
-                ['git', 'diff', '--name-only', '--diff-filter=AM', 'HEAD~1..HEAD'],
+                ["git", "diff", "--name-only", "--diff-filter=AM", "HEAD~1..HEAD"],
                 capture_output=True,
                 text=True,
                 cwd=project_path,
-                timeout=5
+                timeout=5,
             )
             diff_works = diff_result.returncode == 0
         except subprocess.TimeoutExpired:
             diff_works = False
 
         # At least basic git functionality should work
-        if getattr(pytest, 'is_git_repo', False):
+        if getattr(pytest, "is_git_repo", False):
             assert branch_works or commit_works, "At least one git command should work in git repo"
 
         # Record results for debugging
-        print(f"Git commands compatibility: branch={branch_works}, commit={commit_works}, diff={diff_works}")
+        print(
+            f"Git commands compatibility: branch={branch_works}, commit={commit_works}, diff={diff_works}"
+        )
 
     @pytest.mark.asyncio
     async def test_git_error_handling(self, checkpoint_tool):
@@ -176,6 +173,7 @@ class TestGitIntegration:
 
         # Test with reasonable timeout
         import time
+
         start_time = time.time()
 
         branch, commit = await checkpoint_tool._get_git_info_safe(project_path)
@@ -194,16 +192,11 @@ class TestGitIntegration:
 
     def test_git_version_info(self):
         """Test and record git version information for debugging."""
-        if not getattr(pytest, 'git_available', False):
+        if not getattr(pytest, "git_available", False):
             pytest.skip("Git not available")
 
         try:
-            result = subprocess.run(
-                ['git', '--version'],
-                capture_output=True,
-                text=True,
-                timeout=5
-            )
+            result = subprocess.run(["git", "--version"], capture_output=True, text=True, timeout=5)
 
             if result.returncode == 0:
                 version_info = result.stdout.strip()
@@ -211,7 +204,8 @@ class TestGitIntegration:
 
                 # Extract version number for compatibility testing
                 import re
-                version_match = re.search(r'git version (\d+)\.(\d+)\.(\d+)', version_info)
+
+                version_match = re.search(r"git version (\d+)\.(\d+)\.(\d+)", version_info)
                 if version_match:
                     major, minor, patch = map(int, version_match.groups())
 
@@ -236,12 +230,15 @@ class TestGitEdgeCases:
 
         # Create a temporary directory structure for testing
         import tempfile
+
         with tempfile.TemporaryDirectory() as tmp_dir:
             # Initialize empty git repo
             try:
-                subprocess.run(['git', 'init'], cwd=tmp_dir, check=True, capture_output=True)
-                subprocess.run(['git', 'config', 'user.email', 'test@example.com'], cwd=tmp_dir, check=True)
-                subprocess.run(['git', 'config', 'user.name', 'Test User'], cwd=tmp_dir, check=True)
+                subprocess.run(["git", "init"], cwd=tmp_dir, check=True, capture_output=True)
+                subprocess.run(
+                    ["git", "config", "user.email", "test@example.com"], cwd=tmp_dir, check=True
+                )
+                subprocess.run(["git", "config", "user.name", "Test User"], cwd=tmp_dir, check=True)
 
                 # Test our methods with empty repo
                 config = TuskConfig()
@@ -263,10 +260,11 @@ class TestGitEdgeCases:
 
     def test_git_performance_benchmarks(self):
         """Benchmark git operations for performance monitoring."""
-        if not getattr(pytest, 'git_available', False) or not getattr(pytest, 'is_git_repo', False):
+        if not getattr(pytest, "git_available", False) or not getattr(pytest, "is_git_repo", False):
             pytest.skip("Git repository not available for benchmarking")
 
         import time
+
         project_path = str(Path.cwd())
 
         # Benchmark individual git operations
@@ -275,27 +273,39 @@ class TestGitEdgeCases:
         # Test git branch
         start = time.time()
         try:
-            subprocess.run(['git', 'branch', '--show-current'],
-                         cwd=project_path, capture_output=True, timeout=5)
-            operations.append(('branch', time.time() - start))
+            subprocess.run(
+                ["git", "branch", "--show-current"],
+                cwd=project_path,
+                capture_output=True,
+                timeout=5,
+            )
+            operations.append(("branch", time.time() - start))
         except Exception:
             pass
 
         # Test git commit
         start = time.time()
         try:
-            subprocess.run(['git', 'rev-parse', '--short=8', 'HEAD'],
-                         cwd=project_path, capture_output=True, timeout=5)
-            operations.append(('commit', time.time() - start))
+            subprocess.run(
+                ["git", "rev-parse", "--short=8", "HEAD"],
+                cwd=project_path,
+                capture_output=True,
+                timeout=5,
+            )
+            operations.append(("commit", time.time() - start))
         except Exception:
             pass
 
         # Test git diff
         start = time.time()
         try:
-            subprocess.run(['git', 'diff', '--name-only', '--diff-filter=AM', 'HEAD~1..HEAD'],
-                         cwd=project_path, capture_output=True, timeout=5)
-            operations.append(('diff', time.time() - start))
+            subprocess.run(
+                ["git", "diff", "--name-only", "--diff-filter=AM", "HEAD~1..HEAD"],
+                cwd=project_path,
+                capture_output=True,
+                timeout=5,
+            )
+            operations.append(("diff", time.time() - start))
         except Exception:
             pass
 

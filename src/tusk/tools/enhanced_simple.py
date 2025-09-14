@@ -27,7 +27,7 @@ class EnhancedUnifiedTaskTool(EnhancedBaseTool):
             task_id: str | None = None,
             status: str | None = None,
             query: str | None = None,
-            limit: int = 10
+            limit: int = 10,
         ) -> str:
             """Manage tasks efficiently with one simple tool.
 
@@ -59,28 +59,30 @@ class EnhancedUnifiedTaskTool(EnhancedBaseTool):
                 elif action == "search":
                     return await self._search_tasks(query, limit)
                 else:
-                    return json.dumps({
-                        "success": False,
-                        "error": f"Unknown action: {action}. Use: add, list, start, complete, update, search"
-                    }, ensure_ascii=False, indent=2)
+                    return json.dumps(
+                        {
+                            "success": False,
+                            "error": f"Unknown action: {action}. Use: add, list, start, complete, update, search",
+                        },
+                        ensure_ascii=False,
+                        indent=2,
+                    )
 
             except Exception as e:
                 logger.error(f"Task operation failed: {e}")
-                return json.dumps({
-                    "success": False,
-                    "error": str(e)
-                }, ensure_ascii=False, indent=2)
+                return json.dumps({"success": False, "error": str(e)}, ensure_ascii=False, indent=2)
 
         # After registration, enhance the tool with rich parameter descriptions
-        self.enhance_registered_tools(mcp_server, ['task'])
+        self.enhance_registered_tools(mcp_server, ["task"])
 
     async def _add_task(self, task: Optional[str]) -> str:
         """Add a new task."""
         if not task:
-            return json.dumps({
-                "success": False,
-                "error": "Task content is required for add action"
-            }, ensure_ascii=False, indent=2)
+            return json.dumps(
+                {"success": False, "error": "Task content is required for add action"},
+                ensure_ascii=False,
+                indent=2,
+            )
 
         # Get current project context
         project_id = self.config.get_current_project_id()
@@ -100,35 +102,42 @@ class EnhancedUnifiedTaskTool(EnhancedBaseTool):
             self.search_engine.index_task(task)
             logger.info(f"Created task {task.id}")
 
-            return json.dumps({
-                "success": True,
-                "action": "task_added",
-                "task": {
-                    "id": task.id,
-                    "content": task,
-                    "priority": task.priority.value,
-                    "status": task.status.value,
-                    "created_at": task.created_at.strftime("%Y-%m-%d %H:%M")
+            return json.dumps(
+                {
+                    "success": True,
+                    "action": "task_added",
+                    "task": {
+                        "id": task.id,
+                        "content": task,
+                        "priority": task.priority.value,
+                        "status": task.status.value,
+                        "created_at": task.created_at.strftime("%Y-%m-%d %H:%M"),
+                    },
+                    "message": f"Added task: {task}",
                 },
-                "message": f"Added task: {task}"
-            }, ensure_ascii=False, indent=2)
+                ensure_ascii=False,
+                indent=2,
+            )
         else:
-            return json.dumps({
-                "success": False,
-                "error": "Failed to add task"
-            }, ensure_ascii=False, indent=2)
+            return json.dumps(
+                {"success": False, "error": "Failed to add task"}, ensure_ascii=False, indent=2
+            )
 
     async def _list_tasks(self, limit: int) -> str:
         """List active tasks."""
         active_tasks = self.task_storage.get_active_tasks()[:limit]
 
         if not active_tasks:
-            return json.dumps({
-                "success": True,
-                "total_tasks": 0,
-                "message": "No active tasks",
-                "suggestion": "Use task(action='add', task='your task') to create one!"
-            }, ensure_ascii=False, indent=2)
+            return json.dumps(
+                {
+                    "success": True,
+                    "total_tasks": 0,
+                    "message": "No active tasks",
+                    "suggestion": "Use task(action='add', task='your task') to create one!",
+                },
+                ensure_ascii=False,
+                indent=2,
+            )
 
         # Group by status
         in_progress = [t for t in active_tasks if t.status == TaskStatus.IN_PROGRESS]
@@ -145,7 +154,9 @@ class EnhancedUnifiedTaskTool(EnhancedBaseTool):
                         "active_form": task.active_form,
                         "priority": task.priority.value,
                         "created_at": task.created_at.strftime("%Y-%m-%d %H:%M"),
-                        "started_at": task.started_at.strftime("%Y-%m-%d %H:%M") if task.started_at else None
+                        "started_at": (
+                            task.started_at.strftime("%Y-%m-%d %H:%M") if task.started_at else None
+                        ),
                     }
                     for task in in_progress
                 ],
@@ -154,16 +165,13 @@ class EnhancedUnifiedTaskTool(EnhancedBaseTool):
                         "id": task.id,
                         "content": task.content,
                         "priority": task.priority.value,
-                        "created_at": task.created_at.strftime("%Y-%m-%d %H:%M")
+                        "created_at": task.created_at.strftime("%Y-%m-%d %H:%M"),
                     }
                     for task in pending
-                ]
+                ],
             },
-            "counts": {
-                "in_progress": len(in_progress),
-                "pending": len(pending)
-            },
-            "suggestion": "Use task(action='start', task_id='ID') or task(action='complete', task_id='ID')"
+            "counts": {"in_progress": len(in_progress), "pending": len(pending)},
+            "suggestion": "Use task(action='start', task_id='ID') or task(action='complete', task_id='ID')",
         }
 
         return json.dumps(result, ensure_ascii=False, indent=2)
@@ -171,30 +179,36 @@ class EnhancedUnifiedTaskTool(EnhancedBaseTool):
     async def _start_task(self, task_id: Optional[str]) -> str:
         """Start working on a task."""
         if not task_id:
-            return json.dumps({
-                "success": False,
-                "error": "Task ID is required for start action"
-            }, ensure_ascii=False, indent=2)
+            return json.dumps(
+                {"success": False, "error": "Task ID is required for start action"},
+                ensure_ascii=False,
+                indent=2,
+            )
 
         task = self.task_storage.load(task_id)
         if not task:
-            return json.dumps({
-                "success": False,
-                "error": f"Task {task_id} not found"
-            }, ensure_ascii=False, indent=2)
+            return json.dumps(
+                {"success": False, "error": f"Task {task_id} not found"},
+                ensure_ascii=False,
+                indent=2,
+            )
 
         if task.status == TaskStatus.IN_PROGRESS:
-            return json.dumps({
-                "success": True,
-                "action": "task_already_started",
-                "task": {
-                    "id": task.id,
-                    "content": task.content,
-                    "active_form": task.active_form,
-                    "status": task.status.value
+            return json.dumps(
+                {
+                    "success": True,
+                    "action": "task_already_started",
+                    "task": {
+                        "id": task.id,
+                        "content": task.content,
+                        "active_form": task.active_form,
+                        "status": task.status.value,
+                    },
+                    "message": f"Already working on: {task.get_display_form()}",
                 },
-                "message": f"Already working on: {task.get_display_form()}"
-            }, ensure_ascii=False, indent=2)
+                ensure_ascii=False,
+                indent=2,
+            )
 
         task.mark_in_progress()
 
@@ -202,50 +216,57 @@ class EnhancedUnifiedTaskTool(EnhancedBaseTool):
             self.search_engine.index_task(task)
             logger.info(f"Started task {task.id}")
 
-            return json.dumps({
-                "success": True,
-                "action": "task_started",
-                "task": {
-                    "id": task.id,
-                    "content": task.content,
-                    "active_form": task.active_form,
-                    "status": task.status.value,
-                    "started_at": task.started_at.strftime("%Y-%m-%d %H:%M") if task.started_at else None
+            return json.dumps(
+                {
+                    "success": True,
+                    "action": "task_started",
+                    "task": {
+                        "id": task.id,
+                        "content": task.content,
+                        "active_form": task.active_form,
+                        "status": task.status.value,
+                        "started_at": (
+                            task.started_at.strftime("%Y-%m-%d %H:%M") if task.started_at else None
+                        ),
+                    },
+                    "message": f"Started: {task.get_display_form()}",
                 },
-                "message": f"Started: {task.get_display_form()}"
-            }, ensure_ascii=False, indent=2)
+                ensure_ascii=False,
+                indent=2,
+            )
         else:
-            return json.dumps({
-                "success": False,
-                "error": "Failed to start task"
-            }, ensure_ascii=False, indent=2)
+            return json.dumps(
+                {"success": False, "error": "Failed to start task"}, ensure_ascii=False, indent=2
+            )
 
     async def _complete_task(self, task_id: Optional[str]) -> str:
         """Complete a task."""
         if not task_id:
-            return json.dumps({
-                "success": False,
-                "error": "Task ID is required for complete action"
-            }, ensure_ascii=False, indent=2)
+            return json.dumps(
+                {"success": False, "error": "Task ID is required for complete action"},
+                ensure_ascii=False,
+                indent=2,
+            )
 
         task = self.task_storage.load(task_id)
         if not task:
-            return json.dumps({
-                "success": False,
-                "error": f"Task {task_id} not found"
-            }, ensure_ascii=False, indent=2)
+            return json.dumps(
+                {"success": False, "error": f"Task {task_id} not found"},
+                ensure_ascii=False,
+                indent=2,
+            )
 
         if task.status == TaskStatus.COMPLETED:
-            return json.dumps({
-                "success": True,
-                "action": "task_already_completed",
-                "task": {
-                    "id": task.id,
-                    "content": task.content,
-                    "status": task.status.value
+            return json.dumps(
+                {
+                    "success": True,
+                    "action": "task_already_completed",
+                    "task": {"id": task.id, "content": task.content, "status": task.status.value},
+                    "message": f"Already completed: {task.content}",
                 },
-                "message": f"Already completed: {task.content}"
-            }, ensure_ascii=False, indent=2)
+                ensure_ascii=False,
+                indent=2,
+            )
 
         task.mark_completed()
 
@@ -253,53 +274,67 @@ class EnhancedUnifiedTaskTool(EnhancedBaseTool):
             self.search_engine.index_task(task)
             logger.info(f"Completed task {task.id}")
 
-            return json.dumps({
-                "success": True,
-                "action": "task_completed",
-                "task": {
-                    "id": task.id,
-                    "content": task.content,
-                    "status": task.status.value,
-                    "completed_at": task.completed_at.strftime("%Y-%m-%d %H:%M") if task.completed_at else None
+            return json.dumps(
+                {
+                    "success": True,
+                    "action": "task_completed",
+                    "task": {
+                        "id": task.id,
+                        "content": task.content,
+                        "status": task.status.value,
+                        "completed_at": (
+                            task.completed_at.strftime("%Y-%m-%d %H:%M")
+                            if task.completed_at
+                            else None
+                        ),
+                    },
+                    "message": f"Completed: {task.content}",
+                    "celebration": "🎉 Great work!",
                 },
-                "message": f"Completed: {task.content}",
-                "celebration": "🎉 Great work!"
-            }, ensure_ascii=False, indent=2)
+                ensure_ascii=False,
+                indent=2,
+            )
         else:
-            return json.dumps({
-                "success": False,
-                "error": "Failed to complete task"
-            }, ensure_ascii=False, indent=2)
+            return json.dumps(
+                {"success": False, "error": "Failed to complete task"}, ensure_ascii=False, indent=2
+            )
 
     async def _update_task(self, task_id: Optional[str], status: Optional[str]) -> str:
         """Update a task's status."""
         if not task_id:
-            return json.dumps({
-                "success": False,
-                "error": "Task ID is required for update action"
-            }, ensure_ascii=False, indent=2)
+            return json.dumps(
+                {"success": False, "error": "Task ID is required for update action"},
+                ensure_ascii=False,
+                indent=2,
+            )
 
         if not status:
-            return json.dumps({
-                "success": False,
-                "error": "Status is required for update action"
-            }, ensure_ascii=False, indent=2)
+            return json.dumps(
+                {"success": False, "error": "Status is required for update action"},
+                ensure_ascii=False,
+                indent=2,
+            )
 
         # Validate status
         try:
             new_status = TaskStatus(status)
         except ValueError:
-            return json.dumps({
-                "success": False,
-                "error": f"Invalid status: {status}. Use: pending, in_progress, completed"
-            }, ensure_ascii=False, indent=2)
+            return json.dumps(
+                {
+                    "success": False,
+                    "error": f"Invalid status: {status}. Use: pending, in_progress, completed",
+                },
+                ensure_ascii=False,
+                indent=2,
+            )
 
         task = self.task_storage.load(task_id)
         if not task:
-            return json.dumps({
-                "success": False,
-                "error": f"Task {task_id} not found"
-            }, ensure_ascii=False, indent=2)
+            return json.dumps(
+                {"success": False, "error": f"Task {task_id} not found"},
+                ensure_ascii=False,
+                indent=2,
+            )
 
         old_status = task.status
 
@@ -317,43 +352,51 @@ class EnhancedUnifiedTaskTool(EnhancedBaseTool):
             self.search_engine.index_task(task)
             logger.info(f"Updated task {task.id} status: {old_status.value} -> {new_status.value}")
 
-            return json.dumps({
-                "success": True,
-                "action": "task_updated",
-                "task": {
-                    "id": task.id,
-                    "content": task.content,
-                    "old_status": old_status.value,
-                    "new_status": new_status.value,
-                    "updated_at": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M")
+            return json.dumps(
+                {
+                    "success": True,
+                    "action": "task_updated",
+                    "task": {
+                        "id": task.id,
+                        "content": task.content,
+                        "old_status": old_status.value,
+                        "new_status": new_status.value,
+                        "updated_at": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M"),
+                    },
+                    "message": f"Updated {task.content}: {old_status.value} -> {new_status.value}",
                 },
-                "message": f"Updated {task.content}: {old_status.value} -> {new_status.value}"
-            }, ensure_ascii=False, indent=2)
+                ensure_ascii=False,
+                indent=2,
+            )
         else:
-            return json.dumps({
-                "success": False,
-                "error": "Failed to update task"
-            }, ensure_ascii=False, indent=2)
+            return json.dumps(
+                {"success": False, "error": "Failed to update task"}, ensure_ascii=False, indent=2
+            )
 
     async def _search_tasks(self, query: Optional[str], limit: int) -> str:
         """Search for tasks by query."""
         if not query:
-            return json.dumps({
-                "success": False,
-                "error": "Query is required for search action"
-            }, ensure_ascii=False, indent=2)
+            return json.dumps(
+                {"success": False, "error": "Query is required for search action"},
+                ensure_ascii=False,
+                indent=2,
+            )
 
         # Search tasks
         search_results = self.search_engine.search_tasks(query, limit=limit)
 
         if not search_results:
-            return json.dumps({
-                "success": True,
-                "query": query,
-                "total_results": 0,
-                "message": f"No tasks found matching '{query}'",
-                "suggestion": "Try broader search terms or use task(action='list') to see all tasks"
-            }, ensure_ascii=False, indent=2)
+            return json.dumps(
+                {
+                    "success": True,
+                    "query": query,
+                    "total_results": 0,
+                    "message": f"No tasks found matching '{query}'",
+                    "suggestion": "Try broader search terms or use task(action='list') to see all tasks",
+                },
+                ensure_ascii=False,
+                indent=2,
+            )
 
         # Format results
         formatted_results = []
@@ -365,7 +408,7 @@ class EnhancedUnifiedTaskTool(EnhancedBaseTool):
                 "priority": result.priority.value,
                 "created_at": result.created_at.strftime("%Y-%m-%d %H:%M"),
                 "project_id": result.project_id,
-                "relevance": "High"  # Could add scoring later
+                "relevance": "High",  # Could add scoring later
             }
 
             if result.status == TaskStatus.IN_PROGRESS and result.started_at:
@@ -377,11 +420,15 @@ class EnhancedUnifiedTaskTool(EnhancedBaseTool):
 
             formatted_results.append(task_data)
 
-        return json.dumps({
-            "success": True,
-            "query": query,
-            "total_results": len(formatted_results),
-            "tasks": formatted_results,
-            "message": f"Found {len(formatted_results)} tasks matching '{query}'",
-            "suggestion": "Use task ID with other actions to start, complete, or update tasks"
-        }, ensure_ascii=False, indent=2)
+        return json.dumps(
+            {
+                "success": True,
+                "query": query,
+                "total_results": len(formatted_results),
+                "tasks": formatted_results,
+                "message": f"Found {len(formatted_results)} tasks matching '{query}'",
+                "suggestion": "Use task ID with other actions to start, complete, or update tasks",
+            },
+            ensure_ascii=False,
+            indent=2,
+        )

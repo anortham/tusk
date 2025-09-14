@@ -49,7 +49,7 @@ class TestAsyncIOSubprocessSafety:
         assert commit is None or isinstance(commit, str)
 
         # If we're in a git repo, should get actual values
-        if Path(project_path, '.git').exists():
+        if Path(project_path, ".git").exists():
             # At least one should be populated in a git repo
             assert branch is not None or commit is not None
 
@@ -113,11 +113,11 @@ class TestAsyncIOSubprocessSafety:
         # This should work fine - proving the issue is AsyncIO context
         try:
             result = subprocess.run(
-                ['git', 'branch', '--show-current'],
+                ["git", "branch", "--show-current"],
                 capture_output=True,
                 text=True,
                 cwd=project_path,
-                timeout=5
+                timeout=5,
             )
 
             # Should complete successfully
@@ -137,20 +137,14 @@ class TestAsyncIOSubprocessSafety:
             """Run a simple subprocess command."""
             try:
                 result = subprocess.run(
-                    ['python', '--version'],
-                    capture_output=True,
-                    text=True,
-                    timeout=5
+                    ["python", "--version"], capture_output=True, text=True, timeout=5
                 )
                 return result.returncode == 0
             except Exception:
                 return False
 
         # Should work without hanging
-        success = await asyncio.wait_for(
-            asyncio.to_thread(run_subprocess),
-            timeout=10.0
-        )
+        success = await asyncio.wait_for(asyncio.to_thread(run_subprocess), timeout=10.0)
 
         assert isinstance(success, bool)
 
@@ -160,7 +154,7 @@ class TestAsyncIOSubprocessSafety:
         project_path = str(Path.cwd())
 
         # Test with very short timeout to ensure timeout handling works
-        with patch.object(checkpoint_tool, '_get_git_info_safe') as mock_git:
+        with patch.object(checkpoint_tool, "_get_git_info_safe") as mock_git:
 
             async def slow_git_info(path):
                 """Simulate slow git operation."""
@@ -172,8 +166,7 @@ class TestAsyncIOSubprocessSafety:
             # Should complete normally with reasonable timeout
             start_time = asyncio.get_event_loop().time()
             branch, commit = await asyncio.wait_for(
-                mock_git(project_path),
-                timeout=1.0  # 1 second should be plenty
+                mock_git(project_path), timeout=1.0  # 1 second should be plenty
             )
             end_time = asyncio.get_event_loop().time()
 
@@ -193,13 +186,11 @@ class TestAsyncSubprocessRegressionPrevention:
 
         async def simulate_mcp_tool_call():
             """Simulate calling subprocess within MCP async tool context."""
+
             # This pattern used to hang - now should work
             def git_subprocess():
                 return subprocess.run(
-                    ['git', '--version'],
-                    capture_output=True,
-                    text=True,
-                    timeout=3
+                    ["git", "--version"], capture_output=True, text=True, timeout=3
                 )
 
             # Using asyncio.to_thread should prevent hanging
@@ -207,10 +198,7 @@ class TestAsyncSubprocessRegressionPrevention:
             return result.returncode == 0
 
         # Should complete without hanging
-        success = await asyncio.wait_for(
-            simulate_mcp_tool_call(),
-            timeout=10.0  # Generous timeout
-        )
+        success = await asyncio.wait_for(simulate_mcp_tool_call(), timeout=10.0)  # Generous timeout
 
         assert isinstance(success, bool)
 
@@ -220,7 +208,8 @@ class TestAsyncSubprocessRegressionPrevention:
 
         async def level_one():
             def subprocess_call():
-                return subprocess.run(['python', '--version'], capture_output=True, timeout=2)
+                return subprocess.run(["python", "--version"], capture_output=True, timeout=2)
+
             return await asyncio.to_thread(subprocess_call)
 
         async def level_two():
@@ -243,7 +232,7 @@ class TestAsyncSubprocessRegressionPrevention:
         # Run a simple operation multiple times
         for _ in range(5):
             try:
-                subprocess.run(['python', '--version'], capture_output=True, timeout=1)
+                subprocess.run(["python", "--version"], capture_output=True, timeout=1)
             except Exception:
                 pass  # Don't fail on subprocess issues
 

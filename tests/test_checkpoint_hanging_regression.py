@@ -51,7 +51,7 @@ class TestCheckpointHangingRegression:
             # This operation used to hang - should now complete quickly
             result = await asyncio.wait_for(
                 checkpoint_tool._save_checkpoint("Test checkpoint for hanging regression"),
-                timeout=30.0  # Generous timeout for CI environments
+                timeout=30.0,  # Generous timeout for CI environments
             )
 
             end_time = time.time()
@@ -62,6 +62,7 @@ class TestCheckpointHangingRegression:
 
             # Should return valid JSON result
             import json
+
             parsed = json.loads(result)
             assert parsed["success"] is True
             assert "checkpoint" in parsed
@@ -76,21 +77,17 @@ class TestCheckpointHangingRegression:
         descriptions = [
             "Concurrent checkpoint test 1",
             "Concurrent checkpoint test 2",
-            "Concurrent checkpoint test 3"
+            "Concurrent checkpoint test 3",
         ]
 
         start_time = time.time()
 
         try:
             # Run multiple checkpoint saves concurrently
-            tasks = [
-                checkpoint_tool._save_checkpoint(desc)
-                for desc in descriptions
-            ]
+            tasks = [checkpoint_tool._save_checkpoint(desc) for desc in descriptions]
 
             results = await asyncio.wait_for(
-                asyncio.gather(*tasks),
-                timeout=60.0  # Generous timeout for multiple operations
+                asyncio.gather(*tasks), timeout=60.0  # Generous timeout for multiple operations
             )
 
             end_time = time.time()
@@ -103,11 +100,14 @@ class TestCheckpointHangingRegression:
             assert len(results) == 3
             for result in results:
                 import json
+
                 parsed = json.loads(result)
                 assert parsed["success"] is True
 
         except asyncio.TimeoutError:
-            pytest.fail("Concurrent checkpoint operations timed out - deadlock regression detected!")
+            pytest.fail(
+                "Concurrent checkpoint operations timed out - deadlock regression detected!"
+            )
 
     @pytest.mark.asyncio
     async def test_git_operations_dont_hang(self, checkpoint_tool):
@@ -119,14 +119,12 @@ class TestCheckpointHangingRegression:
         try:
             # Test git info operation
             branch, commit = await asyncio.wait_for(
-                checkpoint_tool._get_git_info_safe(project_path),
-                timeout=15.0
+                checkpoint_tool._get_git_info_safe(project_path), timeout=15.0
             )
 
             # Test file detection operation
             files = await asyncio.wait_for(
-                checkpoint_tool._get_recently_modified_files_safe(project_path),
-                timeout=15.0
+                checkpoint_tool._get_recently_modified_files_safe(project_path), timeout=15.0
             )
 
             end_time = time.time()
@@ -155,8 +153,7 @@ class TestCheckpointHangingRegression:
         try:
             # Test the full save checkpoint workflow
             result = await asyncio.wait_for(
-                checkpoint_tool._save_checkpoint("Full workflow timing test"),
-                timeout=20.0
+                checkpoint_tool._save_checkpoint("Full workflow timing test"), timeout=20.0
             )
 
             end_time = time.time()
@@ -167,6 +164,7 @@ class TestCheckpointHangingRegression:
 
             # Should succeed
             import json
+
             parsed = json.loads(result)
             assert parsed["success"] is True
 
@@ -187,10 +185,7 @@ class TestCheckpointHangingRegression:
             tool = EnhancedUnifiedCheckpointTool(mock_server)
 
             # This registration process used to hang
-            await asyncio.wait_for(
-                asyncio.to_thread(tool.register, mock_mcp),
-                timeout=10.0
-            )
+            await asyncio.wait_for(asyncio.to_thread(tool.register, mock_mcp), timeout=10.0)
 
             end_time = time.time()
             duration = end_time - start_time
@@ -209,18 +204,15 @@ class TestCheckpointHangingRegression:
         try:
             # Test with invalid inputs that should fail gracefully
             result1 = await asyncio.wait_for(
-                checkpoint_tool._save_checkpoint(None),  # Invalid description
-                timeout=10.0
+                checkpoint_tool._save_checkpoint(None), timeout=10.0  # Invalid description
             )
 
             result2 = await asyncio.wait_for(
-                checkpoint_tool._get_git_info_safe(""),  # Invalid path
-                timeout=10.0
+                checkpoint_tool._get_git_info_safe(""), timeout=10.0  # Invalid path
             )
 
             result3 = await asyncio.wait_for(
-                checkpoint_tool._get_recently_modified_files_safe("/invalid/path"),
-                timeout=10.0
+                checkpoint_tool._get_recently_modified_files_safe("/invalid/path"), timeout=10.0
             )
 
             end_time = time.time()
@@ -231,6 +223,7 @@ class TestCheckpointHangingRegression:
 
             # Should return proper error responses/defaults
             import json
+
             parsed1 = json.loads(result1)
             assert parsed1["success"] is False
 
@@ -271,7 +264,9 @@ class TestCheckpointHangingRegression:
 
         # Should not have excessive memory growth (allow some reasonable increase)
         max_allowed_increase = 100 * 1024 * 1024  # 100MB
-        assert memory_increase < max_allowed_increase, f"Excessive memory usage: {memory_increase} bytes"
+        assert (
+            memory_increase < max_allowed_increase
+        ), f"Excessive memory usage: {memory_increase} bytes"
 
     @pytest.mark.asyncio
     async def test_rapid_sequential_operations(self, checkpoint_tool):
@@ -282,8 +277,7 @@ class TestCheckpointHangingRegression:
             # Rapid sequential operations
             for i in range(20):
                 result = await asyncio.wait_for(
-                    checkpoint_tool._get_git_info_safe(str(Path.cwd())),
-                    timeout=5.0
+                    checkpoint_tool._get_git_info_safe(str(Path.cwd())), timeout=5.0
                 )
 
                 # Quick validation
@@ -297,7 +291,9 @@ class TestCheckpointHangingRegression:
             assert duration < 30.0, f"Rapid sequential operations took too long: {duration}s"
 
         except asyncio.TimeoutError:
-            pytest.fail("Rapid sequential operations timed out - resource exhaustion regression detected!")
+            pytest.fail(
+                "Rapid sequential operations timed out - resource exhaustion regression detected!"
+            )
 
     @pytest.mark.asyncio
     async def test_stress_test_concurrent_mixed_operations(self, checkpoint_tool):
@@ -323,7 +319,7 @@ class TestCheckpointHangingRegression:
             # Run all concurrently
             results = await asyncio.wait_for(
                 asyncio.gather(*tasks, return_exceptions=True),
-                timeout=90.0  # Generous timeout for stress test
+                timeout=90.0,  # Generous timeout for stress test
             )
 
             end_time = time.time()
@@ -337,10 +333,14 @@ class TestCheckpointHangingRegression:
 
             # No operation should have hung (would cause TimeoutError)
             timeout_errors = [r for r in results if isinstance(r, asyncio.TimeoutError)]
-            assert len(timeout_errors) == 0, f"Found {len(timeout_errors)} timeout errors in stress test"
+            assert (
+                len(timeout_errors) == 0
+            ), f"Found {len(timeout_errors)} timeout errors in stress test"
 
         except asyncio.TimeoutError:
-            pytest.fail("Stress test timed out - concurrent operations hanging regression detected!")
+            pytest.fail(
+                "Stress test timed out - concurrent operations hanging regression detected!"
+            )
 
 
 if __name__ == "__main__":

@@ -45,12 +45,14 @@ class ToolEnhancer:
                         doc_param = param_descriptions[param_name]
                         if doc_param.description:
                             # Clean and format description
-                            description = doc_param.description.strip().strip('.')
+                            description = doc_param.description.strip().strip(".")
                             if description:
-                                description = description[0].upper() + description[1:] + '.'
+                                description = description[0].upper() + description[1:] + "."
                                 param_props["description"] = description
 
-            logger.debug(f"Enhanced tool {func.__name__} with {len(param_descriptions)} parameter descriptions")
+            logger.debug(
+                f"Enhanced tool {func.__name__} with {len(param_descriptions)} parameter descriptions"
+            )
             return enhanced_schema
 
         except Exception as e:
@@ -79,13 +81,13 @@ class ToolEnhancer:
             parsed_doc = docstring_parser.parse(docstring)
 
             # Start with existing description
-            enhanced_description = existing_description.strip().strip('.')
+            enhanced_description = existing_description.strip().strip(".")
             if enhanced_description:
-                enhanced_description += '.'
+                enhanced_description += "."
 
             # Add return description if available
             if parsed_doc.returns and parsed_doc.returns.description:
-                return_desc = parsed_doc.returns.description.strip().strip('.')
+                return_desc = parsed_doc.returns.description.strip().strip(".")
                 if return_desc:
                     prefix = " " if enhanced_description else ""
                     enhanced_description = f"{enhanced_description}{prefix}Returns {return_desc}."
@@ -118,6 +120,7 @@ def enhanced_tool(server_instance):
             '''
             return "result"
     """
+
     def decorator(func: Callable) -> Callable:
         # Get the original FastMCP tool decorator
         original_tool_decorator = server_instance.tool
@@ -130,23 +133,23 @@ def enhanced_tool(server_instance):
             # Now enhance the tool in the server's tool registry
             # This is a hook into FastMCP's internals - may need adjustment for different versions
             try:
-                if hasattr(server_instance, '_tool_manager') and hasattr(server_instance._tool_manager, '_tools'):
+                if hasattr(server_instance, "_tool_manager") and hasattr(
+                    server_instance._tool_manager, "_tools"
+                ):
                     tool_name = enhanced_func.__name__
                     if tool_name in server_instance._tool_manager._tools:
                         tool = server_instance._tool_manager._tools[tool_name]
 
                         # Enhance the parameter schema
-                        if hasattr(tool, 'parameters'):
+                        if hasattr(tool, "parameters"):
                             tool.parameters = ToolEnhancer.enhance_tool_parameters(
-                                enhanced_func,
-                                tool.parameters
+                                enhanced_func, tool.parameters
                             )
 
                         # Enhance the description
-                        if hasattr(tool, 'description'):
+                        if hasattr(tool, "description"):
                             tool.description = ToolEnhancer.enhance_tool_description(
-                                enhanced_func,
-                                tool.description or ""
+                                enhanced_func, tool.description or ""
                             )
 
                         logger.info(f"Enhanced tool '{tool_name}' with rich parameter descriptions")

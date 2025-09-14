@@ -38,7 +38,9 @@ class EnhancedBaseTool(ABC):
 
         Call this after registering tools to add docstring-based parameter descriptions.
         """
-        if not hasattr(mcp_server, '_tool_manager') or not hasattr(mcp_server._tool_manager, '_tools'):
+        if not hasattr(mcp_server, "_tool_manager") or not hasattr(
+            mcp_server._tool_manager, "_tools"
+        ):
             logger.warning("Cannot enhance tools: FastMCP server structure not as expected")
             return
 
@@ -49,21 +51,25 @@ class EnhancedBaseTool(ABC):
 
                 try:
                     # Get the original function that was registered
-                    original_func = tool.fn if hasattr(tool, 'fn') else None
+                    original_func = tool.fn if hasattr(tool, "fn") else None
                     if not original_func:
                         continue
 
                     # Enhance parameter schema
-                    if hasattr(tool, 'parameters'):
-                        enhanced_params = self._enhance_parameter_schema(original_func, tool.parameters)
+                    if hasattr(tool, "parameters"):
+                        enhanced_params = self._enhance_parameter_schema(
+                            original_func, tool.parameters
+                        )
                         if enhanced_params != tool.parameters:
                             tool.parameters = enhanced_params
                             enhanced_count += 1
                             logger.debug(f"Enhanced parameters for tool: {tool_name}")
 
                     # Enhance description
-                    if hasattr(tool, 'description'):
-                        enhanced_desc = self._enhance_description(original_func, tool.description or "")
+                    if hasattr(tool, "description"):
+                        enhanced_desc = self._enhance_description(
+                            original_func, tool.description or ""
+                        )
                         if enhanced_desc != tool.description:
                             tool.description = enhanced_desc
                             logger.debug(f"Enhanced description for tool: {tool_name}")
@@ -99,9 +105,9 @@ class EnhancedBaseTool(ABC):
                         doc_param = param_descriptions[param_name]
                         if doc_param.description:
                             # Clean and format description
-                            description = doc_param.description.strip().strip('.')
+                            description = doc_param.description.strip().strip(".")
                             if description:
-                                description = description[0].upper() + description[1:] + '.'
+                                description = description[0].upper() + description[1:] + "."
                                 # Create new dict to avoid modifying original
                                 new_props = param_props.copy()
                                 new_props["description"] = description
@@ -126,13 +132,13 @@ class EnhancedBaseTool(ABC):
             parsed_doc = docstring_parser.parse(docstring)
 
             # Start with existing description
-            enhanced_description = existing_description.strip().strip('.')
+            enhanced_description = existing_description.strip().strip(".")
             if enhanced_description:
-                enhanced_description += '.'
+                enhanced_description += "."
 
             # Add return description if available
             if parsed_doc.returns and parsed_doc.returns.description:
-                return_desc = parsed_doc.returns.description.strip().strip('.')
+                return_desc = parsed_doc.returns.description.strip().strip(".")
                 if return_desc:
                     prefix = " " if enhanced_description else ""
                     enhanced_description = f"{enhanced_description}{prefix}Returns {return_desc}."
