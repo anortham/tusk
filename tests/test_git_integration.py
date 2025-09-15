@@ -67,14 +67,35 @@ class TestGitIntegration:
 
         branch, commit = await checkpoint_tool._get_git_info_safe(project_path)
 
+        # Check git availability and repo status locally for this test
+        import subprocess
+        git_available = False
+        try:
+            result = subprocess.run(["git", "--version"], capture_output=True, timeout=5)
+            git_available = result.returncode == 0
+        except (FileNotFoundError, subprocess.TimeoutExpired):
+            git_available = False
+
+        current_dir = Path.cwd()
+        git_dir = current_dir / ".git"
+        is_git_repo = git_dir.exists()
+
         # If we're in a git repo and git is available, should get results
-        if getattr(pytest, "git_available", False) and getattr(pytest, "is_git_repo", False):
+        if git_available and is_git_repo:
             assert branch is not None, "Should detect git branch in git repository"
             assert commit is not None, "Should detect git commit in git repository"
             assert isinstance(branch, str), "Branch should be a string"
             assert isinstance(commit, str), "Commit should be a string"
             assert len(branch) > 0, "Branch name should not be empty"
             assert len(commit) > 0, "Commit hash should not be empty"
+            # Branch should be a valid identifier (allows detached-head, main, develop, etc.)
+            # Also allow Azure DevOps branch references like "refs/heads/main"
+            clean_branch = branch.replace("refs/heads/", "").replace("refs/remotes/origin/", "")
+            assert (
+                clean_branch.replace("-", "").replace("_", "").replace("/", "").isalnum() or 
+                clean_branch in ["detached-head"] or
+                branch.startswith("refs/")
+            ), f"Branch '{branch}' should be a valid git reference"
         else:
             # Outside git repo or git not available - should return None gracefully
             assert branch is None, "Should return None outside git repo"

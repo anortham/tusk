@@ -85,14 +85,56 @@ class EnhancedUnifiedCheckpointTool(EnhancedBaseTool):
             def run_git_subprocess():  # type: ignore[no-untyped-def]
                 """Run git commands in a separate thread to avoid AsyncIO deadlock."""
                 try:
-                    # Get current branch
+                    # Get current branch - try multiple methods for Azure DevOps compatibility
+                    branch = None
+                    
+                    # Method 1: Try git branch --show-current (works for normal checkouts)
                     branch_result = subprocess.run(
                         ["git", "branch", "--show-current"],
                         capture_output=True,
                         text=True,
                         cwd=project_path,
-                        timeout=3,  # Shorter timeout
+                        timeout=3,
                     )
+                    if branch_result.returncode == 0 and branch_result.stdout.strip():
+                        branch = branch_result.stdout.strip()
+                    
+                    # Method 2: If empty (detached HEAD), try getting from symbolic-ref
+                    if not branch:
+                        symbolic_ref_result = subprocess.run(
+                            ["git", "symbolic-ref", "--short", "HEAD"],
+                            capture_output=True,
+                            text=True,
+                            cwd=project_path,
+                            timeout=3,
+                        )
+                        if symbolic_ref_result.returncode == 0 and symbolic_ref_result.stdout.strip():
+                            branch = symbolic_ref_result.stdout.strip()
+                    
+                    # Method 3: If still empty (Azure DevOps detached HEAD), try env variables or describe
+                    if not branch:
+                        # Check common CI environment variables
+                        branch = (
+                            os.environ.get("BUILD_SOURCEBRANCHNAME") or  # Azure DevOps
+                            os.environ.get("GITHUB_REF_NAME") or         # GitHub Actions
+                            os.environ.get("CI_COMMIT_REF_NAME") or      # GitLab CI
+                            os.environ.get("BRANCH_NAME")                # Jenkins
+                        )
+                        
+                        # If no env vars, try git describe or just use "detached"
+                        if not branch:
+                            describe_result = subprocess.run(
+                                ["git", "describe", "--all", "--exact-match", "HEAD"],
+                                capture_output=True,
+                                text=True,
+                                cwd=project_path,
+                                timeout=3,
+                            )
+                            if describe_result.returncode == 0 and describe_result.stdout.strip():
+                                branch = describe_result.stdout.strip().replace("heads/", "")
+                            else:
+                                # Last resort: indicate detached state
+                                branch = "detached-head"
 
                     # Get current commit hash (short)
                     commit_result = subprocess.run(
@@ -100,10 +142,9 @@ class EnhancedUnifiedCheckpointTool(EnhancedBaseTool):
                         capture_output=True,
                         text=True,
                         cwd=project_path,
-                        timeout=3,  # Shorter timeout
+                        timeout=3,
                     )
 
-                    branch = branch_result.stdout.strip() if branch_result.returncode == 0 else None
                     commit = commit_result.stdout.strip() if commit_result.returncode == 0 else None
 
                     return branch, commit
@@ -114,7 +155,7 @@ class EnhancedUnifiedCheckpointTool(EnhancedBaseTool):
 
             # Run in thread pool to avoid AsyncIO deadlock
             try:
-                branch, commit = await asyncio.wait_for(asyncio.to_thread(run_git_subprocess), timeout=5.0)  # Overall timeout
+                branch, commit = await asyncio.wait_for(asyncio.to_thread(run_git_subprocess), timeout=5.0)
                 return branch, commit
             except TimeoutError:
                 logger.debug("Git info timeout - operations took too long")
