@@ -293,7 +293,7 @@ stages:
               artifactFeed: 'COA'
 
           - script: |
-              python -m twine upload --repository-url $(PYPI_REPOSITORY_URL) $(System.ArtifactsDirectory)/python-packages/dist/*.whl
+              python -m twine upload -r COA $(System.ArtifactsDirectory)/python-packages/dist/*.whl
             displayName: 'Upload wheel to COA feed'
 
   - stage: PublishPyPI
