@@ -214,15 +214,15 @@ stages:
               pathToSources: 'src'
             displayName: 'Publish code coverage'
 
-          # Only build package on Python 3.11 to avoid duplicates
-          - script: |
+          # Only build package on Python 3.12 to avoid duplicates
+          - powershell: |
               # Update version in pyproject.toml for build
               $version = "$(versionPrefix)"
               if ("$(versionSuffix)") {
                   $version = "$(versionPrefix)+$(versionSuffix)"
               }
 
-              # Use sed to update version in pyproject.toml (works on Windows with Git Bash)
+              # Use PowerShell to update version in pyproject.toml
               (Get-Content pyproject.toml) -replace 'version = ".*"', "version = `"$version`"" | Set-Content pyproject.toml
 
               Write-Host "Updated pyproject.toml version to: $version"
