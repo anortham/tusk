@@ -262,18 +262,14 @@ stages:
             displayName: 'Install dependencies for integration tests'
 
           - script: |
-              # Test server startup
-              timeout 10 python -c "from src.tusk.server import TuskServer; print('Server imports successfully')" 2>nul || echo "Server startup test completed"
+              echo "Testing server imports..."
+              python -c "from src.tusk.server import TuskServer; print('Server imports successfully')"
+            displayName: 'Test server imports'
 
-              # Test basic functionality
-              python -c "
-              from src.tusk.models import Checkpoint, Task, Plan
-              from src.tusk.config import TuskConfig
-              config = TuskConfig()
-              print('✅ Models import successfully')
-              print('✅ Configuration loads successfully')
-              "
-            displayName: 'Run integration tests'
+          - script: |
+              echo "Testing basic functionality..."
+              python -c "from src.tusk.models import Checkpoint, Task, Plan; from src.tusk.config import TuskConfig; config = TuskConfig(); print('Models and configuration import successfully')"
+            displayName: 'Test basic functionality'
 
   - stage: PublishInternal
     displayName: "Publish to Azure DevOps"
