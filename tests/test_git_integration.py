@@ -69,6 +69,7 @@ class TestGitIntegration:
 
         # Check git availability and repo status locally for this test
         import subprocess
+
         git_available = False
         try:
             result = subprocess.run(["git", "--version"], capture_output=True, timeout=5)
@@ -92,9 +93,7 @@ class TestGitIntegration:
             # Also allow Azure DevOps branch references like "refs/heads/main"
             clean_branch = branch.replace("refs/heads/", "").replace("refs/remotes/origin/", "")
             assert (
-                clean_branch.replace("-", "").replace("_", "").replace("/", "").isalnum() or 
-                clean_branch in ["detached-head"] or
-                branch.startswith("refs/")
+                clean_branch.replace("-", "").replace("_", "").replace("/", "").isalnum() or clean_branch in ["detached-head"] or branch.startswith("refs/")
             ), f"Branch '{branch}' should be a valid git reference"
         else:
             # Outside git repo or git not available - should return None gracefully

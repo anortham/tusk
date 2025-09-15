@@ -87,7 +87,7 @@ class EnhancedUnifiedCheckpointTool(EnhancedBaseTool):
                 try:
                     # Get current branch - try multiple methods for Azure DevOps compatibility
                     branch = None
-                    
+
                     # Method 1: Try git branch --show-current (works for normal checkouts)
                     branch_result = subprocess.run(
                         ["git", "branch", "--show-current"],
@@ -98,7 +98,7 @@ class EnhancedUnifiedCheckpointTool(EnhancedBaseTool):
                     )
                     if branch_result.returncode == 0 and branch_result.stdout.strip():
                         branch = branch_result.stdout.strip()
-                    
+
                     # Method 2: If empty (detached HEAD), try getting from symbolic-ref
                     if not branch:
                         symbolic_ref_result = subprocess.run(
@@ -110,17 +110,17 @@ class EnhancedUnifiedCheckpointTool(EnhancedBaseTool):
                         )
                         if symbolic_ref_result.returncode == 0 and symbolic_ref_result.stdout.strip():
                             branch = symbolic_ref_result.stdout.strip()
-                    
+
                     # Method 3: If still empty (Azure DevOps detached HEAD), try env variables or describe
                     if not branch:
                         # Check common CI environment variables
                         branch = (
-                            os.environ.get("BUILD_SOURCEBRANCHNAME") or  # Azure DevOps
-                            os.environ.get("GITHUB_REF_NAME") or         # GitHub Actions
-                            os.environ.get("CI_COMMIT_REF_NAME") or      # GitLab CI
-                            os.environ.get("BRANCH_NAME")                # Jenkins
+                            os.environ.get("BUILD_SOURCEBRANCHNAME")  # Azure DevOps
+                            or os.environ.get("GITHUB_REF_NAME")  # GitHub Actions
+                            or os.environ.get("CI_COMMIT_REF_NAME")  # GitLab CI
+                            or os.environ.get("BRANCH_NAME")  # Jenkins
                         )
-                        
+
                         # If no env vars, try git describe or just use "detached"
                         if not branch:
                             describe_result = subprocess.run(
