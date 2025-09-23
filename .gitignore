@@ -66,9 +66,13 @@ venv.bak/
 ehthumbs.db
 Thumbs.db
 
-# Tusk-specific  
-# Note: Data is now stored in ~/.coa/tusk/ instead of local directories
-# These patterns are kept for backward compatibility and local overrides
+# Bun/Node.js
+node_modules/
+bun.lockb
+.bun-cache/
+
+# Tusk-specific
+# Note: Data is now stored in ~/.tusk/journal.db (SQLite)
 *.log
 .coa/
 .serena/           # Serena MCP cache
