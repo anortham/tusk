@@ -9,7 +9,7 @@ import { existsSync, mkdirSync, writeFileSync, readFileSync } from "fs";
 import { spawnSync } from "bun";
 
 import { generateStandup } from "../standup.js";
-import { saveEntry, getRecentEntries, getJournalStats } from "../journal.js";
+import { saveEntry, getRecentEntries, getJournalStats, getWorkspaceSummary } from "../journal.js";
 import {
   TestEnvironment,
   TestDataFactory,
@@ -396,6 +396,111 @@ describe("Integration Tests - End-to-End Workflows", () => {
 
       expect(session1Entries).toHaveLength(3);
       expect(session2Entries).toHaveLength(2);
+    });
+
+    test("workspace summary functionality", async () => {
+      // Create entries in different workspaces by setting up different workspace contexts
+      const workspaceEntries = [
+        TestDataFactory.createJournalEntry({
+          description: "Workspace 1 entry 1",
+          project: "project-a",
+          tags: ["workspace1", "feature"],
+        }),
+        TestDataFactory.createJournalEntry({
+          description: "Workspace 1 entry 2",
+          project: "project-b",
+          tags: ["workspace1", "bug-fix"],
+        }),
+      ];
+
+      // Store entries
+      for (const entry of workspaceEntries) {
+        await saveEntry(entry);
+      }
+
+      // Test workspace summary
+      const workspaces = await getWorkspaceSummary();
+      expect(Array.isArray(workspaces)).toBe(true);
+      expect(workspaces.length).toBeGreaterThan(0);
+
+      // Verify workspace summary structure
+      if (workspaces.length > 0) {
+        const workspace = workspaces[0];
+        expect(workspace).toHaveProperty('id');
+        expect(workspace).toHaveProperty('path');
+        expect(workspace).toHaveProperty('name');
+        expect(workspace).toHaveProperty('entryCount');
+        expect(workspace).toHaveProperty('projects');
+        expect(Array.isArray(workspace.projects)).toBe(true);
+        expect(typeof workspace.entryCount).toBe('number');
+        expect(workspace.entryCount).toBeGreaterThan(0);
+      }
+    });
+
+    test("date range filtering functionality", async () => {
+      // Create test entries with known timestamps
+      const baseTime = new Date();
+      const oneHourAgo = new Date(baseTime.getTime() - (60 * 60 * 1000));
+      const twoHoursAgo = new Date(baseTime.getTime() - (2 * 60 * 60 * 1000));
+      const threeDaysAgo = new Date(baseTime.getTime() - (3 * 24 * 60 * 60 * 1000));
+
+      const timestampedEntries = [
+        TestDataFactory.createJournalEntry({
+          description: "Recent entry 1",
+          project: "date-test",
+          timestamp: baseTime.toISOString(),
+        }),
+        TestDataFactory.createJournalEntry({
+          description: "Recent entry 2",
+          project: "date-test",
+          timestamp: oneHourAgo.toISOString(),
+        }),
+        TestDataFactory.createJournalEntry({
+          description: "Older entry",
+          project: "date-test",
+          timestamp: threeDaysAgo.toISOString(),
+        }),
+      ];
+
+      // Store entries
+      for (const entry of timestampedEntries) {
+        await saveEntry(entry);
+      }
+
+      // Test date range filtering with from parameter
+      const today = baseTime.toISOString().split('T')[0]; // YYYY-MM-DD format
+      const recentEntries = await getRecentEntries({
+        from: today,
+        project: "date-test"
+      });
+
+      expect(Array.isArray(recentEntries)).toBe(true);
+      // Should include entries from today
+      const todayEntries = recentEntries.filter(e =>
+        e.description.includes("Recent entry") && e.project === "date-test"
+      );
+      expect(todayEntries.length).toBeGreaterThan(0);
+
+      // Test date range filtering with to parameter
+      const yesterday = new Date(baseTime.getTime() - (24 * 60 * 60 * 1000))
+        .toISOString().split('T')[0];
+      const olderEntries = await getRecentEntries({
+        to: yesterday,
+        project: "date-test"
+      });
+
+      expect(Array.isArray(olderEntries)).toBe(true);
+
+      // Test combined from and to parameters
+      const fromDate = threeDaysAgo.toISOString().split('T')[0];
+      const toDate = oneHourAgo.toISOString().split('T')[0];
+      const rangeEntries = await getRecentEntries({
+        from: fromDate,
+        to: toDate,
+        project: "date-test"
+      });
+
+      expect(Array.isArray(rangeEntries)).toBe(true);
     });
   });
 

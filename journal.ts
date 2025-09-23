@@ -47,6 +47,8 @@ export interface WorkspaceInfo {
 export interface QueryOptions {
   workspace?: string | 'current' | 'all';
   days?: number;
+  from?: string;
+  to?: string;
   project?: string;
   tags?: string[];
   limit?: number;
@@ -524,6 +526,8 @@ export class JournalDB {
     const {
       workspace = 'current',
       days = 7,
+      from,
+      to,
       project,
       tags,
       limit = 1000,
@@ -537,10 +541,27 @@ export class JournalDB {
         tags, files, sync_status, remote_id, last_synced_at, version,
         created_at, updated_at
       FROM checkpoints
-      WHERE datetime(timestamp) > datetime('now', '-' || $days || ' days')
+      WHERE 1=1
     `;
 
-    const params: Record<string, any> = { $days: days };
+    const params: Record<string, any> = {};
+
+    // Add date filtering with from/to range support
+    if (from && to) {
+      query += ` AND datetime(timestamp) BETWEEN datetime($from) AND datetime($to)`;
+      params.$from = from;
+      params.$to = to;
+    } else if (from) {
+      query += ` AND datetime(timestamp) >= datetime($from)`;
+      params.$from = from;
+    } else if (to) {
+      query += ` AND datetime(timestamp) <= datetime($to)`;
+      params.$to = to;
+    } else {
+      // Default to days-based filtering when no date range specified
+      query += ` AND datetime(timestamp) > datetime('now', '-' || $days || ' days')`;
+      params.$days = days;
+    }
 
     // Add workspace filtering
     if (workspace === 'current') {
@@ -605,11 +626,12 @@ export class JournalDB {
    * Get summary of all workspaces
    */
   async getWorkspaceSummary(): Promise<Array<{
-    workspaceId: string;
-    workspaceName: string;
-    workspacePath: string;
-    checkpointCount: number;
-    lastActivity: string;
+    id: string;
+    path: string;
+    name: string;
+    entryCount: number;
+    lastActivity?: string;
+    projects: string[];
   }>> {
     const query = `
       SELECT
@@ -625,13 +647,28 @@ export class JournalDB {
 
     const rows = this.db.prepare(query).all() as any[];
 
-    return rows.map(row => ({
-      workspaceId: row.workspace_id,
-      workspaceName: row.workspace_name,
-      workspacePath: row.workspace_path,
-      checkpointCount: row.checkpoint_count,
-      lastActivity: row.last_activity,
-    }));
+    // Get projects for each workspace
+    const workspacesWithProjects = rows.map(row => {
+      const projectsQuery = `
+        SELECT DISTINCT project
+        FROM checkpoints
+        WHERE workspace_id = ? AND project IS NOT NULL
+        ORDER BY project
+      `;
+      const projectRows = this.db.prepare(projectsQuery).all(row.workspace_id) as any[];
+      const projects = projectRows.map(p => p.project);
+
+      return {
+        id: row.workspace_id,
+        path: row.workspace_path,
+        name: row.workspace_name,
+        entryCount: row.checkpoint_count,
+        lastActivity: row.last_activity,
+        projects,
+      };
+    });
+
+    return workspacesWithProjects;
   }
 
   /**
@@ -818,9 +855,11 @@ export async function saveEntry(entry: JournalEntry): Promise<void> {
   return getDefaultJournal().saveCheckpoint(entry);
 }
 
-export async function getRecentEntries(filter: { days?: number; project?: string; workspace?: string | 'current' | 'all' } = {}): Promise<JournalEntry[]> {
+export async function getRecentEntries(filter: { days?: number; from?: string; to?: string; project?: string; workspace?: string | 'current' | 'all' } = {}): Promise<JournalEntry[]> {
   return getDefaultJournal().getRecentCheckpoints({
     days: filter.days,
+    from: filter.from,
+    to: filter.to,
     project: filter.project,
     workspace: filter.workspace || 'current',
   });
@@ -841,4 +880,15 @@ export async function getJournalStats(): Promise<{
   newestEntry?: string;
 }> {
   return getDefaultJournal().getJournalStats();
+}
+
+export async function getWorkspaceSummary(): Promise<Array<{
+  id: string;
+  path: string;
+  name: string;
+  entryCount: number;
+  lastActivity?: string;
+  projects: string[];
+}>> {
+  return getDefaultJournal().getWorkspaceSummary();
 }

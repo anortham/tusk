@@ -20,7 +20,8 @@ import {
   getRecentEntries,
   searchEntries,
   generateId,
-  getJournalStats
+  getJournalStats,
+  getWorkspaceSummary
 } from "./journal.js";
 import type { JournalEntry } from "./journal.js";
 import { getGitContext, getStatusSummary } from "./git.js";
@@ -166,9 +167,12 @@ const CheckpointSchema = z.object({
 
 const RecallSchema = z.object({
   days: z.number().optional().default(2).describe("Number of days to look back (default: 2)"),
+  from: z.string().optional().describe("Start date (YYYY-MM-DD or ISO 8601)"),
+  to: z.string().optional().describe("End date (YYYY-MM-DD or ISO 8601)"),
   search: z.string().optional().describe("Search term to filter entries"),
   project: z.string().optional().describe("Filter by specific project name"),
   workspace: z.string().optional().describe("Filter by specific workspace ID ('current' for current workspace, 'all' for all workspaces)"),
+  listWorkspaces: z.boolean().optional().describe("List all workspaces with statistics"),
 });
 
 const StandupSchema = z.object({
@@ -204,7 +208,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
           },
           required: ["description"],
         },
-      } satisfies typeof ToolSchema,
+      },
       {
         name: "recall",
         description: "Restore context from previous work. ALWAYS use this at the start of sessions to recover important context that might have been lost due to Claude crashes or compaction.",
@@ -228,9 +232,21 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
               type: "string",
               description: "Filter by specific workspace ID ('current' for current workspace, 'all' for all workspaces)",
             },
+            from: {
+              type: "string",
+              description: "Start date (YYYY-MM-DD or ISO 8601)",
+            },
+            to: {
+              type: "string",
+              description: "End date (YYYY-MM-DD or ISO 8601)",
+            },
+            listWorkspaces: {
+              type: "boolean",
+              description: "List all workspaces with statistics",
+            },
           },
         },
-      } satisfies typeof ToolSchema,
+      },
       {
         name: "standup",
         description: "Generate beautiful standup reports from your journal. Perfect for team meetings, progress summaries, or understanding what you've accomplished recently.",
@@ -264,7 +280,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
             },
           },
         },
-      } satisfies typeof ToolSchema,
+      },
     ],
   };
 });
@@ -349,12 +365,57 @@ Your progress is now safely captured and will survive Claude sessions! 🐘`,
  * Handle recall tool - restore previous context
  */
 async function handleRecall(args: any) {
-  const { days, search, project, workspace } = RecallSchema.parse(args);
+  const { days, from, to, search, project, workspace, listWorkspaces } = RecallSchema.parse(args);
+
+  // Handle workspace listing if requested
+  if (listWorkspaces) {
+    const workspaces = await getWorkspaceSummary();
+    if (workspaces.length === 0) {
+      return {
+        content: [
+          {
+            type: "text",
+            text: `📂 **No workspaces found**
+
+No workspaces have been detected. Start by creating checkpoints in different projects to see workspace organization.
+
+💡 **Tip:** Use \`checkpoint("your progress description")\` to start capturing your work!`,
+          },
+        ],
+      };
+    }
+
+    const workspaceLines: string[] = [];
+    workspaceLines.push(`📂 **Found ${workspaces.length} workspace${workspaces.length === 1 ? '' : 's'}:**`);
+    workspaceLines.push("");
+
+    workspaces.forEach(ws => {
+      workspaceLines.push(`📁 **${ws.name}**`);
+      workspaceLines.push(`   • Path: ${ws.path}`);
+      workspaceLines.push(`   • Entries: ${ws.entryCount}`);
+      if (ws.lastActivity) {
+        workspaceLines.push(`   • Last activity: ${ws.lastActivity}`);
+      }
+      if (ws.projects.length > 0) {
+        workspaceLines.push(`   • Projects: ${ws.projects.join(', ')}`);
+      }
+      workspaceLines.push("");
+    });
+
+    return {
+      content: [
+        {
+          type: "text",
+          text: workspaceLines.join("\n").trim(),
+        },
+      ],
+    };
+  }
 
   // Get entries based on filters
   const entries = search
     ? await searchEntries(search, { workspace: workspace || 'current' })
-    : await getRecentEntries({ days, project, workspace: workspace || 'current' });
+    : await getRecentEntries({ days, from, to, project, workspace: workspace || 'current' });
 
   if (entries.length === 0) {
     const filterDesc = [];

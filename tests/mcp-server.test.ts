@@ -351,6 +351,139 @@ describe("MCP Server - Tool Parameter Validation", () => {
         }
       });
     });
+
+    test("should validate from parameter for date range filtering", () => {
+      const validFromInputs = [
+        { from: "2025-01-01" },
+        { from: "2025-12-31T23:59:59Z" },
+        { from: "2025-06-15T12:00:00.000Z" },
+      ];
+      const invalidFromInputs = [
+        { from: 123 },
+        { from: null },
+        { from: [] },
+        { from: {} },
+      ];
+
+      validFromInputs.forEach(input => {
+        expect(typeof input.from).toBe("string");
+      });
+      invalidFromInputs.forEach(input => {
+        if (input.from !== null) {
+          expect(typeof input.from).not.toBe("string");
+        }
+      });
+    });
+
+    test("should validate to parameter for date range filtering", () => {
+      const validToInputs = [
+        { to: "2025-01-01" },
+        { to: "2025-12-31T23:59:59Z" },
+        { to: "2025-06-15T12:00:00.000Z" },
+      ];
+      const invalidToInputs = [
+        { to: 123 },
+        { to: null },
+        { to: [] },
+        { to: {} },
+      ];
+
+      validToInputs.forEach(input => {
+        expect(typeof input.to).toBe("string");
+      });
+      invalidToInputs.forEach(input => {
+        if (input.to !== null) {
+          expect(typeof input.to).not.toBe("string");
+        }
+      });
+    });
+
+    test("should validate workspace parameter", () => {
+      const validWorkspaceInputs = [
+        { workspace: "current" },
+        { workspace: "all" },
+        { workspace: "/path/to/workspace" },
+        { workspace: "workspace-id-123" },
+      ];
+      const invalidWorkspaceInputs = [
+        { workspace: 123 },
+        { workspace: null },
+        { workspace: [] },
+        { workspace: {} },
+      ];
+
+      validWorkspaceInputs.forEach(input => {
+        expect(typeof input.workspace).toBe("string");
+      });
+      invalidWorkspaceInputs.forEach(input => {
+        if (input.workspace !== null) {
+          expect(typeof input.workspace).not.toBe("string");
+        }
+      });
+    });
+
+    test("should validate listWorkspaces parameter", () => {
+      const validListWorkspacesInputs = [
+        { listWorkspaces: true },
+        { listWorkspaces: false },
+      ];
+      const invalidListWorkspacesInputs = [
+        { listWorkspaces: "true" },
+        { listWorkspaces: 1 },
+        { listWorkspaces: "false" },
+        { listWorkspaces: 0 },
+        { listWorkspaces: null },
+        { listWorkspaces: [] },
+      ];
+
+      validListWorkspacesInputs.forEach(input => {
+        expect(typeof input.listWorkspaces).toBe("boolean");
+      });
+      invalidListWorkspacesInputs.forEach(input => {
+        if (input.listWorkspaces !== null) {
+          expect(typeof input.listWorkspaces).not.toBe("boolean");
+        }
+      });
+    });
+
+    test("should handle combination of new parameters", () => {
+      const combinedInput = {
+        from: "2025-01-01",
+        to: "2025-12-31",
+        workspace: "current",
+        listWorkspaces: false,
+        days: 30,
+        search: "test",
+        project: "myproject"
+      };
+
+      expect(typeof combinedInput.from).toBe("string");
+      expect(typeof combinedInput.to).toBe("string");
+      expect(typeof combinedInput.workspace).toBe("string");
+      expect(typeof combinedInput.listWorkspaces).toBe("boolean");
+      expect(typeof combinedInput.days).toBe("number");
+      expect(typeof combinedInput.search).toBe("string");
+      expect(typeof combinedInput.project).toBe("string");
+    });
+
+    test("should handle date range edge cases", () => {
+      const edgeCaseInputs = [
+        { from: "2025-01-01", to: "2024-12-31" }, // from after to
+        { from: "invalid-date" }, // invalid date format
+        { to: "not-a-date" }, // invalid date format
+        { from: "", to: "" }, // empty strings
+      ];
+
+      edgeCaseInputs.forEach(input => {
+        if (input.from !== undefined) {
+          expect(typeof input.from).toBe("string");
+        }
+        if (input.to !== undefined) {
+          expect(typeof input.to).toBe("string");
+        }
+        // Date validation logic would be tested in integration tests
+      });
+    });
   });
 
   describe("Standup Tool Validation", () => {

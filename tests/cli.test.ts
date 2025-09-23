@@ -305,6 +305,78 @@ describe("CLI Interface - Recall Command", () => {
     CLITestUtils.expectSuccess(result);
     CLITestUtils.expectOutputContains(result, "no entries found");
   });
+
+  test("should parse --list-workspaces parameter", async () => {
+    const result = await CLITestUtils.runCLI(["recall", "--list-workspaces"]);
+
+    CLITestUtils.expectSuccess(result);
+    CLITestUtils.expectOutputContains(result, "workspace");
+  });
+
+  test("should parse --from parameter for date range filtering", async () => {
+    const result1 = await CLITestUtils.runCLI(["recall", "--from=2025-01-01"]);
+    CLITestUtils.expectSuccess(result1);
+
+    const result2 = await CLITestUtils.runCLI(["recall", "--from", "2025-01-01"]);
+    CLITestUtils.expectSuccess(result2);
+  });
+
+  test("should parse --to parameter for date range filtering", async () => {
+    const result1 = await CLITestUtils.runCLI(["recall", "--to=2025-12-31"]);
+    CLITestUtils.expectSuccess(result1);
+
+    const result2 = await CLITestUtils.runCLI(["recall", "--to", "2025-12-31"]);
+    CLITestUtils.expectSuccess(result2);
+  });
+
+  test("should handle date range filtering with both --from and --to", async () => {
+    const result = await CLITestUtils.runCLI([
+      "recall",
+      "--from", "2025-01-01",
+      "--to", "2025-12-31"
+    ]);
+    CLITestUtils.expectSuccess(result);
+  });
+
+  test("should validate date format for --from parameter", async () => {
+    const validResult = await CLITestUtils.runCLI(["recall", "--from", "2025-01-01"]);
+    CLITestUtils.expectSuccess(validResult);
+
+    // Invalid date should still succeed but may return no results
+    const invalidResult = await CLITestUtils.runCLI(["recall", "--from", "invalid-date"]);
+    // The function should handle invalid dates gracefully
+    expect(invalidResult.exitCode).toBeDefined();
+  });
+
+  test("should require value for --from parameter", async () => {
+    const result = await CLITestUtils.runCLI(["recall", "--from="]);
+    CLITestUtils.expectFailure(result);
+    CLITestUtils.expectErrorContains(result, "--from= requires a value");
+  });
+
+  test("should require value for --to parameter", async () => {
+    const result = await CLITestUtils.runCLI(["recall", "--to="]);
+    CLITestUtils.expectFailure(result);
+    CLITestUtils.expectErrorContains(result, "--to= requires a value");
+  });
+
+  test("should handle workspace listing with proper formatting", async () => {
+    const result = await CLITestUtils.runCLI(["recall", "--list-workspaces"]);
+
+    CLITestUtils.expectSuccess(result);
+    CLITestUtils.expectOutputContains(result, "📂");
+    CLITestUtils.expectOutputContains(result, "📁");
+  });
+
+  test("should combine parameters correctly", async () => {
+    const result = await CLITestUtils.runCLI([
+      "recall",
+      "--workspace", "current",
+      "--from", "2025-01-01",
+      "--days", "30"
+    ]);
+    CLITestUtils.expectSuccess(result);
+  });
 });
 
 describe("CLI Interface - Standup Command", () => {

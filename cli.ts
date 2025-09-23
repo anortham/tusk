@@ -5,7 +5,7 @@
  * Allows calling tusk tools from command line and Claude Code hooks
  */
 
-import { saveEntry, getRecentEntries, searchEntries, generateId } from "./journal.js";
+import { saveEntry, getRecentEntries, searchEntries, generateId, getWorkspaceSummary } from "./journal.js";
 import type { JournalEntry } from "./journal.js";
 import { getGitContext } from "./git.js";
 import { generateStandup } from "./standup.js";
@@ -93,6 +93,9 @@ async function handleRecallCLI(args: string[]) {
   let search: string | undefined;
   let project: string | undefined;
   let workspace: string | 'current' | 'all' = 'current';
+  let from: string | undefined;
+  let to: string | undefined;
+  let listWorkspaces = false;
 
   for (let i = 0; i < args.length; i++) {
     const arg = args[i];
@@ -166,12 +169,68 @@ async function handleRecallCLI(args: string[]) {
       workspace = nextArg;
     } else if (arg === '--all-workspaces') {
       workspace = 'all';
+    } else if (arg.startsWith('--from=')) {
+      const fromPart = arg.split('=')[1];
+      if (!fromPart) {
+        console.error('❌ --from= requires a value. Example: --from=2024-01-01');
+        process.exit(1);
+      }
+      from = fromPart;
+    } else if (arg.startsWith('--to=')) {
+      const toPart = arg.split('=')[1];
+      if (!toPart) {
+        console.error('❌ --to= requires a value. Example: --to=2024-01-31');
+        process.exit(1);
+      }
+      to = toPart;
+    } else if (arg === '--from' && i + 1 < args.length) {
+      const nextArg = args[++i];
+      if (!nextArg) {
+        console.error('❌ --from requires a value. Example: --from 2024-01-01');
+        process.exit(1);
+      }
+      from = nextArg;
+    } else if (arg === '--to' && i + 1 < args.length) {
+      const nextArg = args[++i];
+      if (!nextArg) {
+        console.error('❌ --to requires a value. Example: --to 2024-01-31');
+        process.exit(1);
+      }
+      to = nextArg;
+    } else if (arg === '--list-workspaces') {
+      listWorkspaces = true;
     }
+  }
+
+  // Handle workspace listing if requested
+  if (listWorkspaces) {
+    const workspaces = await getWorkspaceSummary();
+    if (workspaces.length === 0) {
+      console.log('📂 No workspaces found');
+      return;
+    }
+
+    console.log(`📂 Found ${workspaces.length} workspace${workspaces.length === 1 ? '' : 's'}:`);
+    console.log('');
+
+    workspaces.forEach(ws => {
+      console.log(`📁 ${ws.name}`);
+      console.log(`   Path: ${ws.path}`);
+      console.log(`   Entries: ${ws.entryCount}`);
+      if (ws.lastActivity) {
+        console.log(`   Last activity: ${ws.lastActivity}`);
+      }
+      if (ws.projects.length > 0) {
+        console.log(`   Projects: ${ws.projects.join(', ')}`);
+      }
+      console.log('');
+    });
+    return;
   }
 
   const entries = search
     ? await searchEntries(search, { workspace })
-    : await getRecentEntries({ days, project, workspace });
+    : await getRecentEntries({ days, project, workspace, from, to });
 
   if (entries.length === 0) {
     console.log('🔍 No entries found');
@@ -336,6 +395,9 @@ Examples:
   bun cli.ts rc --days 7 --search auth
   bun cli.ts recall --project myproject
   bun cli.ts recall --all-workspaces --days 3
+  bun cli.ts recall --from 2024-01-01 --to 2024-01-31
+  bun cli.ts recall --from 2024-01-01
+  bun cli.ts recall --list-workspaces
 
   # Generate standup
   bun cli.ts standup
@@ -349,10 +411,13 @@ Checkpoint Options:
 
 Recall Options:
   --days N         Number of days to look back (default: 2)
+  --from DATE      Start date (YYYY-MM-DD or ISO 8601)
+  --to DATE        End date (YYYY-MM-DD or ISO 8601)
   --search TEXT    Search term to filter entries
   --project NAME   Filter by specific project
   --workspace ID   Filter by specific workspace ID (default: current)
   --all-workspaces Include entries from all workspaces
+  --list-workspaces List all workspaces with statistics
 
 Standup Options:
   --style TYPE     meeting|written|executive|metrics (default: meeting)
