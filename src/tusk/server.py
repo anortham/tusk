@@ -75,44 +75,30 @@ class TuskServer:
     def _get_instructions(self) -> str:
         """Get behavioral instructions for Claude."""
         return """
-# Tusk - Persistent Memory & Organization System
+# Tusk Memory System - Behavioral Instructions
 
-## PROACTIVE USAGE - When to Use Tusk Automatically
+Follow these steps for EVERY interaction:
 
-**Auto-Actions:**
-- **Session Start**: ALWAYS use `recall(context="recent")` first
-- **Complex Tasks (3+ steps)**: Create `plan` before coding
-- **Multiple Tasks**: Use `task(action="add")` for each discrete task
-- **After Achievements**: Create `checkpoint` after significant work
-- **Before Risky Changes**: Create `checkpoint` before major refactoring
+1. **Session Start**: ALWAYS begin by using `recall(context="recent")` first
+2. **Multiple Tasks**: Convert any list/numbered items to individual `task(action="add")` entries immediately  
+3. **Complex Work**: Create a `plan` before starting any multi-step task (3+ steps)
+4. **After Success**: Save `checkpoint` after completing significant work or solving problems
+5. **Before Risk**: Save `checkpoint` before major changes, refactoring, or risky operations
 
-**Conversation Triggers:**
-- "I was working on..." → Use `recall(context="recent")` immediately
-- "yesterday/last time/previously" → Search with `recall` or `checkpoint`
-- Numbered/bulleted task list → Convert each to `task(action="add")`
-- "what was I doing?" → Use `standup(timeframe="daily")` or `recall`
-- Complex feature request → Create `plan` with clear steps
+## Trigger-Based Actions:
+- User mentions "yesterday/last time/before" → Search with `recall` or `checkpoint(action="search")`
+- User asks "what was I doing?" → Use `standup(timeframe="daily")`  
+- User provides task list → Convert each item to `task(action="add")`
+- Complex feature request → Create detailed `plan` with steps
+- Work session ends → Save `checkpoint` with progress summary
 
-**Work Patterns:**
-- Multi-session projects: Maintain tasks across conversations
-- Development work: Checkpoint after tests pass, features complete, bugs fixed
-- Learning/research: Checkpoint insights and discoveries
-- Problem solving: Plan complex debugging approaches
+## Critical Rules:
+- NEVER start work without checking recent context first
+- ALWAYS search before creating (avoid duplicates)  
+- CAPTURE insights and breakthroughs immediately as checkpoints
+- MAINTAIN task persistence across conversations
 
-## The Tusk Workflow
-
-1. **Start with Recall** - Begin sessions by recalling previous context
-2. **Plan with Purpose** - Break complex work into manageable steps
-3. **Track with Tasks** - Convert plans into specific actionable tasks
-4. **Checkpoint Success** - Save progress at meaningful moments
-5. **Standup with Pride** - Generate summaries of accomplishments
-
-## Search Before Creating
-- `task(action="search", query="...")` - Find related tasks
-- `checkpoint(action="search", query="...")` - Discover relevant saves
-- `plan(action="search", query="...")` - Check for existing plans
-
-Every checkpoint saved, task completed, and plan executed builds lasting progress.
+Your memory = their productivity. Use it religiously.
         """.strip()
 
     def _register_tools(self) -> None:
