@@ -1,0 +1,46 @@
+# Bun Configuration for tusk-bun project
+# https://bun.sh/docs/runtime/bunfig
+
+[test]
+# Test runner configuration
+timeout = 30000  # 30 second default timeout
+root = "./tests"
+smol = false  # Use full test runner features
+
+# Coverage configuration
+coverage = true
+coverageDir = "coverage"
+coverageReporters = ["text", "html", "json", "lcov"]
+coverageThreshold = 80
+
+# Test environment
+env = { TUSK_TEST_MODE = "true" }
+
+# Preload files for testing
+preload = ["./tests/setup.ts"]
+
+# Test patterns
+testNamePattern = ["*.test.ts", "*.test.js"]
+
+# Exclude patterns
+exclude = [
+  "node_modules/**",
+  "coverage/**",
+  "dist/**",
+  ".git/**"
+]
+
+[runtime]
+# Runtime configuration for tests
+enableBunBuild = true
+
+[install]
+# Package installation preferences
+auto = "fallback"
+frozen = false
+production = false
+
+[dev]
+# Development server configuration
+port = 3000
+hot = true

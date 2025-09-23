@@ -1,0 +1,211 @@
+{
+  "lockfileVersion": 1,
+  "workspaces": {
+    "": {
+      "name": "tusk-bun",
+      "dependencies": {
+        "@modelcontextprotocol/sdk": "^1.18.1",
+        "zod": "^4.1.11",
+      },
+      "devDependencies": {
+        "@types/bun": "latest",
+      },
+      "peerDependencies": {
+        "typescript": "^5",
+      },
+    },
+  },
+  "packages": {
+    "@modelcontextprotocol/sdk": ["@modelcontextprotocol/sdk@1.18.1", "https://pkgs.dev.azure.com/childrensal/_packaging/COA-NPM-Packages/npm/registry/@modelcontextprotocol/sdk/-/sdk-1.18.1.tgz", { "dependencies": { "ajv": "^6.12.6", "content-type": "^1.0.5", "cors": "^2.8.5", "cross-spawn": "^7.0.5", "eventsource": "^3.0.2", "eventsource-parser": "^3.0.0", "express": "^5.0.1", "express-rate-limit": "^7.5.0", "pkce-challenge": "^5.0.0", "raw-body": "^3.0.0", "zod": "^3.23.8", "zod-to-json-schema": "^3.24.1" } }, "sha1-zcfggJMZsEZlmbk/v2Vdr6n0nOs="],
+
+    "@types/bun": ["@types/bun@1.2.22", "https://pkgs.dev.azure.com/childrensal/_packaging/COA-NPM-Packages/npm/registry/@types/bun/-/bun-1.2.22.tgz", { "dependencies": { "bun-types": "1.2.22" } }, "sha1-yOYqgdr8mamkjdUbk3XiVZf6tlI="],
+
+    "@types/node": ["@types/node@24.5.2", "https://pkgs.dev.azure.com/childrensal/_packaging/COA-NPM-Packages/npm/registry/@types/node/-/node-24.5.2.tgz", { "dependencies": { "undici-types": "~7.12.0" } }, "sha1-Us64P1D+D8/fvSqfq22y6efvZEY="],
+
+    "@types/react": ["@types/react@19.1.13", "https://pkgs.dev.azure.com/childrensal/_packaging/COA-NPM-Packages/npm/registry/@types/react/-/react-19.1.13.tgz", { "dependencies": { "csstype": "^3.0.2" } }, "sha1-/GUP+mgNc5olpTD11+vgDN13GIM="],
+
+    "accepts": ["accepts@2.0.0", "https://pkgs.dev.azure.com/childrensal/_packaging/COA-NPM-Packages/npm/registry/accepts/-/accepts-2.0.0.tgz", { "dependencies": { "mime-types": "^3.0.0", "negotiator": "^1.0.0" } }, "sha1-u89LpQdUZ/PyEx6rPP/HPC9deJU="],
+
+    "ajv": ["ajv@6.12.6", "https://pkgs.dev.azure.com/childrensal/_packaging/COA-NPM-Packages/npm/registry/ajv/-/ajv-6.12.6.tgz", { "dependencies": { "fast-deep-equal": "^3.1.1", "fast-json-stable-stringify": "^2.0.0", "json-schema-traverse": "^0.4.1", "uri-js": "^4.2.2" } }, "sha1-uvWmLoArB9l3A0WG+MO69a3ybfQ="],
+
+    "body-parser": ["body-parser@2.2.0", "https://pkgs.dev.azure.com/childrensal/_packaging/COA-NPM-Packages/npm/registry/body-parser/-/body-parser-2.2.0.tgz", { "dependencies": { "bytes": "^3.1.2", "content-type": "^1.0.5", "debug": "^4.4.0", "http-errors": "^2.0.0", "iconv-lite": "^0.6.3", "on-finished": "^2.4.1", "qs": "^6.14.0", "raw-body": "^3.0.0", "type-is": "^2.0.0" } }, "sha1-96llbeMFJJpxW1Sbe4/Rq5393Po="],
+
+    "bun-types": ["bun-types@1.2.22", "https://pkgs.dev.azure.com/childrensal/_packaging/COA-NPM-Packages/npm/registry/bun-types/-/bun-types-1.2.22.tgz", { "dependencies": { "@types/node": "*" }, "peerDependencies": { "@types/react": "^19" } }, "sha1-xMQzn/2ha6jGN5OAJdCXXaYhO1s="],
+
+    "bytes": ["bytes@3.1.2", "https://pkgs.dev.azure.com/childrensal/_packaging/COA-NPM-Packages/npm/registry/bytes/-/bytes-3.1.2.tgz", {}, "sha1-iwvuuYYFrfGxKPpDhkA8AJ4CIaU="],
+
+    "call-bind-apply-helpers": ["call-bind-apply-helpers@1.0.2", "https://pkgs.dev.azure.com/childrensal/_packaging/COA-NPM-Packages/npm/registry/call-bind-apply-helpers/-/call-bind-apply-helpers-1.0.2.tgz", { "dependencies": { "es-errors": "^1.3.0", "function-bind": "^1.1.2" } }, "sha1-S1QowiK+mF15w9gmV0edvgtZstY="],
+
+    "call-bound": ["call-bound@1.0.4", "https://pkgs.dev.azure.com/childrensal/_packaging/COA-NPM-Packages/npm/registry/call-bound/-/call-bound-1.0.4.tgz", { "dependencies": { "call-bind-apply-helpers": "^1.0.2", "get-intrinsic": "^1.3.0" } }, "sha1-I43pNdKippKSjFOMfM+pEGf9Bio="],
+
+    "content-disposition": ["content-disposition@1.0.0", "https://pkgs.dev.azure.com/childrensal/_packaging/COA-NPM-Packages/npm/registry/content-disposition/-/content-disposition-1.0.0.tgz", { "dependencies": { "safe-buffer": "5.2.1" } }, "sha1-hEQmyzmPk0yu/LsXIgASa8fOrOI="],
+
+    "content-type": ["content-type@1.0.5", "https://pkgs.dev.azure.com/childrensal/_packaging/COA-NPM-Packages/npm/registry/content-type/-/content-type-1.0.5.tgz", {}, "sha1-i3cxYmVtHRCGeEyPI6VM5tc9eRg="],
+
+    "cookie": ["cookie@0.7.2", "https://pkgs.dev.azure.com/childrensal/_packaging/COA-NPM-Packages/npm/registry/cookie/-/cookie-0.7.2.tgz", {}, "sha1-VWNpxHKiupEPKXmJG1JrNDYjftc="],
+
+    "cookie-signature": ["cookie-signature@1.2.2", "https://pkgs.dev.azure.com/childrensal/_packaging/COA-NPM-Packages/npm/registry/cookie-signature/-/cookie-signature-1.2.2.tgz", {}, "sha1-V8f8PMKTrKuf7FTXPhVpDr5KF5M="],
+
+    "cors": ["cors@2.8.5", "https://pkgs.dev.azure.com/childrensal/_packaging/COA-NPM-Packages/npm/registry/cors/-/cors-2.8.5.tgz", { "dependencies": { "object-assign": "^4", "vary": "^1" } }, "sha1-6sEdpRWS3Ya58G9uesKTs9+HXSk="],
+
+    "cross-spawn": ["cross-spawn@7.0.6", "https://pkgs.dev.azure.com/childrensal/_packaging/COA-NPM-Packages/npm/registry/cross-spawn/-/cross-spawn-7.0.6.tgz", { "dependencies": { "path-key": "^3.1.0", "shebang-command": "^2.0.0", "which": "^2.0.1" } }, "sha1-ilj+ePANzXDDcEUXWd+/rwPo7p8="],
+
+    "csstype": ["csstype@3.1.3", "https://pkgs.dev.azure.com/childrensal/_packaging/COA-NPM-Packages/npm/registry/csstype/-/csstype-3.1.3.tgz", {}, "sha1-2A/ylNEU+w5qxQD7+FtgE31+/4E="],
+
+    "debug": ["debug@4.4.3", "https://pkgs.dev.azure.com/childrensal/_packaging/COA-NPM-Packages/npm/registry/debug/-/debug-4.4.3.tgz", { "dependencies": { "ms": "^2.1.3" } }, "sha1-xq5DLZvZZiWC/OCHCbA4xY6ePWo="],
+
+    "depd": ["depd@2.0.0", "https://pkgs.dev.azure.com/childrensal/_packaging/COA-NPM-Packages/npm/registry/depd/-/depd-2.0.0.tgz", {}, "sha1-tpYWPMdXVg0JzyLMj60Vcbeedt8="],
+
+    "dunder-proto": ["dunder-proto@1.0.1", "https://pkgs.dev.azure.com/childrensal/_packaging/COA-NPM-Packages/npm/registry/dunder-proto/-/dunder-proto-1.0.1.tgz", { "dependencies": { "call-bind-apply-helpers": "^1.0.1", "es-errors": "^1.3.0", "gopd": "^1.2.0" } }, "sha1-165mfh3INIL4tw/Q9u78UNow9Yo="],
+
+    "ee-first": ["ee-first@1.1.1", "https://pkgs.dev.azure.com/childrensal/_packaging/COA-NPM-Packages/npm/registry/ee-first/-/ee-first-1.1.1.tgz", {}, "sha1-WQxhFWsK4vTwJVcyoViyZrxWsh0="],
+
+    "encodeurl": ["encodeurl@2.0.0", "https://pkgs.dev.azure.com/childrensal/_packaging/COA-NPM-Packages/npm/registry/encodeurl/-/encodeurl-2.0.0.tgz", {}, "sha1-e46omAd9fkCdOsRUdOo46vCFelg="],
+
+    "es-define-property": ["es-define-property@1.0.1", "https://pkgs.dev.azure.com/childrensal/_packaging/COA-NPM-Packages/npm/registry/es-define-property/-/es-define-property-1.0.1.tgz", {}, "sha1-mD6y+aZyTpMD9hrd8BHHLgngsPo="],
+
+    "es-errors": ["es-errors@1.3.0", "https://pkgs.dev.azure.com/childrensal/_packaging/COA-NPM-Packages/npm/registry/es-errors/-/es-errors-1.3.0.tgz", {}, "sha1-BfdaJdq5jk+x3NXhRywFRtUFfI8="],
+
+    "es-object-atoms": ["es-object-atoms@1.1.1", "https://pkgs.dev.azure.com/childrensal/_packaging/COA-NPM-Packages/npm/registry/es-object-atoms/-/es-object-atoms-1.1.1.tgz", { "dependencies": { "es-errors": "^1.3.0" } }, "sha1-HE8sSDcydZfOadLKGQp/3RcjOME="],
+
+    "escape-html": ["escape-html@1.0.3", "https://pkgs.dev.azure.com/childrensal/_packaging/COA-NPM-Packages/npm/registry/escape-html/-/escape-html-1.0.3.tgz", {}, "sha1-Aljq5NPQwJdN4cFpGI7wBR0dGYg="],
+
+    "etag": ["etag@1.8.1", "https://pkgs.dev.azure.com/childrensal/_packaging/COA-NPM-Packages/npm/registry/etag/-/etag-1.8.1.tgz", {}, "sha1-Qa4u62XvpiJorr/qg6x9eSmbCIc="],
+
+    "eventsource": ["eventsource@3.0.7", "https://pkgs.dev.azure.com/childrensal/_packaging/COA-NPM-Packages/npm/registry/eventsource/-/eventsource-3.0.7.tgz", { "dependencies": { "eventsource-parser": "^3.0.1" } }, "sha1-EVdiLi9Td7tq7yEUNycougwVaYk="],
+
+    "eventsource-parser": ["eventsource-parser@3.0.6", "https://pkgs.dev.azure.com/childrensal/_packaging/COA-NPM-Packages/npm/registry/eventsource-parser/-/eventsource-parser-3.0.6.tgz", {}, "sha1-KS4WXjTKy8k2w8knGe8ybUrrTpA="],
+
+    "express": ["express@5.1.0", "https://pkgs.dev.azure.com/childrensal/_packaging/COA-NPM-Packages/npm/registry/express/-/express-5.1.0.tgz", { "dependencies": { "accepts": "^2.0.0", "body-parser": "^2.2.0", "content-disposition": "^1.0.0", "content-type": "^1.0.5", "cookie": "^0.7.1", "cookie-signature": "^1.2.1", "debug": "^4.4.0", "encodeurl": "^2.0.0", "escape-html": "^1.0.3", "etag": "^1.8.1", "finalhandler": "^2.1.0", "fresh": "^2.0.0", "http-errors": "^2.0.0", "merge-descriptors": "^2.0.0", "mime-types": "^3.0.0", "on-finished": "^2.4.1", "once": "^1.4.0", "parseurl": "^1.3.3", "proxy-addr": "^2.0.7", "qs": "^6.14.0", "range-parser": "^1.2.1", "router": "^2.2.0", "send": "^1.1.0", "serve-static": "^2.2.0", "statuses": "^2.0.1", "type-is": "^2.0.1", "vary": "^1.1.2" } }, "sha1-0xvq9xWgAW8NU/R9O016zyjHXMk="],
+
+    "express-rate-limit": ["express-rate-limit@7.5.1", "https://pkgs.dev.azure.com/childrensal/_packaging/COA-NPM-Packages/npm/registry/express-rate-limit/-/express-rate-limit-7.5.1.tgz", { "peerDependencies": { "express": ">= 4.11" } }, "sha1-jDpC9pIJo6HJaYkAcOzp4gqHnew="],
+
+    "fast-deep-equal": ["fast-deep-equal@3.1.3", "https://pkgs.dev.azure.com/childrensal/_packaging/COA-NPM-Packages/npm/registry/fast-deep-equal/-/fast-deep-equal-3.1.3.tgz", {}, "sha1-On1WtVnWy8PrUSMlJE5hmmXGxSU="],
+
+    "fast-json-stable-stringify": ["fast-json-stable-stringify@2.1.0", "https://pkgs.dev.azure.com/childrensal/_packaging/COA-NPM-Packages/npm/registry/fast-json-stable-stringify/-/fast-json-stable-stringify-2.1.0.tgz", {}, "sha1-h0v2nG9ATCtdmcSBNBOZ/VWJJjM="],
+
+    "finalhandler": ["finalhandler@2.1.0", "https://pkgs.dev.azure.com/childrensal/_packaging/COA-NPM-Packages/npm/registry/finalhandler/-/finalhandler-2.1.0.tgz", { "dependencies": { "debug": "^4.4.0", "encodeurl": "^2.0.0", "escape-html": "^1.0.3", "on-finished": "^2.4.1", "parseurl": "^1.3.3", "statuses": "^2.0.1" } }, "sha1-cjBjc6qJ0FqCQu1WnthqG/98Vh8="],
+
+    "forwarded": ["forwarded@0.2.0", "https://pkgs.dev.azure.com/childrensal/_packaging/COA-NPM-Packages/npm/registry/forwarded/-/forwarded-0.2.0.tgz", {}, "sha1-ImmTZCiq1MFcfr6XeahL8LKoGBE="],
+
+    "fresh": ["fresh@2.0.0", "https://pkgs.dev.azure.com/childrensal/_packaging/COA-NPM-Packages/npm/registry/fresh/-/fresh-2.0.0.tgz", {}, "sha1-jdffahs6Gzpc8YbAWl3SZ2ImNaQ="],
+
+    "function-bind": ["function-bind@1.1.2", "https://pkgs.dev.azure.com/childrensal/_packaging/COA-NPM-Packages/npm/registry/function-bind/-/function-bind-1.1.2.tgz", {}, "sha1-LALYZNl/PqbIgwxGTL0Rq26rehw="],
+
+    "get-intrinsic": ["get-intrinsic@1.3.0", "https://pkgs.dev.azure.com/childrensal/_packaging/COA-NPM-Packages/npm/registry/get-intrinsic/-/get-intrinsic-1.3.0.tgz", { "dependencies": { "call-bind-apply-helpers": "^1.0.2", "es-define-property": "^1.0.1", "es-errors": "^1.3.0", "es-object-atoms": "^1.1.1", "function-bind": "^1.1.2", "get-proto": "^1.0.1", "gopd": "^1.2.0", "has-symbols": "^1.1.0", "hasown": "^2.0.2", "math-intrinsics": "^1.1.0" } }, "sha1-dD8OO2lkqTpUke0b/6rgVNf5jQE="],
+
+    "get-proto": ["get-proto@1.0.1", "https://pkgs.dev.azure.com/childrensal/_packaging/COA-NPM-Packages/npm/registry/get-proto/-/get-proto-1.0.1.tgz", { "dependencies": { "dunder-proto": "^1.0.1", "es-object-atoms": "^1.0.0" } }, "sha1-FQs/J0OGnvPoUewMSdFbHRTQDuE="],
+
+    "gopd": ["gopd@1.2.0", "https://pkgs.dev.azure.com/childrensal/_packaging/COA-NPM-Packages/npm/registry/gopd/-/gopd-1.2.0.tgz", {}, "sha1-ifVrghe9vIgCvSmd9tfxCB1+UaE="],
+
+    "has-symbols": ["has-symbols@1.1.0", "https://pkgs.dev.azure.com/childrensal/_packaging/COA-NPM-Packages/npm/registry/has-symbols/-/has-symbols-1.1.0.tgz", {}, "sha1-/JxqeDoISVHQuXH+EBjegTcHozg="],
+
+    "hasown": ["hasown@2.0.2", "https://pkgs.dev.azure.com/childrensal/_packaging/COA-NPM-Packages/npm/registry/hasown/-/hasown-2.0.2.tgz", { "dependencies": { "function-bind": "^1.1.2" } }, "sha1-AD6vkb563DcuhOxZ3DclLO24AAM="],
+
+    "http-errors": ["http-errors@2.0.0", "https://pkgs.dev.azure.com/childrensal/_packaging/COA-NPM-Packages/npm/registry/http-errors/-/http-errors-2.0.0.tgz", { "dependencies": { "depd": "2.0.0", "inherits": "2.0.4", "setprototypeof": "1.2.0", "statuses": "2.0.1", "toidentifier": "1.0.1" } }, "sha1-t3dKFIbvc892Z6ya4IWMASxXudM="],
+
+    "iconv-lite": ["iconv-lite@0.7.0", "https://pkgs.dev.azure.com/childrensal/_packaging/COA-NPM-Packages/npm/registry/iconv-lite/-/iconv-lite-0.7.0.tgz", { "dependencies": { "safer-buffer": ">= 2.1.2 < 3.0.0" } }, "sha1-xQzYDmdGyoEV65h0OvqBqg4Uej4="],
+
+    "inherits": ["inherits@2.0.4", "https://pkgs.dev.azure.com/childrensal/_packaging/COA-NPM-Packages/npm/registry/inherits/-/inherits-2.0.4.tgz", {}, "sha1-D6LGT5MpF8NDOg3tVTY6rjdBa3w="],
+
+    "ipaddr.js": ["ipaddr.js@1.9.1", "https://pkgs.dev.azure.com/childrensal/_packaging/COA-NPM-Packages/npm/registry/ipaddr.js/-/ipaddr.js-1.9.1.tgz", {}, "sha1-v/OFQ+64mEglB5/zoqjmy9RngbM="],
+
+    "is-promise": ["is-promise@4.0.0", "https://pkgs.dev.azure.com/childrensal/_packaging/COA-NPM-Packages/npm/registry/is-promise/-/is-promise-4.0.0.tgz", {}, "sha1-Qv+fhCBsGZHSbev1IN1cAQQt0vM="],
+
+    "isexe": ["isexe@2.0.0", "https://pkgs.dev.azure.com/childrensal/_packaging/COA-NPM-Packages/npm/registry/isexe/-/isexe-2.0.0.tgz", {}, "sha1-6PvzdNxVb/iUehDcsFctYz8s+hA="],
+
+    "json-schema-traverse": ["json-schema-traverse@0.4.1", "https://pkgs.dev.azure.com/childrensal/_packaging/COA-NPM-Packages/npm/registry/json-schema-traverse/-/json-schema-traverse-0.4.1.tgz", {}, "sha1-afaofZUTq4u4/mO9sJecRI5oRmA="],
+
+    "math-intrinsics": ["math-intrinsics@1.1.0", "https://pkgs.dev.azure.com/childrensal/_packaging/COA-NPM-Packages/npm/registry/math-intrinsics/-/math-intrinsics-1.1.0.tgz", {}, "sha1-oN10voHiqlwvJ+Zc4oNgXuTit/k="],
+
+    "media-typer": ["media-typer@1.1.0", "https://pkgs.dev.azure.com/childrensal/_packaging/COA-NPM-Packages/npm/registry/media-typer/-/media-typer-1.1.0.tgz", {}, "sha1-ardLjy0zIPIGSyqHo455Mf86VWE="],
+
+    "merge-descriptors": ["merge-descriptors@2.0.0", "https://pkgs.dev.azure.com/childrensal/_packaging/COA-NPM-Packages/npm/registry/merge-descriptors/-/merge-descriptors-2.0.0.tgz", {}, "sha1-6pIvZgY1oiSe5WXgRJ+VHmtgOAg="],
+
+    "mime-db": ["mime-db@1.54.0", "https://pkgs.dev.azure.com/childrensal/_packaging/COA-NPM-Packages/npm/registry/mime-db/-/mime-db-1.54.0.tgz", {}, "sha1-zds+5PnGRTDf9kAjZmHULLajFPU="],
+
+    "mime-types": ["mime-types@3.0.1", "https://pkgs.dev.azure.com/childrensal/_packaging/COA-NPM-Packages/npm/registry/mime-types/-/mime-types-3.0.1.tgz", { "dependencies": { "mime-db": "^1.54.0" } }, "sha1-sdlNaZepsy/WnrrtDbc96Ky1Gc4="],
+
+    "ms": ["ms@2.1.3", "https://pkgs.dev.azure.com/childrensal/_packaging/COA-NPM-Packages/npm/registry/ms/-/ms-2.1.3.tgz", {}, "sha1-V0yBOM4dK1hh8LRFedut1gxmFbI="],
+
+    "negotiator": ["negotiator@1.0.0", "https://pkgs.dev.azure.com/childrensal/_packaging/COA-NPM-Packages/npm/registry/negotiator/-/negotiator-1.0.0.tgz", {}, "sha1-tskbtHFy1p+Tz9fDV7u1KQGbX2o="],
+
+    "object-assign": ["object-assign@4.1.1", "https://pkgs.dev.azure.com/childrensal/_packaging/COA-NPM-Packages/npm/registry/object-assign/-/object-assign-4.1.1.tgz", {}, "sha1-IQmtx5ZYh8/AXLvUQsrIv7s2CGM="],
+
+    "object-inspect": ["object-inspect@1.13.4", "https://pkgs.dev.azure.com/childrensal/_packaging/COA-NPM-Packages/npm/registry/object-inspect/-/object-inspect-1.13.4.tgz", {}, "sha1-g3UmXiG8IND6WCwi4bE0hdbgAhM="],
+
+    "on-finished": ["on-finished@2.4.1", "https://pkgs.dev.azure.com/childrensal/_packaging/COA-NPM-Packages/npm/registry/on-finished/-/on-finished-2.4.1.tgz", { "dependencies": { "ee-first": "1.1.1" } }, "sha1-WMjEQRblSEWtV/FKsQsDUzGErD8="],
+
+    "once": ["once@1.4.0", "https://pkgs.dev.azure.com/childrensal/_packaging/COA-NPM-Packages/npm/registry/once/-/once-1.4.0.tgz", { "dependencies": { "wrappy": "1" } }, "sha1-WDsap3WWHUsROsF9nFC6753Xa9E="],
+
+    "parseurl": ["parseurl@1.3.3", "https://pkgs.dev.azure.com/childrensal/_packaging/COA-NPM-Packages/npm/registry/parseurl/-/parseurl-1.3.3.tgz", {}, "sha1-naGee+6NEt/wUT7Vt2lXeTvC6NQ="],
+
+    "path-key": ["path-key@3.1.1", "https://pkgs.dev.azure.com/childrensal/_packaging/COA-NPM-Packages/npm/registry/path-key/-/path-key-3.1.1.tgz", {}, "sha1-WB9q3mWMu6ZaDTOA3ndTKVBU83U="],
+
+    "path-to-regexp": ["path-to-regexp@8.3.0", "https://pkgs.dev.azure.com/childrensal/_packaging/COA-NPM-Packages/npm/registry/path-to-regexp/-/path-to-regexp-8.3.0.tgz", {}, "sha1-qoGKaYH5kyEAOgiYfTzsnDR0zR8="],
+
+    "pkce-challenge": ["pkce-challenge@5.0.0", "https://pkgs.dev.azure.com/childrensal/_packaging/COA-NPM-Packages/npm/registry/pkce-challenge/-/pkce-challenge-5.0.0.tgz", {}, "sha1-w6QFy0nicglKOOiQorUdoCKMTZc="],
+
+    "proxy-addr": ["proxy-addr@2.0.7", "https://pkgs.dev.azure.com/childrensal/_packaging/COA-NPM-Packages/npm/registry/proxy-addr/-/proxy-addr-2.0.7.tgz", { "dependencies": { "forwarded": "0.2.0", "ipaddr.js": "1.9.1" } }, "sha1-8Z/mnOqzEe65S0LnDowgcPm6ECU="],
+
+    "punycode": ["punycode@2.3.1", "https://pkgs.dev.azure.com/childrensal/_packaging/COA-NPM-Packages/npm/registry/punycode/-/punycode-2.3.1.tgz", {}, "sha1-AnQi4vrsCyXhVJw+G9gwm5EztuU="],
+
+    "qs": ["qs@6.14.0", "https://pkgs.dev.azure.com/childrensal/_packaging/COA-NPM-Packages/npm/registry/qs/-/qs-6.14.0.tgz", { "dependencies": { "side-channel": "^1.1.0" } }, "sha1-xj+kBoDSxclBQSoOiZyJr2DAqTA="],
+
+    "range-parser": ["range-parser@1.2.1", "https://pkgs.dev.azure.com/childrensal/_packaging/COA-NPM-Packages/npm/registry/range-parser/-/range-parser-1.2.1.tgz", {}, "sha1-PPNwI9GZ4cJNGlW4SADC8+ZGgDE="],
+
+    "raw-body": ["raw-body@3.0.1", "https://pkgs.dev.azure.com/childrensal/_packaging/COA-NPM-Packages/npm/registry/raw-body/-/raw-body-3.0.1.tgz", { "dependencies": { "bytes": "3.1.2", "http-errors": "2.0.0", "iconv-lite": "0.7.0", "unpipe": "1.0.0" } }, "sha1-ztXNead7uwSW1wfyoPnhrjrs3LE="],
+
+    "router": ["router@2.2.0", "https://pkgs.dev.azure.com/childrensal/_packaging/COA-NPM-Packages/npm/registry/router/-/router-2.2.0.tgz", { "dependencies": { "debug": "^4.4.0", "depd": "^2.0.0", "is-promise": "^4.0.0", "parseurl": "^1.3.3", "path-to-regexp": "^8.0.0" } }, "sha1-AZvmILcRyHZBFnzHm5kJDwCxRu8="],
+
+    "safe-buffer": ["safe-buffer@5.2.1", "https://pkgs.dev.azure.com/childrensal/_packaging/COA-NPM-Packages/npm/registry/safe-buffer/-/safe-buffer-5.2.1.tgz", {}, "sha1-Hq+fqb2x/dTsdfWPnNtOa3gn7sY="],
+
+    "safer-buffer": ["safer-buffer@2.1.2", "https://pkgs.dev.azure.com/childrensal/_packaging/COA-NPM-Packages/npm/registry/safer-buffer/-/safer-buffer-2.1.2.tgz", {}, "sha1-RPoWGwGHuVSd2Eu5GAL5vYOFzWo="],
+
+    "send": ["send@1.2.0", "https://pkgs.dev.azure.com/childrensal/_packaging/COA-NPM-Packages/npm/registry/send/-/send-1.2.0.tgz", { "dependencies": { "debug": "^4.3.5", "encodeurl": "^2.0.0", "escape-html": "^1.0.3", "etag": "^1.8.1", "fresh": "^2.0.0", "http-errors": "^2.0.0", "mime-types": "^3.0.1", "ms": "^2.1.3", "on-finished": "^2.4.1", "range-parser": "^1.2.1", "statuses": "^2.0.1" } }, "sha1-MqdVT7d3uDHfqCg3D3c6OAjTchI="],
+
+    "serve-static": ["serve-static@2.2.0", "https://pkgs.dev.azure.com/childrensal/_packaging/COA-NPM-Packages/npm/registry/serve-static/-/serve-static-2.2.0.tgz", { "dependencies": { "encodeurl": "^2.0.0", "escape-html": "^1.0.3", "parseurl": "^1.3.3", "send": "^1.2.0" } }, "sha1-nAJWTuJZvdIlG4LWWaLn4ZONZvk="],
+
+    "setprototypeof": ["setprototypeof@1.2.0", "https://pkgs.dev.azure.com/childrensal/_packaging/COA-NPM-Packages/npm/registry/setprototypeof/-/setprototypeof-1.2.0.tgz", {}, "sha1-ZsmiSnP5/CjL5msJ/tPTPcrxtCQ="],
+
+    "shebang-command": ["shebang-command@2.0.0", "https://pkgs.dev.azure.com/childrensal/_packaging/COA-NPM-Packages/npm/registry/shebang-command/-/shebang-command-2.0.0.tgz", { "dependencies": { "shebang-regex": "^3.0.0" } }, "sha1-zNCvT4g1+9wmW4JGGq8MNmY/NOo="],
+
+    "shebang-regex": ["shebang-regex@3.0.0", "https://pkgs.dev.azure.com/childrensal/_packaging/COA-NPM-Packages/npm/registry/shebang-regex/-/shebang-regex-3.0.0.tgz", {}, "sha1-rhbxZE2HPsrYQ7AwexQzYtTEIXI="],
+
+    "side-channel": ["side-channel@1.1.0", "https://pkgs.dev.azure.com/childrensal/_packaging/COA-NPM-Packages/npm/registry/side-channel/-/side-channel-1.1.0.tgz", { "dependencies": { "es-errors": "^1.3.0", "object-inspect": "^1.13.3", "side-channel-list": "^1.0.0", "side-channel-map": "^1.0.1", "side-channel-weakmap": "^1.0.2" } }, "sha1-w/z/nE2pMnhIczNeyXZfqU/2a8k="],
+
+    "side-channel-list": ["side-channel-list@1.0.0", "https://pkgs.dev.azure.com/childrensal/_packaging/COA-NPM-Packages/npm/registry/side-channel-list/-/side-channel-list-1.0.0.tgz", { "dependencies": { "es-errors": "^1.3.0", "object-inspect": "^1.13.3" } }, "sha1-EMtZhCYxFdO3oOM2WR4pCoMK+K0="],
+
+    "side-channel-map": ["side-channel-map@1.0.1", "https://pkgs.dev.azure.com/childrensal/_packaging/COA-NPM-Packages/npm/registry/side-channel-map/-/side-channel-map-1.0.1.tgz", { "dependencies": { "call-bound": "^1.0.2", "es-errors": "^1.3.0", "get-intrinsic": "^1.2.5", "object-inspect": "^1.13.3" } }, "sha1-1rtrN5Asb+9RdOX1M/q0xzKib0I="],
+
+    "side-channel-weakmap": ["side-channel-weakmap@1.0.2", "https://pkgs.dev.azure.com/childrensal/_packaging/COA-NPM-Packages/npm/registry/side-channel-weakmap/-/side-channel-weakmap-1.0.2.tgz", { "dependencies": { "call-bound": "^1.0.2", "es-errors": "^1.3.0", "get-intrinsic": "^1.2.5", "object-inspect": "^1.13.3", "side-channel-map": "^1.0.1" } }, "sha1-Ed2hnVNo5Azp7CvcH7DsvAeQ7Oo="],
+
+    "statuses": ["statuses@2.0.1", "https://pkgs.dev.azure.com/childrensal/_packaging/COA-NPM-Packages/npm/registry/statuses/-/statuses-2.0.1.tgz", {}, "sha1-VcsADM8dSHKL0jxoWgY5mM8aG2M="],
+
+    "toidentifier": ["toidentifier@1.0.1", "https://pkgs.dev.azure.com/childrensal/_packaging/COA-NPM-Packages/npm/registry/toidentifier/-/toidentifier-1.0.1.tgz", {}, "sha1-O+NDIaiKgg7RvYDfqjPkefu43TU="],
+
+    "type-is": ["type-is@2.0.1", "https://pkgs.dev.azure.com/childrensal/_packaging/COA-NPM-Packages/npm/registry/type-is/-/type-is-2.0.1.tgz", { "dependencies": { "content-type": "^1.0.5", "media-typer": "^1.1.0", "mime-types": "^3.0.0" } }, "sha1-ZPbPA/kvzkAVwrIkeT9r3UsGjJc="],
+
+    "typescript": ["typescript@5.9.2", "https://pkgs.dev.azure.com/childrensal/_packaging/COA-NPM-Packages/npm/registry/typescript/-/typescript-5.9.2.tgz", { "bin": { "tsc": "./bin/tsc", "tsserver": "./bin/tsserver" } }, "sha1-2TRQzd7FFUotXKvjuBArgzFvsqY="],
+
+    "undici-types": ["undici-types@7.12.0", "https://pkgs.dev.azure.com/childrensal/_packaging/COA-NPM-Packages/npm/registry/undici-types/-/undici-types-7.12.0.tgz", {}, "sha1-FcXHR1wqO6MGWVKfXNtGdLYi+vs="],
+
+    "unpipe": ["unpipe@1.0.0", "https://pkgs.dev.azure.com/childrensal/_packaging/COA-NPM-Packages/npm/registry/unpipe/-/unpipe-1.0.0.tgz", {}, "sha1-sr9O6FFKrmFltIF4KdIbLvSZBOw="],
+
+    "uri-js": ["uri-js@4.4.1", "https://pkgs.dev.azure.com/childrensal/_packaging/COA-NPM-Packages/npm/registry/uri-js/-/uri-js-4.4.1.tgz", { "dependencies": { "punycode": "^2.1.0" } }, "sha1-mxpSWVIlhZ5V9mnZKPiMbFfyp34="],
+
+    "vary": ["vary@1.1.2", "https://pkgs.dev.azure.com/childrensal/_packaging/COA-NPM-Packages/npm/registry/vary/-/vary-1.1.2.tgz", {}, "sha1-IpnwLG3tMNSllhsLn3RSShj2NPw="],
+
+    "which": ["which@2.0.2", "https://pkgs.dev.azure.com/childrensal/_packaging/COA-NPM-Packages/npm/registry/which/-/which-2.0.2.tgz", { "dependencies": { "isexe": "^2.0.0" }, "bin": { "node-which": "./bin/node-which" } }, "sha1-fGqN0KY2oDJ+ELWckobu6T8/UbE="],
+
+    "wrappy": ["wrappy@1.0.2", "https://pkgs.dev.azure.com/childrensal/_packaging/COA-NPM-Packages/npm/registry/wrappy/-/wrappy-1.0.2.tgz", {}, "sha1-tSQ9jz7BqjXxNkYFvA0QNuMKtp8="],
+
+    "zod": ["zod@4.1.11", "https://pkgs.dev.azure.com/childrensal/_packaging/COA-NPM-Packages/npm/registry/zod/-/zod-4.1.11.tgz", {}, "sha1-Sqti92z9RebGFmUZujGy6gGfdfU="],
+
+    "zod-to-json-schema": ["zod-to-json-schema@3.24.6", "https://pkgs.dev.azure.com/childrensal/_packaging/COA-NPM-Packages/npm/registry/zod-to-json-schema/-/zod-to-json-schema-3.24.6.tgz", { "peerDependencies": { "zod": "^3.24.1" } }, "sha1-WSDwIMTSZH7fu5VPoDYIK5LJ4S0="],
+
+    "@modelcontextprotocol/sdk/zod": ["zod@3.25.76", "https://pkgs.dev.azure.com/childrensal/_packaging/COA-NPM-Packages/npm/registry/zod/-/zod-3.25.76.tgz", {}, "sha1-JoQcP2/SKmonYOfMtxkXl2hHHjQ="],
+
+    "body-parser/iconv-lite": ["iconv-lite@0.6.3", "https://pkgs.dev.azure.com/childrensal/_packaging/COA-NPM-Packages/npm/registry/iconv-lite/-/iconv-lite-0.6.3.tgz", { "dependencies": { "safer-buffer": ">= 2.1.2 < 3.0.0" } }, "sha1-pS+AvzjaGVLrXGgXkHGYcaGnJQE="],
+  }
+}

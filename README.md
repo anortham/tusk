@@ -1,147 +1,246 @@
-# Tusk - Persistent Memory for AI Agents 🐘
+# Tusk-Bun 🐘
 
-> Like an elephant's memory - never forget your work across Claude sessions
+> Developer journal and standup tool - persistent memory for AI agents
 
-Tusk is a Python-based MCP (Model Context Protocol) server that provides persistent memory for AI agents. Unlike typical AI conversations that "forget" previous sessions, Tusk gives Claude elephant-like memory that remembers your work across sessions and context windows.
+A complete rewrite of tusk in Bun, focused on what actually works: **journaling work progress** and **generating beautiful standup reports**. No task management complexity - just simple, effective memory that survives Claude sessions.
 
-## What Does Tusk Do?
+## Why Tusk-Bun?
 
-- **🔖 Checkpoints**: Save important progress moments with context for later recall
-- **📝 Tasks**: Manage to-dos that persist between Claude sessions
-- **📋 Plans**: Create multi-step project plans that survive context resets
-- **🧠 Recall**: Automatically restore previous work context when you return
-- **📊 Standup**: Generate progress summaries across all your work
+- **🧠 Context Recovery**: Never lose important work details to Claude crashes or compaction
+- **🤖 Proactive AI Behavior**: Built-in instructions guide AI agents to checkpoint automatically
+- **📊 Beautiful Standups**: Generate meeting-ready reports from your journal
+- **⚡ Blazing Fast**: Bun + JSONL = instant saves and recalls
+- **🔍 Simple & Searchable**: Human-readable journal with powerful filtering
 
-## Installation & Setup
+## Quick Start
 
-### 1. Install Tusk
-Currently install from source (PyPI package coming soon):
+### 1. Install & Run
 
 ```bash
-# Clone the repository
-git clone https://github.com/anortham/tusk.git
-cd tusk
+# Clone and install
+git clone <repository-url> tusk-bun
+cd tusk-bun
+bun install
 
-# Install in development mode
-pip install -e ".[dev]"
+# Start the MCP server
+bun run index.ts
 ```
 
-### 2. Start the Tusk Server
-```bash
-tusk-server
-```
+### 2. Configure Claude Desktop
 
-The server will start on stdio and create data directories in `~/.coa/tusk/`.
+Add to your Claude Desktop MCP configuration:
 
-### 3. Configure Claude Desktop
-Add Tusk to your Claude Desktop MCP configuration:
-
-**On Windows**: Edit `%APPDATA%\Claude\claude_desktop_config.json`
-**On Mac**: Edit `~/Library/Application Support/Claude/claude_desktop_config.json`
+**Mac**: `~/Library/Application Support/Claude/claude_desktop_config.json`
+**Windows**: `%APPDATA%\Claude\claude_desktop_config.json`
 
 ```json
 {
   "mcpServers": {
-    "tusk": {
-      "command": "tusk-server",
-      "args": []
+    "tusk-bun": {
+      "command": "bun",
+      "args": ["run", "/path/to/tusk-bun/index.ts"]
     }
   }
 }
 ```
 
-### 4. Restart Claude Desktop
-Close and reopen Claude Desktop to load the Tusk MCP server.
+### 3. Start Using
 
-## Using Tusk
-
-Once configured, Claude will have access to Tusk's memory tools:
-
-### Save Your Progress
+**Via MCP (Claude Desktop):**
 ```
-Create a checkpoint of my current work on the authentication system
+checkpoint("Started working on the auth system")
+recall()
+standup(style="meeting")
 ```
 
-### Restore Previous Sessions
-```
-What was I working on? Use recall to show my recent progress
-```
+**Via CLI (Command Line & Claude Code Hooks):**
+```bash
+# Save a checkpoint
+bun cli.ts checkpoint "Fixed auth timeout bug"
+bun cli.ts cp "Added user dashboard" "feature,ui"
 
-### Manage Persistent Tasks
-```
-Add a task: "Implement password reset functionality"
-```
+# Recall previous work
+bun cli.ts recall
+bun cli.ts recall --days 7 --search auth
 
-### Plan Multi-Step Projects
-```
-Create a plan for implementing the user dashboard with these steps: design UI, create API endpoints, add authentication, write tests
-```
-
-### Generate Progress Summaries
-```
-Give me a standup report of what I accomplished this week
+# Generate standup
+bun cli.ts standup
+bun cli.ts standup --style executive --days 3
 ```
 
-## How It Works
+### Claude Code Hook Integration
 
-Tusk stores your work context in human-readable JSON files in `~/.coa/tusk/`. Each piece of information is searchable and organized by project. Your data stays on your machine - nothing is sent to external servers.
+Add to your project's `CLAUDE.md` for automatic progress tracking:
 
-## Troubleshooting
+```markdown
+## Post-Work Hook
+After completing any significant work, run:
+bun /path/to/tusk-bun/cli.ts checkpoint "Brief description of what was accomplished"
+```
 
-### Tusk Server Won't Start
-- Ensure Python 3.11+ is installed: `python --version`
-- Check if port is available: `netstat -an | findstr :3000`
-- Look for error messages in `~/.coa/tusk/logs/tusk.log`
+## The Three Tools
 
-### Claude Can't Find Tusk Tools
-- Verify MCP configuration is correct in `claude_desktop_config.json`
-- Restart Claude Desktop completely
-- Check that `tusk-server` is running: `ps aux | grep tusk-server`
+### 📝 checkpoint
+Save work progress across Claude sessions:
+```
+checkpoint("Fixed JWT timeout bug using refresh tokens")
+checkpoint("Implemented user dashboard", ["feature", "ui"])
+```
 
-### Memory Not Persisting
-- Check data directory exists: `ls ~/.coa/tusk/`
-- Verify write permissions on the directory
-- Look for storage errors in the logs
+### 🧠 recall
+Restore context from previous work:
+```
+recall()                           # Last 2 days
+recall(days=7, search="auth")      # Search last week
+recall(project="myproject")        # Project-specific
+```
 
-### Need Help?
-- Check the logs: `~/.coa/tusk/logs/tusk.log`
-- Report issues: [GitHub Issues](https://github.com/anortham/tusk/issues)
+### 📊 standup
+Generate beautiful reports:
+```
+standup()                          # Meeting format
+standup(style="executive")         # High-level summary
+standup(style="metrics", days=7)   # Weekly dashboard
+```
+
+## Migration from Python Tusk
+
+Import your existing checkpoints:
+
+```bash
+# Preview what will be migrated
+bun run migrate.ts --dry-run --verbose
+
+# Perform the migration
+bun run migrate.ts
+
+# Custom tusk location
+PYTHON_TUSK_DIR=/path/to/tusk bun run migrate.ts
+```
+
+## Data Storage
+
+- **Location**: `~/.tusk/journal.jsonl`
+- **Format**: One JSON object per line (human-readable)
+- **Structure**:
+  ```json
+  {
+    "id": "20241201_143052_abc123",
+    "type": "checkpoint",
+    "timestamp": "2024-12-01T14:30:52.123Z",
+    "description": "Fixed auth timeout bug",
+    "project": "myproject",
+    "gitBranch": "feature/auth-fix",
+    "gitCommit": "a1b2c3d",
+    "files": ["src/auth.ts", "src/login.tsx"],
+    "tags": ["bug-fix", "auth"]
+  }
+  ```
+
+## Standup Formats
+
+### Meeting Style (Default)
+```
+🏃‍♂️ Daily Standup (last 24 hours)
+📍 Projects: myproject
+
+✅ What I accomplished:
+   • Fixed auth timeout bug using JWT refresh pattern (2h ago)
+   • Implemented user dashboard UI components (4h ago)
+
+⭐ Key highlights:
+   • Resolved critical security vulnerability
+   • Achieved 100% test coverage
+
+🚀 Next steps:
+   • Deploy auth fix to staging
+   • Add user preferences panel
+```
+
+### Executive Style
+```
+🎯 Executive Summary (last 24 hours)
+Portfolio: myproject • dashboard-redesign
+
+Impact: Delivered 3 key achievements across 2 strategic initiatives
+with high development velocity (8 work sessions).
+
+Strategic Focus:
+1. myproject - 6 active sessions
+2. dashboard-redesign - 2 active sessions
+
+Key Wins:
+1. Resolved critical security vulnerability
+2. Achieved 100% test coverage
+3. Completed user dashboard implementation
+
+Forward Outlook:
+Priority actions: Deploy to staging • Add user preferences
+```
 
 ## Development
 
-Want to contribute or modify Tusk?
-
 ```bash
-# Clone and setup
-git clone https://github.com/anortham/tusk.git
-cd tusk
-pip install -e ".[dev]"
+# Development with hot reload
+bun run dev
 
-# Run tests
-pytest
+# Test CLI tools directly
+bun cli.ts checkpoint "Test checkpoint from CLI"
+bun cli.ts recall --days 7
+bun cli.ts standup --style metrics
 
-# Format code
-black src tests
-ruff check src tests --fix
+# Using npm scripts
+bun run checkpoint "Test checkpoint"
+bun run recall
+bun run standup
 
-# Type check
-mypy src
+# Test MCP server manually (advanced)
+echo '{"method":"tools/call","params":{"name":"checkpoint","arguments":{"description":"Test checkpoint"}}}' | bun run index.ts
 
-# Start development server
-tusk-server
+# Run migration
+bun run migrate.ts --help
 ```
-
-### Testing Your Changes
-When modifying Tusk code:
-1. Make your changes
-2. **Restart Claude Desktop** (important - MCP servers cache code)
-3. Test your changes
-4. Run the test suite: `pytest`
 
 ## Architecture
 
-For developers: Tusk uses FastMCP 2.0 with JSON file storage and Whoosh full-text search. See `CLAUDE.md` for detailed development information.
+- **index.ts**: MCP server with three tools (~350 lines)
+- **cli.ts**: Command-line interface for hooks/direct usage (~200 lines)
+- **journal.ts**: JSONL storage operations (~150 lines)
+- **git.ts**: Git context capture (~100 lines)
+- **standup.ts**: Report formatters (~300 lines)
+- **migrate.ts**: Python tusk migration (~200 lines)
 
-## License
+**Total**: ~1,300 lines vs 6,358 lines in Python tusk!
 
-MIT License - see LICENSE file for details.
+## Why Not Python Tusk?
+
+- **Over-engineered**: 6,358 lines for basic journaling
+- **Async complexity**: Subprocess deadlocks and AsyncIO pain
+- **Identity crisis**: Tasks, plans, checkpoints, search engines
+- **Python tax**: Virtual environments, dependencies, models
+
+## Design Philosophy
+
+### What We Do
+✅ **Developer journaling** - capture progress moments
+✅ **Context recovery** - survive Claude crashes
+✅ **Standup generation** - beautiful formatted reports
+✅ **Git integration** - automatic context capture
+✅ **Simple storage** - human-readable JSONL
+
+### What We Don't Do
+❌ **Task management** - Claude's TodoWrite handles this
+❌ **Project planning** - unnecessary complexity
+❌ **Complex search** - grep/filter is sufficient
+❌ **Multiple backends** - JSONL works perfectly
+❌ **Progressive disclosure** - just three simple tools
+
+## Credits
+
+- **Standup formatting** inspired by the original goldfish standup tool
+- **MCP integration** based on the ModelContextProtocol SDK
+- **Built with** [Bun](https://bun.com) - the fast all-in-one JavaScript runtime
+
+---
+
+*"Like an elephant's memory - never forget your work across Claude sessions"* 🐘

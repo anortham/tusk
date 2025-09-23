@@ -1,197 +1,126 @@
-# Claude Development Instructions for Tusk
 
-## Project Overview
+# Tusk-Bun Development Guide
 
-Tusk is a Python-based MCP server providing **persistent memory** for AI agents using FastMCP 2.0. Think "elephant memory" instead of "goldfish memory" - context that survives session resets.
+This project is a **developer journal and standup tool** built with Bun, providing persistent memory for AI agents through MCP (Model Context Protocol).
 
 ## Core Architecture
 
-### Framework: FastMCP 2.0
-- **Tool Transformation** for adaptive interfaces
-- **Instructions field** for behavioral guidance  
-- **Progressive disclosure** - simple → expert modes
-- Install: `pip install fastmcp>=2.0.0`
-
-### Storage: JSON + Whoosh
-- **Human-readable** JSON files organized by workspace
-- **Full-text search** with Whoosh (pure Python)
-- **No database** required - just files
-- **Portable** - copy ~/.coa/tusk/ folder anywhere
-
-### Data Models (Pydantic)
-- `Checkpoint`: Work context snapshots with highlights
-- `Task`: Cross-session task management (renamed from Todo)
-- `Plan`: Persistent multi-step planning
-- `Highlight`: Important moments/decisions
-
-## Development Guidelines
-
-### File Organization
-```
-src/tusk/
-├── models/          # Pydantic data models
-├── storage/         # JSON + Whoosh storage
-├── tools/           # MCP tool implementations  
-├── transformations/ # Adaptive tool interfaces
-├── server.py        # FastMCP server setup
-└── config.py        # Configuration management
-```
-
-### Data Storage Structure
-```
-~/.coa/tusk/
-└── {workspace_name}/
-    ├── checkpoints/{date}/{id}.json
-    ├── tasks/tasks.json
-    ├── plans/{id}.json
-    └── index/          # Whoosh search index
-```
-
-### Testing Strategy
-- Unit tests with pytest for all models
-- Integration tests for storage operations
-- Tool transformation tests for different interfaces
-- End-to-end MCP server tests
-
-### Key Principles
-
-1. **Adaptive Complexity**: Tools adjust to user expertise
-2. **Workspace Isolation**: All data organized by workspace
-3. **Search-First**: Everything should be searchable
-4. **Cross-Session**: Memory that survives context resets
-5. **Human-Readable**: JSON for transparency
-
-### Actual Tool Implementation Pattern
-```python
-# Current implementation uses enhanced tools with rich parameter descriptions
-@mcp_server.tool
-async def checkpoint(
-    action: Annotated[str, "Operations: 'save', 'list', 'search'"],
-    description: Annotated[Union[str, None], "Progress description for save"] = None,
-    limit: Annotated[int, "Max results for list/search (5-20)"] = 5,
-    query: Annotated[Union[str, None], "Search text"] = None
-) -> str:
-    """Save and retrieve work progress checkpoints."""
-    # Implementation with AsyncIO-safe subprocess calls
-```
-
-### Test Coverage
-Comprehensive test suite with 191 tests covering:
-- **AsyncIO subprocess safety** (prevents MCP hanging)
-- **Git integration** (cross-platform compatibility)
-- **Checkpoint hanging regression** (stress tests)
-- **Storage operations** (JSON + Whoosh)
-- **Model validation** (Pydantic edge cases)
-- **Tool functionality** (end-to-end MCP)
-
-### Error Handling
-- Use structured logging to ~/.coa/tusk/logs/ directory
-- Graceful degradation when search fails
-- Clear error messages for users
-- Automatic recovery for corrupted files
-
-### Performance Considerations
-- Lazy loading of large datasets
-- Whoosh index optimization
-- File locking for concurrent access
-- TTL-based cleanup of old data
+- **MCP Server** (`index.ts`): Serves 3 tools to Claude Desktop - checkpoint, recall, standup
+- **CLI Interface** (`cli.ts`): Command-line access for hooks and direct usage
+- **Journal Storage** (`journal.ts`): JSONL-based persistence in `~/.tusk/journal.jsonl`
+- **Git Integration** (`git.ts`): Automatic context capture (branch, commit, files)
+- **Report Generation** (`standup.ts`): 4 report styles (meeting, written, executive, metrics)
 
 ## Development Commands
 
+**Use Bun for all operations:**
+
 ```bash
-# Setup
-pip install -e ".[dev]"
+# Install dependencies
+bun install
 
-# Testing  
-pytest
+# Start MCP server (for Claude Desktop)
+bun run index.ts
 
-# Code quality
-black src tests
-ruff check src tests --fix
-mypy src
+# Development with hot reload
+bun run dev
 
-# Run server
-tusk-server
+# Test CLI tools directly
+bun cli.ts checkpoint "Test checkpoint"
+bun cli.ts recall --days 7
+bun cli.ts standup --style executive
+
+# Using npm scripts
+bun run checkpoint "Test checkpoint"
+bun run recall
+bun run standup
+
+# Run migration from Python tusk
+bun run migrate.ts --help
 ```
 
-## Development Best Practices
+## Testing the Project
 
-### Testing Changes
-1. **Write tests first**: `tests/test_*.py`
-2. **Run test suite**: `pytest` (191 tests should pass)
-3. **Test AsyncIO safety**: Especially for subprocess operations
-4. **Restart Claude**: For MCP tool changes to take effect
-
-### Code Quality Standards
 ```bash
-# Before committing
-black src tests              # Format code
-ruff check src tests --fix   # Lint and fix
-mypy src                     # Type checking
-pytest                       # Run all tests
+# Test all functionality
+bun run test-tools.ts  # (create if needed)
+
+# Test MCP server manually
+echo '{"method":"tools/call","params":{"name":"checkpoint","arguments":{"description":"Test"}}}' | bun run index.ts
+
+# Check journal contents
+cat ~/.tusk/journal.jsonl
 ```
 
-### Debugging MCP Tools
-- **Logs**: Check `~/.coa/tusk/logs/tusk.log`
-- **Verbose**: Add `--verbose` flag to tool operations
-- **AsyncIO**: Use `asyncio.to_thread()` for subprocess calls
-- **Timeouts**: Always set reasonable timeouts (3-5 seconds)
+## Project Structure
+
+```
+tusk-bun/
+├── index.ts          # MCP server (main entry point)
+├── cli.ts            # Command-line interface
+├── journal.ts        # JSONL storage operations
+├── git.ts            # Git context capture
+├── standup.ts        # Report formatters
+├── migrate.ts        # Python tusk migration
+└── package.json      # Dependencies and scripts
+```
+
+## Data Storage
+
+- **Location**: `~/.tusk/journal.jsonl`
+- **Format**: One JSON object per line (human-readable)
+- **Auto-captures**: Git branch, commit, changed files, project name
+
+## Development Workflow
+
+1. **Make changes** to TypeScript files
+2. **Test with CLI**: `bun cli.ts checkpoint "What you accomplished"`
+3. **Test MCP integration**: Start server with `bun run index.ts`
+4. **Verify data**: Check `~/.tusk/journal.jsonl` for entries
+
+## Code Style
+
+- Use **Bun APIs** where possible: `Bun.file()`, `spawnSync()`, etc.
+- **TypeScript**: Strict typing with Zod validation
+- **Error handling**: Graceful fallbacks for git operations
+- **Simple storage**: Append-only JSONL for persistence
 
 ## Integration Points
 
-### With Existing Goldfish
-- Import data from Node.js Goldfish (archive/)
-- Import data from C# Goldfish (COA.Goldfish.McpServer/)
-- Migration scripts in migrations/
+- **Claude Desktop**: Add to `claude_desktop_config.json` as MCP server
+- **Claude Code Hooks**: Use `bun cli.ts checkpoint` in post-work hooks
+- **Command Line**: Direct CLI usage for manual journaling
 
-### With Claude Desktop
-- MCP server configuration
-- Tool registration and discovery
-- Behavioral guidance via instructions
+## Key Design Principles
 
-### With Other MCP Servers
-- Non-conflicting tool names
-- Complementary functionality
-- Shared workspace concepts
+✅ **Simple**: 3 tools, JSONL storage, ~1,300 lines
+✅ **Fast**: Bun + simple file operations
+✅ **Persistent**: Survives Claude crashes/compaction
+✅ **Git-aware**: Automatic context capture
+✅ **Human-readable**: JSONL you can edit/search manually
+✅ **Behavioral**: Built-in instructions guide proactive AI agent usage
 
-## Current Status
+## Behavioral Instructions
 
-✅ **Project structure and configuration**
-✅ **Pydantic models with validation**
-✅ **Storage system with JSON + Whoosh**
-✅ **FastMCP server setup with tool transformations**
-✅ **Core tools implemented** (checkpoint, task, plan, recall, standup)
-✅ **Comprehensive testing** (191 tests passing)
-✅ **AsyncIO-safe subprocess handling** (prevents hanging)
-✅ **Azure DevOps CI/CD pipeline**
-⏳ **Migration from existing Goldfish systems**
+The MCP server includes comprehensive behavioral instructions that guide AI agents to:
 
-## Critical Development Information
+### 🎯 **Proactive Usage Patterns**
+- **Always start sessions** with `recall()` to restore context
+- **Automatically checkpoint** after significant work (bug fixes, features, discoveries)
+- **Build emergency recovery data** with quality descriptions and tags
+- **Generate standups** for progress summaries and team updates
 
-### AsyncIO Subprocess Safety ⚠️
-**CRITICAL**: All subprocess calls in MCP tools must use AsyncIO-safe patterns to prevent hanging:
+### 🚨 **Critical Triggers for Checkpointing**
+- Code completion (functions, classes, modules)
+- Bug fixes and problem resolution
+- Important discoveries or breakthroughs
+- Work session milestones
+- Before context switching
 
-```python
-# ❌ WRONG - Will hang in MCP context
-result = subprocess.run(['git', 'status'], capture_output=True)
+### 🎪 **Success Metrics**
+- Sessions start with context recovery
+- Important moments are captured
+- Knowledge persists across sessions
+- Valuable standup reports generated
 
-# ✅ CORRECT - AsyncIO-safe using thread pool
-async def safe_subprocess():
-    def run_command():
-        return subprocess.run(['git', 'status'], capture_output=True)
-    return await asyncio.to_thread(run_command)
-
-result = await asyncio.wait_for(safe_subprocess(), timeout=5.0)
-```
-
-**Why this matters**: Direct subprocess calls in async MCP tool functions cause deadlocks. Always use `asyncio.to_thread()` for subprocess operations.
-
-### Live Development Cycle
-**IMPORTANT**: MCP server code changes require Claude restart to take effect:
-
-1. **Make code changes**
-2. **Restart Claude Desktop completely** (critical - cached imports)
-3. **Test changes**
-4. **Run test suite**: `pytest`
-
-Python import caching means live changes won't be seen until restart.
+These instructions are embedded directly in the server initialization, ensuring Claude receives behavioral guidance automatically when the MCP server is registered.

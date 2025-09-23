@@ -1,0 +1,49 @@
+{
+  "name": "tusk-bun",
+  "version": "1.0.0",
+  "description": "Developer journal and standup tool - persistent memory for AI agents",
+  "main": "index.ts",
+  "type": "module",
+  "bin": {
+    "tusk-bun": "./index.ts",
+    "tusk": "./cli.ts"
+  },
+  "scripts": {
+    "start": "bun run index.ts",
+    "dev": "bun --watch index.ts",
+    "checkpoint": "bun run cli.ts checkpoint",
+    "recall": "bun run cli.ts recall",
+    "standup": "bun run cli.ts standup",
+    "test": "bun test",
+    "test:watch": "bun test --watch",
+    "test:unit": "bun test tests/*.test.ts --exclude tests/integration.test.ts",
+    "test:integration": "bun test tests/integration.test.ts",
+    "test:performance": "bun test tests/setup.ts tests/*.test.ts --timeout 30000",
+    "test:coverage": "bun test --coverage",
+    "test:ci": "bun test --reporter json --timeout 60000",
+    "test:contracts": "bun test tests/contracts/",
+    "test:quick": "bun test tests/journal.test.ts tests/git.test.ts",
+    "test:full": "bun test --coverage --timeout 60000",
+    "test:debug": "bun test --verbose --bail",
+    "test:clean": "rm -rf coverage/ test-results/ && echo 'Test artifacts cleaned'",
+    "pretest": "bun run test:clean",
+    "validate": "bun run test:full && bun run lint && bun run type-check",
+    "lint": "echo 'Linting with Bun - add linter when available'",
+    "type-check": "tsc --noEmit",
+    "test:setup": "bun run tests/scripts/setup-test-env.ts",
+    "test:benchmark": "bun run tests/scripts/benchmark.ts"
+  },
+  "keywords": ["mcp", "journal", "standup", "developer", "memory"],
+  "author": "Murphy Randle",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/bun": "latest"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.18.1",
+    "zod": "^4.1.11"
+  }
+}
