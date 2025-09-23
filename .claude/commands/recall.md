@@ -1,31 +1,25 @@
 ---
-allowed-tools: mcp__tusk__recall, mcp__tusk__checkpoint, mcp__tusk__task, mcp__tusk__plan
-description: Check for relevant context and optionally recall it
-argument-hint: [auto|ask]
+allowed-tools: mcp__tusk__recall
+description: Restore context from previous work sessions
+argument-hint: [days]
 ---
 
-$if($1 == "ask")
-**Context Check Mode:** Let me check what context is available and you can decide whether to recall it.
+$if($ARGUMENTS)
+**Recalling Context:** Loading context from the last $ARGUMENTS days.
 
-First, let me check for recent context using `recall(context="recent")`:
-
-This will check recent checkpoints, tasks, and plans to see if there's relevant context for this session. 
-
-If meaningful context exists, I'll summarize what's available and let you decide whether to do a full recall.
-
-This prevents unwanted context loading while ensuring you don't miss important previous work.
-
-$elif($1 == "auto")
-**Auto-Recall Mode:** Automatically loading recent context using `recall(context="recent")`.
-
-Checking for and loading relevant context from recent work sessions...
+Using `recall(days=$ARGUMENTS)` to restore recent work context and progress.
 
 $else
-**Smart Context Check:** 
+**Default Recall:** Loading context from the last 2 days.
 
-Let me check if there's relevant context from recent sessions. I'll show you what's available and recommend whether to recall it.
+Using `recall(days=2)` to restore recent work context and progress.
 
-This gives you control over context loading - useful when you want a fresh start vs continuing previous work.
+This helps maintain continuity across Claude sessions by recovering:
+- Recent checkpoints and progress
+- Project context and decisions
+- Key breakthroughs and discoveries
 
-Use `/recall-check ask` to review options first, or `/recall-check auto` to load context automatically.
+Use `/recall 7` for week-long context or `/recall 1` for just today.
+
+Multi-workspace support: By default shows current workspace only. The tool supports workspace filtering for cross-project context.
 $endif

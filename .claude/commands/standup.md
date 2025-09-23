@@ -1,34 +1,37 @@
 ---
 allowed-tools: mcp__tusk__standup
-description: Generate daily/weekly standup report from Tusk memory
-argument-hint: [period]
+description: Generate standup reports from your development journal
+argument-hint: [style] [days]
 ---
 
-Generate a standup report from Tusk memory showing:
+Generate a standup report from your journal showing recent work progress and accomplishments.
 
-**Recent Work (Last 2 Days):**
-- Completed checkpoints with highlights
-- Finished tasks and their outcomes  
-- Plan progress and next steps
+Available styles:
+- **meeting**: Classic standup format (default)
+- **written**: Narrative summary format
+- **executive**: High-level impact summary
+- **metrics**: Dashboard with productivity stats
 
-**Current Status:**
-- Active tasks in progress
-- Pending tasks to pick up
-- Current plan focus areas
-
-**Blockers & Issues:**
-- Any incomplete work requiring attention
-- Stale tasks that may need cleanup
-
-**Next Actions:**
-- Recommended priorities for upcoming work
-- Plan steps ready to begin
-- Context for continued work
-
-$if($1)
-Generate standup using `standup(timeframe="$1")` for timeframe: $1 (daily/weekly/custom)
+$if($1 == "executive")
+Generate executive standup using `standup(style="executive", days=3)` for leadership updates.
+$elif($1 == "metrics")
+Generate metrics dashboard using `standup(style="metrics", days=7)` for detailed analytics.
+$elif($1 == "written")
+Generate written summary using `standup(style="written", days=2)` for narrative format.
+$elif($1)
+Generate standup using `standup(style="meeting", days=$1)` for the last $1 days.
 $else
-Generate recent standup using `standup(timeframe="daily")` (last day)
+Generate daily standup using `standup(style="meeting", days=1)` for recent progress.
 $endif
 
-This uses your persistent Tusk memory to provide context across sessions and gives a comprehensive view of your development progress.
+**Features:**
+- Multi-workspace support (current workspace by default)
+- Automatic project and git context
+- Progress highlights and next steps
+- File activity tracking (optional)
+
+Examples:
+- `/standup` - Daily meeting format
+- `/standup executive` - Executive summary
+- `/standup metrics` - Analytics dashboard
+- `/standup 7` - Weekly meeting format

@@ -11,20 +11,21 @@ import {
   CallToolRequestSchema,
   ListToolsRequestSchema,
   ToolSchema,
-  GetPromptResult,
 } from "@modelcontextprotocol/sdk/types.js";
+import type { GetPromptResult } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
 
 import {
-  JournalEntry,
   saveEntry,
   getRecentEntries,
   searchEntries,
   generateId,
   getJournalStats
 } from "./journal.js";
+import type { JournalEntry } from "./journal.js";
 import { getGitContext, getStatusSummary } from "./git.js";
-import { generateStandup, StandupStyle } from "./standup.js";
+import { generateStandup } from "./standup.js";
+import type { StandupStyle } from "./standup.js";
 
 // Create MCP server with behavioral instructions for AI agents
 const server = new Server(
@@ -310,7 +311,6 @@ async function handleCheckpoint(args: any) {
   // Create journal entry
   const entry: JournalEntry = {
     id: generateId(),
-    type: "checkpoint",
     timestamp: new Date().toISOString(),
     description,
     project: gitInfo.project,
@@ -410,7 +410,7 @@ No journal entries found${filterDesc.length > 0 ? ` for ${filterDesc.join(", ")}
 
   // Add summary
   const stats = await getJournalStats();
-  contextLines.push(`📊 **Journal Stats:** ${stats.totalEntries} total entries, ${stats.todayEntries} today, ${stats.weekEntries} this week`);
+  contextLines.push(`📊 **Journal Stats:** ${stats.totalEntries} total entries, ${stats.entriesThisWeek} this week, ${stats.entriesThisMonth} this month`);
 
   if (stats.projects.length > 0) {
     contextLines.push(`🗂️ **Projects:** ${stats.projects.join(", ")}`);

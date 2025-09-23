@@ -8,7 +8,8 @@
 import { existsSync, readdirSync, statSync } from "fs";
 import { join, basename } from "path";
 import { homedir } from "os";
-import { JournalEntry, saveEntry, getTuskDir } from "./journal.js";
+import { saveEntry } from "./journal.js";
+import type { JournalEntry } from "./journal.js";
 
 interface PythonCheckpoint {
   id: string;
@@ -121,7 +122,6 @@ function convertToJournalEntry(checkpoint: PythonCheckpoint): JournalEntry {
 
   return {
     id: checkpoint.id,
-    type: "checkpoint",
     timestamp: checkpoint.created_at,
     description: checkpoint.description,
     project,

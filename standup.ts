@@ -3,7 +3,8 @@
  * Ports the beautiful formatting from the original goldfish standup tool
  */
 
-import { JournalEntry, getRecentEntries } from "./journal.js";
+import { getRecentEntries } from "./journal.js";
+import type { JournalEntry } from "./journal.js";
 
 export type StandupStyle = "meeting" | "written" | "executive" | "metrics";
 

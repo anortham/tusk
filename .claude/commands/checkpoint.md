@@ -7,12 +7,12 @@ argument-hint: [description]
 $if($ARGUMENTS)
 Save checkpoint: $ARGUMENTS
 
-This will use `checkpoint(action="save", description="$ARGUMENTS")` to preserve your current work context, progress, and key decisions.
+This will use `checkpoint(description="$ARGUMENTS")` to preserve your current work context, progress, and key decisions.
 
 This checkpoint will be searchable and can be recalled in future sessions to restore context.
 
 $else
-Save a checkpoint using `checkpoint(action="save", description="...")`.
+Save a checkpoint using `checkpoint(description="...")`.
 
 Please describe what you've been working on or what significant progress/decisions should be captured.
 

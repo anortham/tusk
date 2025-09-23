@@ -9,8 +9,8 @@ A complete rewrite of tusk in Bun, focused on what actually works: **journaling 
 - **🧠 Context Recovery**: Never lose important work details to Claude crashes or compaction
 - **🤖 Proactive AI Behavior**: Built-in instructions guide AI agents to checkpoint automatically
 - **📊 Beautiful Standups**: Generate meeting-ready reports from your journal
-- **⚡ Blazing Fast**: Bun + JSONL = instant saves and recalls
-- **🔍 Simple & Searchable**: Human-readable journal with powerful filtering
+- **⚡ Blazing Fast**: Bun + SQLite = instant saves and recalls with concurrency
+- **🔍 Simple & Searchable**: SQLite-based journal with powerful filtering and workspace isolation
 
 ## Quick Start
 
@@ -120,22 +120,14 @@ PYTHON_TUSK_DIR=/path/to/tusk bun run migrate.ts
 
 ## Data Storage
 
-- **Location**: `~/.tusk/journal.jsonl`
-- **Format**: One JSON object per line (human-readable)
-- **Structure**:
-  ```json
-  {
-    "id": "20241201_143052_abc123",
-    "type": "checkpoint",
-    "timestamp": "2024-12-01T14:30:52.123Z",
-    "description": "Fixed auth timeout bug",
-    "project": "myproject",
-    "gitBranch": "feature/auth-fix",
-    "gitCommit": "a1b2c3d",
-    "files": ["src/auth.ts", "src/login.tsx"],
-    "tags": ["bug-fix", "auth"]
-  }
-  ```
+- **Location**: `~/.tusk/journal.db`
+- **Format**: SQLite database with multi-workspace support
+- **Features**:
+  - Automatic workspace detection (git root, package.json, or cwd)
+  - Cross-platform path normalization
+  - Concurrent access with WAL mode
+  - Workspace isolation for projects
+- **Schema**: Checkpoints with git context, project info, and metadata
 
 ## Standup Formats
 
@@ -203,14 +195,14 @@ bun run migrate.ts --help
 
 ## Architecture
 
-- **index.ts**: MCP server with three tools (~350 lines)
-- **cli.ts**: Command-line interface for hooks/direct usage (~200 lines)
-- **journal.ts**: JSONL storage operations (~150 lines)
-- **git.ts**: Git context capture (~100 lines)
-- **standup.ts**: Report formatters (~300 lines)
+- **index.ts**: MCP server with three tools and behavioral instructions (~480 lines)
+- **cli.ts**: Command-line interface for hooks/direct usage (~295 lines)
+- **journal.ts**: SQLite storage with multi-workspace support (~845 lines)
+- **git.ts**: Git context capture (~200 lines)
+- **standup.ts**: Report formatters (~395 lines)
 - **migrate.ts**: Python tusk migration (~200 lines)
 
-**Total**: ~1,300 lines vs 6,358 lines in Python tusk!
+**Total**: ~2,400 lines of robust, production-ready code vs 6,358 lines in Python tusk!
 
 ## Why Not Python Tusk?
 
@@ -226,13 +218,13 @@ bun run migrate.ts --help
 ✅ **Context recovery** - survive Claude crashes
 ✅ **Standup generation** - beautiful formatted reports
 ✅ **Git integration** - automatic context capture
-✅ **Simple storage** - human-readable JSONL
+✅ **Robust storage** - SQLite with workspace isolation and concurrency
 
 ### What We Don't Do
 ❌ **Task management** - Claude's TodoWrite handles this
 ❌ **Project planning** - unnecessary complexity
-❌ **Complex search** - grep/filter is sufficient
-❌ **Multiple backends** - JSONL works perfectly
+❌ **Complex search** - SQLite queries are sufficient
+❌ **Multiple backends** - SQLite works perfectly
 ❌ **Progressive disclosure** - just three simple tools
 
 ## Credits

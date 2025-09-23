@@ -5,9 +5,11 @@
  * Allows calling tusk tools from command line and Claude Code hooks
  */
 
-import { saveEntry, getRecentEntries, searchEntries, generateId, JournalEntry } from "./journal.js";
+import { saveEntry, getRecentEntries, searchEntries, generateId } from "./journal.js";
+import type { JournalEntry } from "./journal.js";
 import { getGitContext } from "./git.js";
-import { generateStandup, StandupStyle } from "./standup.js";
+import { generateStandup } from "./standup.js";
+import type { StandupStyle } from "./standup.js";
 
 // Parse command line arguments
 const [, , command, ...args] = process.argv;
@@ -61,7 +63,6 @@ async function handleCheckpointCLI(args: string[]) {
 
   const entry: JournalEntry = {
     id: generateId(),
-    type: "checkpoint",
     timestamp: new Date().toISOString(),
     description,
     project: gitInfo.project,

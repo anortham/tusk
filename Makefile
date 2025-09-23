@@ -10,18 +10,19 @@ help: ## Show this help message
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2}'
 	@echo ""
 	@echo "Examples:"
-	@echo "  make install     # Install dependencies"
-	@echo "  make test        # Run all tests"
-	@echo "  make test-quick  # Run quick subset of tests"
-	@echo "  make benchmark   # Run performance benchmarks"
-	@echo "  make dev         # Start development server"
+	@echo "  make install        # Install dependencies"
+	@echo "  make test           # Run all tests"
+	@echo "  make test-coverage  # Run tests with coverage"
+	@echo "  make benchmark      # Run performance benchmarks"
+	@echo "  make dev            # Start development server"
 
 # Installation and setup
 install: ## Install dependencies
 	bun install
 
-setup: ## Setup development environment
-	bun run test:setup --verbose
+setup: ## Setup development environment (basic check)
+	@echo "✅ Development environment ready"
+	@echo "Run 'make test' to verify everything works"
 
 clean: ## Clean build artifacts and test results
 	bun run test:clean
@@ -45,8 +46,8 @@ test-unit: ## Run unit tests only
 test-integration: ## Run integration tests only
 	bun run test:integration
 
-test-quick: ## Run quick subset of tests
-	bun run test:quick
+test-quick: ## Run quick subset of tests (unit tests only)
+	bun run test:unit
 
 test-coverage: ## Run tests with coverage report
 	bun run test:coverage
@@ -54,18 +55,11 @@ test-coverage: ## Run tests with coverage report
 test-watch: ## Run tests in watch mode
 	bun run test:watch
 
-test-performance: ## Run performance tests with extended timeout
-	bun run test:performance
-
 test-debug: ## Run tests with verbose output and bail on first failure
 	bun run test:debug
 
-# Advanced test runners
-test-runner: ## Run advanced test runner (specify suite with SUITE=name)
-	bun run tests/scripts/test-runner.ts --suite $(or $(SUITE),unit) --verbose
-
 benchmark: ## Run performance benchmarks
-	bun run test:benchmark
+	bun run tests/scripts/benchmark.ts
 
 # Code quality
 validate: ## Run full validation (tests + lint + type-check)

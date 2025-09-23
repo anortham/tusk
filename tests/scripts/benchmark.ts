@@ -9,7 +9,7 @@ import { join } from "path";
 import { existsSync, mkdirSync, writeFileSync } from "fs";
 import { tmpdir } from "os";
 
-import { appendJournalEntry, getRecentEntries, getJournalStats } from "../../journal.js";
+import { saveEntry, getRecentEntries, getJournalStats } from "../../journal.js";
 import { generateStandup } from "../../standup.js";
 import { TestDataFactory, TestEnvironment, TEST_CONFIG } from "../setup.js";
 
@@ -60,7 +60,7 @@ class PerformanceBenchmark {
         const entry = TestDataFactory.createJournalEntry({
           description: "Benchmark test entry",
         });
-        await appendJournalEntry(entry);
+        await saveEntry(entry);
       }
     ));
 
@@ -71,7 +71,7 @@ class PerformanceBenchmark {
       async () => {
         const entries = TestDataFactory.createMultipleEntries(100);
         for (const entry of entries) {
-          await appendJournalEntry(entry);
+          await saveEntry(entry);
         }
       }
     ));
@@ -107,7 +107,7 @@ class PerformanceBenchmark {
       project: "benchmark-project",
     });
     for (const entry of standupEntries) {
-      await appendJournalEntry(entry);
+      await saveEntry(entry);
     }
 
     // Benchmark each standup style
@@ -130,7 +130,7 @@ class PerformanceBenchmark {
     // Benchmark standup with large dataset
     const largeDataset = TestDataFactory.createMultipleEntries(500);
     for (const entry of largeDataset) {
-      await appendJournalEntry(entry);
+      await saveEntry(entry);
     }
 
     suiteResults.push(await this.benchmark(
@@ -168,7 +168,7 @@ class PerformanceBenchmark {
           // Create and store entries
           const entries = TestDataFactory.createMultipleEntries(size);
           for (const entry of entries) {
-            await appendJournalEntry(entry);
+            await saveEntry(entry);
           }
 
           // Retrieve and process
@@ -196,7 +196,7 @@ class PerformanceBenchmark {
           const entry = TestDataFactory.createJournalEntry({
             description: `Concurrent entry ${i}`,
           });
-          return appendJournalEntry(entry);
+          return saveEntry(entry);
         });
         await Promise.all(writePromises);
       }
@@ -218,7 +218,7 @@ class PerformanceBenchmark {
       "Mixed concurrent read/write/standup operations",
       async () => {
         const operations = [
-          () => appendJournalEntry(TestDataFactory.createJournalEntry()),
+          () => saveEntry(TestDataFactory.createJournalEntry()),
           () => getRecentEntries({ days: 1 }),
           () => generateStandup({ style: "meeting", days: 1 }),
           () => getJournalStats(),
@@ -244,7 +244,7 @@ class PerformanceBenchmark {
       async () => {
         const entries = TestDataFactory.createMultipleEntries(1000);
         for (const entry of entries) {
-          await appendJournalEntry(entry);
+          await saveEntry(entry);
         }
         await generateStandup({ style: "metrics", days: 30, includeMetrics: true });
       }
@@ -258,7 +258,7 @@ class PerformanceBenchmark {
         // Create large dataset
         const entries = TestDataFactory.createMultipleEntries(500);
         for (const entry of entries) {
-          await appendJournalEntry(entry);
+          await saveEntry(entry);
         }
 
         // Perform multiple operations
