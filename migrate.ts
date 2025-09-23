@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
 
 /**
- * Migration script from Python tusk to tusk-bun
+ * Migration script from Python tusk to tusk
  * Imports existing checkpoints from ~/.coa/tusk/ into the new JSONL format
  */
 
@@ -105,7 +105,7 @@ async function loadPythonCheckpoint(filePath: string): Promise<PythonCheckpoint 
 }
 
 /**
- * Convert Python checkpoint to tusk-bun journal entry
+ * Convert Python checkpoint to tusk journal entry
  */
 function convertToJournalEntry(checkpoint: PythonCheckpoint): JournalEntry {
   // Extract tags from highlights or work context
@@ -164,8 +164,8 @@ async function migrate(options: { dryRun?: boolean; verbose?: boolean } = {}) {
     return;
   }
 
-  // Create tusk-bun directory
-  const tuskBunDir = getTuskDir();
+  // Create tusk directory
+  const tuskBunDir = join(homedir(), ".tusk");
   console.log(`📁 Target directory: ${tuskBunDir}`);
 
   if (dryRun) {
@@ -215,7 +215,7 @@ async function migrate(options: { dryRun?: boolean; verbose?: boolean } = {}) {
   console.log(`   📈 Success rate: ${Math.round((successCount / checkpointFiles.length) * 100)}%`);
 
   if (!dryRun && successCount > 0) {
-    console.log(`\n🎉 Migration complete! Your checkpoints are now available in tusk-bun.`);
+    console.log(`\n🎉 Migration complete! Your checkpoints are now available in tusk.`);
     console.log(`📁 Journal location: ${join(tuskBunDir, "journal.jsonl")}`);
     console.log(`\n💡 Try running: recall() to see your imported checkpoints`);
   }
@@ -240,7 +240,7 @@ async function main() {
     console.log(`
 🐘 Tusk-Bun Migration Tool
 
-Migrates checkpoints from Python tusk to tusk-bun format.
+Migrates checkpoints from Python tusk to tusk format.
 
 Usage:
   bun run migrate.ts [options]

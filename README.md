@@ -1,10 +1,10 @@
-# Tusk-Bun 🐘
+# Tusk 🐘
 
 > Developer journal and standup tool - persistent memory for AI agents
 
 A complete rewrite of tusk in Bun, focused on what actually works: **journaling work progress** and **generating beautiful standup reports**. No task management complexity - just simple, effective memory that survives Claude sessions.
 
-## Why Tusk-Bun?
+## Why Tusk?
 
 - **🧠 Context Recovery**: Never lose important work details to Claude crashes or compaction
 - **🤖 Proactive AI Behavior**: Built-in instructions guide AI agents to checkpoint automatically
@@ -18,8 +18,8 @@ A complete rewrite of tusk in Bun, focused on what actually works: **journaling 
 
 ```bash
 # Clone and install
-git clone <repository-url> tusk-bun
-cd tusk-bun
+git clone <repository-url> tusk
+cd tusk
 bun install
 
 # Start the MCP server
@@ -36,9 +36,9 @@ Add to your Claude Desktop MCP configuration:
 ```json
 {
   "mcpServers": {
-    "tusk-bun": {
+    "tusk": {
       "command": "bun",
-      "args": ["run", "/path/to/tusk-bun/index.ts"]
+      "args": ["run", "/path/to/tusk/index.ts"]
     }
   }
 }
@@ -75,7 +75,7 @@ Add to your project's `CLAUDE.md` for automatic progress tracking:
 ```markdown
 ## Post-Work Hook
 After completing any significant work, run:
-bun /path/to/tusk-bun/cli.ts checkpoint "Brief description of what was accomplished"
+bun /path/to/tusk/cli.ts checkpoint "Brief description of what was accomplished"
 ```
 
 ## The Three Tools

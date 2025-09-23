@@ -394,7 +394,7 @@ describe("CLI Interface - Help System", () => {
     const result = await CLITestUtils.runCLI([]);
 
     CLITestUtils.expectSuccess(result);
-    CLITestUtils.expectOutputContains(result, "tusk-bun cli");
+    CLITestUtils.expectOutputContains(result, "tusk cli");
     CLITestUtils.expectOutputContains(result, "usage");
   });
 

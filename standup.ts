@@ -1,5 +1,5 @@
 /**
- * Standup report generator for tusk-bun
+ * Standup report generator for tusk
  * Ports the beautiful formatting from the original goldfish standup tool
  */
 
@@ -382,13 +382,13 @@ function groupCheckpointsByTime(checkpoints: JournalEntry[]): Record<string, num
     const checkpointDate = new Date(checkpoint.timestamp);
 
     if (checkpointDate >= today) {
-      groups["Today"]++;
+      groups["Today"] = (groups["Today"] || 0) + 1;
     } else if (checkpointDate >= yesterday) {
-      groups["Yesterday"]++;
+      groups["Yesterday"] = (groups["Yesterday"] || 0) + 1;
     } else if (checkpointDate >= weekAgo) {
-      groups["This week"]++;
+      groups["This week"] = (groups["This week"] || 0) + 1;
     } else {
-      groups["Earlier"]++;
+      groups["Earlier"] = (groups["Earlier"] || 0) + 1;
     }
   });
 

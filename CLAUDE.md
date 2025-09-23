@@ -1,5 +1,5 @@
 
-# Tusk-Bun Development Guide
+# Tusk Development Guide
 
 **Developer journal and standup tool** built with Bun + SQLite, providing persistent memory for AI agents through MCP.
 

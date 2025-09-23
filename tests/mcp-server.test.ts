@@ -76,7 +76,7 @@ async function createTestServer() {
   // Import the server creation logic from index.ts
   const server = new Server(
     {
-      name: "tusk-bun",
+      name: "tusk",
       version: "1.0.0",
     },
     {
@@ -195,7 +195,7 @@ describe("MCP Server - Server Initialization", () => {
   test("should include behavioral instructions", async () => {
     const server = new Server(
       {
-        name: "tusk-bun",
+        name: "tusk",
         version: "1.0.0",
       },
       {
@@ -725,10 +725,10 @@ describe("MCP Server - Protocol Compliance", () => {
 
 describe("MCP Server - Behavioral Instructions", () => {
   test("should include comprehensive behavioral instructions", () => {
-    const instructions = `You are an AI agent with access to tusk-bun tools for persistent memory across sessions.`;
+    const instructions = `You are an AI agent with access to tusk tools for persistent memory across sessions.`;
 
     expect(instructions).toContain("AI agent");
-    expect(instructions).toContain("tusk-bun tools");
+    expect(instructions).toContain("tusk tools");
     expect(instructions).toContain("persistent memory");
   });
 

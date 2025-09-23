@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
 
 /**
- * Tusk-Bun CLI interface
+ * Tusk CLI interface
  * Allows calling tusk tools from command line and Claude Code hooks
  */
 
@@ -56,6 +56,12 @@ async function handleCheckpointCLI(args: string[]) {
   }
 
   const description = args[0];
+  if (!description) {
+    console.error('❌ Description required for checkpoint');
+    console.error('Usage: bun cli.ts checkpoint "your progress description" [tag1,tag2]');
+    process.exit(1);
+  }
+
   const tags = args[1] ? args[1].split(',').map(t => t.trim()) : undefined;
 
   // Capture git context
@@ -90,32 +96,74 @@ async function handleRecallCLI(args: string[]) {
 
   for (let i = 0; i < args.length; i++) {
     const arg = args[i];
+    if (!arg) continue; // Skip undefined args
+
     if (arg.startsWith('--days=')) {
-      const parsedDays = parseInt(arg.split('=')[1]);
+      const daysPart = arg.split('=')[1];
+      if (!daysPart) {
+        console.error('❌ --days= requires a value. Example: --days=7');
+        process.exit(1);
+      }
+      const parsedDays = parseInt(daysPart);
       if (isNaN(parsedDays)) {
         console.error('❌ Invalid days value. Must be a number.');
         process.exit(1);
       }
       days = parsedDays;
     } else if (arg.startsWith('--search=')) {
-      search = arg.split('=')[1];
+      const searchPart = arg.split('=')[1];
+      if (!searchPart) {
+        console.error('❌ --search= requires a value. Example: --search=auth');
+        process.exit(1);
+      }
+      search = searchPart;
     } else if (arg.startsWith('--project=')) {
-      project = arg.split('=')[1];
+      const projectPart = arg.split('=')[1];
+      if (!projectPart) {
+        console.error('❌ --project= requires a value. Example: --project=myproject');
+        process.exit(1);
+      }
+      project = projectPart;
     } else if (arg.startsWith('--workspace=')) {
-      workspace = arg.split('=')[1];
+      const workspacePart = arg.split('=')[1];
+      if (!workspacePart) {
+        console.error('❌ --workspace= requires a value. Example: --workspace=current');
+        process.exit(1);
+      }
+      workspace = workspacePart;
     } else if (arg === '--days' && i + 1 < args.length) {
-      const parsedDays = parseInt(args[++i]);
+      const nextArg = args[++i];
+      if (!nextArg) {
+        console.error('❌ --days requires a value. Example: --days 7');
+        process.exit(1);
+      }
+      const parsedDays = parseInt(nextArg);
       if (isNaN(parsedDays)) {
         console.error('❌ Invalid days value. Must be a number.');
         process.exit(1);
       }
       days = parsedDays;
     } else if (arg === '--search' && i + 1 < args.length) {
-      search = args[++i];
+      const nextArg = args[++i];
+      if (!nextArg) {
+        console.error('❌ --search requires a value. Example: --search auth');
+        process.exit(1);
+      }
+      search = nextArg;
     } else if (arg === '--project' && i + 1 < args.length) {
-      project = args[++i];
+      const nextArg = args[++i];
+      if (!nextArg) {
+        console.error('❌ --project requires a value. Example: --project myproject');
+        process.exit(1);
+      }
+      project = nextArg;
     } else if (arg === '--workspace' && i + 1 < args.length) {
-      workspace = args[++i];
+      const nextArg = args[++i];
+      if (!nextArg) {
+        console.error('❌ --workspace requires a value. Example: --workspace current');
+        process.exit(1);
+      }
+      workspace = nextArg;
     } else if (arg === '--all-workspaces') {
       workspace = 'all';
     }
@@ -173,22 +221,38 @@ async function handleStandupCLI(args: string[]) {
 
   for (let i = 0; i < args.length; i++) {
     const arg = args[i];
+    if (!arg) continue; // Skip undefined args
+
     if (arg.startsWith('--style=')) {
       const styleValue = arg.split('=')[1];
+      if (!styleValue) {
+        console.error('❌ --style= requires a value. Example: --style=meeting');
+        process.exit(1);
+      }
       if (!validStyles.includes(styleValue as StandupStyle)) {
         console.error(`❌ Invalid style value: ${styleValue}. Must be one of: ${validStyles.join(', ')}`);
         process.exit(1);
       }
       style = styleValue as StandupStyle;
     } else if (arg.startsWith('--days=')) {
-      const parsedDays = parseInt(arg.split('=')[1]);
+      const daysPart = arg.split('=')[1];
+      if (!daysPart) {
+        console.error('❌ --days= requires a value. Example: --days=7');
+        process.exit(1);
+      }
+      const parsedDays = parseInt(daysPart);
       if (isNaN(parsedDays)) {
         console.error('❌ Invalid days value. Must be a number.');
         process.exit(1);
       }
       days = parsedDays;
     } else if (arg.startsWith('--workspace=')) {
-      workspace = arg.split('=')[1];
+      const workspacePart = arg.split('=')[1];
+      if (!workspacePart) {
+        console.error('❌ --workspace= requires a value. Example: --workspace=current');
+        process.exit(1);
+      }
+      workspace = workspacePart;
     } else if (arg === '--no-metrics') {
       includeMetrics = false;
     } else if (arg === '--include-files') {
@@ -203,14 +267,24 @@ async function handleStandupCLI(args: string[]) {
       }
       style = styleValue as StandupStyle;
     } else if (arg === '--days' && i + 1 < args.length) {
-      const parsedDays = parseInt(args[++i]);
+      const nextArg = args[++i];
+      if (!nextArg) {
+        console.error('❌ --days requires a value. Example: --days 7');
+        process.exit(1);
+      }
+      const parsedDays = parseInt(nextArg);
       if (isNaN(parsedDays)) {
         console.error('❌ Invalid days value. Must be a number.');
         process.exit(1);
       }
       days = parsedDays;
     } else if (arg === '--workspace' && i + 1 < args.length) {
-      workspace = args[++i];
+      const nextArg = args[++i];
+      if (!nextArg) {
+        console.error('❌ --workspace requires a value. Example: --workspace current');
+        process.exit(1);
+      }
+      workspace = nextArg;
     }
   }
 
@@ -240,7 +314,7 @@ function formatTimeAgo(timestamp: string): string {
 }
 
 function showHelp() {
-  console.log(`🐘 Tusk-Bun CLI - Developer journal and standup tool
+  console.log(`🐘 Tusk CLI - Developer journal and standup tool
 
 Usage:
   bun cli.ts <command> [options]

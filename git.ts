@@ -1,5 +1,5 @@
 /**
- * Git context utilities for tusk-bun
+ * Git context utilities for tusk
  * Captures git branch, commit, and recently modified files
  */
 

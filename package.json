@@ -1,11 +1,11 @@
 {
-  "name": "tusk-bun",
+  "name": "tusk",
   "version": "1.0.0",
   "description": "Developer journal and standup tool - persistent memory for AI agents",
   "main": "index.ts",
   "type": "module",
   "bin": {
-    "tusk-bun": "./index.ts",
+    "tusk-server": "./index.ts",
     "tusk": "./cli.ts"
   },
   "scripts": {

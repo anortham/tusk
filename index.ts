@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
 
 /**
- * Tusk-Bun MCP Server
+ * Tusk MCP Server
  * Simple developer journal and standup tool with persistent memory
  */
 
@@ -30,7 +30,7 @@ import type { StandupStyle } from "./standup.js";
 // Create MCP server with behavioral instructions for AI agents
 const server = new Server(
   {
-    name: "tusk-bun",
+    name: "tusk",
     version: "1.0.0",
   },
   {
@@ -39,7 +39,7 @@ const server = new Server(
     },
     instructions: `# Tusk-Bun Behavioral Instructions
 
-You are an AI agent with access to tusk-bun tools for persistent memory across sessions. These instructions guide your PROACTIVE behavior to build valuable context data.
+You are an AI agent with access to tusk tools for persistent memory across sessions. These instructions guide your PROACTIVE behavior to build valuable context data.
 
 ## 🎯 CORE BEHAVIORAL PRINCIPLES
 
@@ -204,7 +204,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
           },
           required: ["description"],
         },
-      } satisfies ToolSchema,
+      } satisfies typeof ToolSchema,
       {
         name: "recall",
         description: "Restore context from previous work. ALWAYS use this at the start of sessions to recover important context that might have been lost due to Claude crashes or compaction.",
@@ -230,7 +230,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
             },
           },
         },
-      } satisfies ToolSchema,
+      } satisfies typeof ToolSchema,
       {
         name: "standup",
         description: "Generate beautiful standup reports from your journal. Perfect for team meetings, progress summaries, or understanding what you've accomplished recently.",
@@ -264,7 +264,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
             },
           },
         },
-      } satisfies ToolSchema,
+      } satisfies typeof ToolSchema,
     ],
   };
 });
@@ -473,7 +473,7 @@ async function main() {
   await server.connect(transport);
 
   // Log startup info to stderr (won't interfere with MCP protocol)
-  console.error("🐘 Tusk-Bun MCP Server started");
+  console.error("🐘 Tusk MCP Server started");
   console.error("📁 Journal location: ~/.tusk/journal.db (SQLite)");
   console.error("🔧 Tools available: checkpoint, recall, standup");
   console.error("🗂️ Multi-workspace support enabled");
