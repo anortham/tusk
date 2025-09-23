@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 /**
- * Tusk-Bun User Prompt Submit Hook
+ * Tusk User Prompt Submit Hook
  *
  * Captures important user prompts and technical decisions to prevent loss during compaction.
  * Automatically detects and saves checkpoints for significant discussions and decisions.
@@ -67,8 +67,8 @@ async function main() {
     const keyContent = extractKeyContent(content);
     const description = `User request: ${keyContent}`;
 
-    // Save checkpoint using local tusk CLI
-    const result = spawnSync(["bun", "./cli.ts", "checkpoint", description], {
+    // Save checkpoint using tusk CLI with absolute path
+    const result = spawnSync(["bun", "/Users/murphy/Source/tusk/cli.ts", "checkpoint", description], {
       stdout: "pipe",
       stderr: "pipe",
     });

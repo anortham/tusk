@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 /**
- * Tusk-Bun Pre-Compact Hook
+ * Tusk Pre-Compact Hook
  *
  * Automatically saves a checkpoint before compaction starts to preserve context.
  * This prevents loss of work progress when Claude Code compacts the conversation.
@@ -13,8 +13,8 @@ async function main() {
     const now = new Date();
     const description = `Auto-saved before compaction to preserve context - ${now.toLocaleString()}`;
 
-    // Use the local tusk CLI for hooks
-    const result = spawnSync(["bun", "./cli.ts", "checkpoint", description], {
+    // Use the tusk CLI with absolute path
+    const result = spawnSync(["bun", "/Users/murphy/Source/tusk/cli.ts", "checkpoint", description], {
       stdout: "pipe",
       stderr: "pipe",
     });

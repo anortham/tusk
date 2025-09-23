@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 /**
- * Tusk-Bun Stop Hook - Work Completion Detection
+ * Tusk Stop Hook - Work Completion Detection
  *
  * Analyzes Claude's responses to detect when work is completed and automatically
  * saves a checkpoint to capture the final state.
@@ -55,8 +55,8 @@ async function main() {
     const keyContent = extractKeyContent(content);
     const description = `Work completed: ${keyContent}`;
 
-    // Save checkpoint using local tusk CLI
-    const result = spawnSync(["bun", "./cli.ts", "checkpoint", description], {
+    // Save checkpoint using tusk CLI with absolute path
+    const result = spawnSync(["bun", "/Users/murphy/Source/tusk/cli.ts", "checkpoint", description], {
       stdout: "pipe",
       stderr: "pipe",
     });
