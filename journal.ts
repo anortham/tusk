@@ -9,6 +9,8 @@ import { homedir } from "os";
 import { join, normalize, resolve, dirname, basename } from "path";
 import { createHash } from "crypto";
 import { spawnSync } from "bun";
+import { FTSManager } from "./fts-manager.js";
+import type { FTSSearchOptions, FTSSearchResult } from "./fts-types.js";
 
 // Types for the SQLite journal implementation
 export interface CheckpointEntry {
@@ -76,6 +78,8 @@ export class JournalDB {
   private readonly workspacePath: string;
   private readonly workspaceName: string;
   private readonly workspaceInfo: WorkspaceInfo;
+  private ftsManager: FTSManager;
+  private ftsEnabled: boolean = false;
 
   constructor(options: { cwd?: string; testMode?: boolean; dbPath?: string } = {}) {
     // Initialize workspace context
@@ -102,6 +106,10 @@ export class JournalDB {
 
     // Initialize schema
     this.initializeSchema();
+
+    // Initialize FTS manager and setup
+    this.ftsManager = new FTSManager(this.db, this.workspaceId);
+    this.initializeFTSAsync();
   }
 
   /**
@@ -210,6 +218,22 @@ export class JournalDB {
 
     // Create indexes for performance
     this.createIndexes();
+  }
+
+  /**
+   * Initialize FTS asynchronously (non-blocking)
+   */
+  private async initializeFTSAsync(): Promise<void> {
+    try {
+      await this.ftsManager.initializeFTS();
+      this.ftsEnabled = await this.ftsManager.isFTSEnabled();
+      if (this.ftsEnabled) {
+        console.error("✅ FTS enabled for enhanced search");
+      }
+    } catch (error) {
+      console.error("⚠️ FTS initialization failed, using LIKE fallback:", error instanceof Error ? error.message : error);
+      this.ftsEnabled = false;
+    }
   }
 
   /**
@@ -672,9 +696,93 @@ export class JournalDB {
   }
 
   /**
-   * Search checkpoints across workspaces
+   * Search checkpoints across workspaces with FTS support and LIKE fallback
    */
   async searchCheckpoints(query: string, options: QueryOptions = {}): Promise<CheckpointEntry[]> {
+    // Try FTS search first if available
+    if (this.ftsEnabled) {
+      try {
+        const ftsOptions: FTSSearchOptions = {
+          query,
+          workspace: options.workspace || 'current',
+          limit: options.limit || 50,
+          offset: options.offset || 0
+        };
+
+        const ftsResults = await this.ftsManager.searchWithFTS(ftsOptions);
+        return ftsResults.map(result => this.ftsResultToCheckpointEntry(result));
+      } catch (error) {
+        console.error('FTS search failed, falling back to LIKE:', error instanceof Error ? error.message : error);
+        // Fall through to LIKE search
+      }
+    }
+
+    // Fallback to original LIKE-based search
+    return this.searchCheckpointsWithLike(query, options);
+  }
+
+  /**
+   * Enhanced FTS search with full options support
+   */
+  async searchWithFTS(options: FTSSearchOptions): Promise<FTSSearchResult[]> {
+    if (!this.ftsEnabled) {
+      throw new Error('FTS not available - use searchCheckpoints() for automatic fallback');
+    }
+
+    // Set current workspace context
+    if (options.workspace === 'current') {
+      options.workspace = this.workspaceId;
+    }
+
+    return this.ftsManager.searchWithFTS(options);
+  }
+
+  /**
+   * Get FTS statistics and status
+   */
+  async getFTSStats() {
+    if (!this.ftsEnabled) {
+      return null;
+    }
+    return this.ftsManager.getFTSStats();
+  }
+
+  /**
+   * Check if FTS is enabled and available
+   */
+  isFTSEnabled(): boolean {
+    return this.ftsEnabled;
+  }
+
+  /**
+   * Convert FTS result to checkpoint entry for backward compatibility
+   */
+  private ftsResultToCheckpointEntry(result: FTSSearchResult): CheckpointEntry {
+    return {
+      id: result.id,
+      workspaceId: result.workspaceId,
+      workspacePath: result.workspacePath,
+      workspaceName: result.workspaceName,
+      timestamp: result.timestamp,
+      description: result.description,
+      project: result.project,
+      gitBranch: result.gitBranch,
+      gitCommit: result.gitCommit,
+      tags: result.tags,
+      files: result.files,
+      syncStatus: result.syncStatus,
+      remoteId: result.remoteId,
+      lastSyncedAt: result.lastSyncedAt,
+      version: result.version,
+      createdAt: result.createdAt,
+      updatedAt: result.updatedAt
+    };
+  }
+
+  /**
+   * Original LIKE-based search for fallback compatibility
+   */
+  private async searchCheckpointsWithLike(query: string, options: QueryOptions = {}): Promise<CheckpointEntry[]> {
     const {
       workspace = 'current',
       limit = 50,
