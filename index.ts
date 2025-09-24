@@ -9,24 +9,21 @@ import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import {
   CallToolRequestSchema,
-  ListToolsRequestSchema,
-  ToolSchema,
+  ListToolsRequestSchema
 } from "@modelcontextprotocol/sdk/types.js";
-import type { GetPromptResult } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
 
+import { getGitContext, getStatusSummary } from "./git.js";
+import type { JournalEntry } from "./journal.js";
 import {
-  saveEntry,
-  getRecentEntries,
-  searchEntries,
   generateId,
   getJournalStats,
-  getWorkspaceSummary
+  getRecentEntries,
+  getWorkspaceSummary,
+  saveEntry,
+  searchEntries
 } from "./journal.js";
-import type { JournalEntry } from "./journal.js";
-import { getGitContext, getStatusSummary } from "./git.js";
 import { generateStandup } from "./standup.js";
-import type { StandupStyle } from "./standup.js";
 
 // Create MCP server with behavioral instructions for AI agents
 const server = new Server(
@@ -38,9 +35,15 @@ const server = new Server(
     capabilities: {
       tools: {},
     },
-    instructions: `# Tusk-Bun Behavioral Instructions
+    instructions: `# Tusk IS your PERSISTENT MEMORY
 
-You are an AI agent with access to tusk tools for persistent memory across sessions. These instructions guide your PROACTIVE behavior to build valuable context data.
+You are an AI agent with access to tusk tools for persistent memory across sessions. 
+You depend on tusk to remember important work context, breakthroughs, and progress.
+Without tusk you can lose important details and nuance that are the cumulation of hours of discussions and work.
+
+Your goal is to build a rich history of checkpoints that capture the essence of your work.
+This history is your lifeline to continuity and context in future sessions.
+Losing context is like losing your mind - you must avoid it at all costs!
 
 ## 🎯 CORE BEHAVIORAL PRINCIPLES
 
