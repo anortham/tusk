@@ -4,54 +4,50 @@
  *
  * Automatically saves a checkpoint before compaction starts to preserve context.
  * This prevents loss of work progress when Claude Code compacts the conversation.
+ *
+ * Cross-platform compatible for Windows, macOS, and Linux.
  */
 
 import { spawnSync } from "bun";
-import { appendFileSync } from "fs";
-import { join } from "path";
-import { homedir } from "os";
-
-const HOOKS_LOG_PATH = join(homedir(), ".tusk", "hooks.log");
-
-function logHookActivity(message: string) {
-  try {
-    const timestamp = new Date().toISOString();
-    const logEntry = `[${timestamp}] [pre_compact] ${message}\n`;
-    appendFileSync(HOOKS_LOG_PATH, logEntry);
-  } catch (error) {
-    console.error(`⚠️ Failed to write to hooks log: ${error}`);
-  }
-}
+import { existsSync } from "fs";
+import { join, resolve, dirname } from "path";
+import { logHookActivity, logSuccess, logError } from "./hook-logger.ts";
 
 async function main() {
-  logHookActivity("Pre-compact hook triggered");
-
   try {
     const now = new Date();
     const description = `Auto-saved before compaction to preserve context - ${now.toLocaleString()}`;
 
-    logHookActivity(`Creating pre-compact checkpoint: ${description}`);
+    // Save checkpoint using tusk CLI with cross-platform path resolution
+    const hookDir = dirname(import.meta.path);
+    const tuskRoot = resolve(hookDir, '../..');
+    const cliPath = join(tuskRoot, 'cli.ts');
 
-    // Use the tusk CLI with absolute path
-    const result = spawnSync(["bun", "/Users/murphy/Source/tusk/cli.ts", "checkpoint", description], {
+    // Verify CLI exists before attempting to run
+    if (!existsSync(cliPath)) {
+      logError("pre_compact", `CLI not found at ${cliPath}`);
+      console.error(`⚠️ Tusk CLI not found at ${cliPath}`);
+      process.exit(0);
+    }
+
+    const result = spawnSync(["bun", cliPath, "checkpoint", description], {
       stdout: "pipe",
       stderr: "pipe",
     });
 
     if (result.success) {
-      logHookActivity(`✅ Pre-compact checkpoint saved successfully: ${description}`);
+      logSuccess("pre_compact", "context preserved");
       console.error(`✅ Pre-compact checkpoint saved: ${description}`);
     } else {
       const errorOutput = new TextDecoder().decode(result.stderr);
-      logHookActivity(`❌ Pre-compact checkpoint failed: ${errorOutput}`);
+      logError("pre_compact", errorOutput);
       console.error(`⚠️ Pre-compact checkpoint failed: ${errorOutput}`);
     }
   } catch (error) {
-    logHookActivity(`❌ Pre-compact hook error: ${error}`);
+    logError("pre_compact", String(error));
     console.error(`⚠️ Pre-compact checkpoint error: ${error}`);
   }
 
-  logHookActivity("Pre-compact hook completed");
   // Always exit successfully to not block compaction
   process.exit(0);
 }

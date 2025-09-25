@@ -4,24 +4,14 @@
  *
  * Analyzes Claude's responses to detect when work is completed and automatically
  * saves a checkpoint to capture the final state.
+ *
+ * Cross-platform compatible for Windows, macOS, and Linux.
  */
 
 import { spawnSync } from "bun";
-import { appendFileSync } from "fs";
-import { join } from "path";
-import { homedir } from "os";
-
-const HOOKS_LOG_PATH = join(homedir(), ".tusk", "hooks.log");
-
-function logHookActivity(message: string) {
-  try {
-    const timestamp = new Date().toISOString();
-    const logEntry = `[${timestamp}] [stop] ${message}\n`;
-    appendFileSync(HOOKS_LOG_PATH, logEntry);
-  } catch (error) {
-    console.error(`⚠️ Failed to write to hooks log: ${error}`);
-  }
-}
+import { existsSync } from "fs";
+import { join, resolve, dirname } from "path";
+import { logHookActivity, logSuccess, logError, logSkip } from "./hook-logger.ts";
 
 function detectCompletionPatterns(text: string): boolean {
   const completionPatterns = [
@@ -50,8 +40,6 @@ function extractKeyContent(text: string): string {
 }
 
 async function main() {
-  logHookActivity("Hook triggered");
-
   try {
     // Read JSON input from stdin
     const stdinBuffer = [];
@@ -59,11 +47,6 @@ async function main() {
       stdinBuffer.push(chunk);
     }
     const inputData = JSON.parse(Buffer.concat(stdinBuffer).toString());
-
-    logHookActivity(`Input data keys: ${JSON.stringify(Object.keys(inputData))}`);
-
-    // Extract session_id and try to find assistant message content
-    const sessionId = inputData.session_id || 'unknown';
 
     // Try multiple possible paths for assistant content
     let content = '';
@@ -75,45 +58,45 @@ async function main() {
       content = inputData.message.content;
     }
 
-    logHookActivity(`Session ID: ${sessionId}`);
-    logHookActivity(`Content length: ${content.length}`);
-    logHookActivity(`Content preview: ${content.substring(0, 100)}...`);
-
     // Check if this looks like completion
     if (!detectCompletionPatterns(content)) {
-      logHookActivity("No completion patterns detected, skipping");
+      logSkip("stop", "no completion patterns");
       process.exit(0);
     }
-
-    logHookActivity("Completion patterns detected!");
 
     const keyContent = extractKeyContent(content);
     const description = `Work completed: ${keyContent}`;
 
-    logHookActivity(`Creating checkpoint with description: ${description}`);
+    // Save checkpoint using tusk CLI with cross-platform path resolution
+    const hookDir = dirname(import.meta.path);
+    const tuskRoot = resolve(hookDir, '../..');
+    const cliPath = join(tuskRoot, 'cli.ts');
 
-    // Save checkpoint using tusk CLI with absolute path
-    const result = spawnSync(["bun", "/Users/murphy/Source/tusk/cli.ts", "checkpoint", description], {
+    // Verify CLI exists before attempting to run
+    if (!existsSync(cliPath)) {
+      logError("stop", `CLI not found at ${cliPath}`);
+      console.error(`⚠️ Tusk CLI not found at ${cliPath}`);
+      process.exit(0);
+    }
+
+    const result = spawnSync(["bun", cliPath, "checkpoint", description], {
       stdout: "pipe",
       stderr: "pipe",
     });
 
     if (result.success) {
-      logHookActivity(`✅ Checkpoint saved successfully: ${description}`);
+      logSuccess("stop", keyContent);
       console.error(`✅ Completion checkpoint saved: ${description}`);
     } else {
       const errorOutput = new TextDecoder().decode(result.stderr);
-      logHookActivity(`❌ Checkpoint failed: ${errorOutput}`);
+      logError("stop", errorOutput);
       console.error(`⚠️ Completion checkpoint failed: ${errorOutput}`);
     }
   } catch (error) {
-    logHookActivity(`❌ Hook error: ${error}`);
+    logError("stop", String(error));
     console.error(`⚠️ Stop hook error: ${error}`);
-    // Exit successfully to not interfere with Claude
-    process.exit(0);
   }
 
-  logHookActivity("Hook completed");
   // Always exit successfully to not interfere with Claude
   process.exit(0);
 }

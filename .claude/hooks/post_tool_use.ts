@@ -4,24 +4,14 @@
  *
  * Automatically detects when Claude performs git commits and saves the commit
  * message as a checkpoint to preserve the detailed commit context.
+ *
+ * Cross-platform compatible for Windows, macOS, and Linux.
  */
 
 import { spawnSync } from "bun";
-import { appendFileSync } from "fs";
-import { join } from "path";
-import { homedir } from "os";
-
-const HOOKS_LOG_PATH = join(homedir(), ".tusk", "hooks.log");
-
-function logHookActivity(message: string) {
-  try {
-    const timestamp = new Date().toISOString();
-    const logEntry = `[${timestamp}] [post_tool_use] ${message}\n`;
-    appendFileSync(HOOKS_LOG_PATH, logEntry);
-  } catch (error) {
-    console.error(`⚠️ Failed to write to hooks log: ${error}`);
-  }
-}
+import { existsSync } from "fs";
+import { join, resolve, dirname } from "path";
+import { logHookActivity, logSuccess, logError, logSkip } from "./hook-logger.ts";
 
 function extractCommitMessage(command: string): string | null {
   // Match various git commit patterns
@@ -52,8 +42,6 @@ function isGitCommitCommand(command: string): boolean {
 }
 
 async function main() {
-  logHookActivity("Hook triggered");
-
   try {
     // Read JSON input from stdin
     const stdinBuffer = [];
@@ -62,72 +50,68 @@ async function main() {
     }
     const inputData = JSON.parse(Buffer.concat(stdinBuffer).toString());
 
-    logHookActivity(`Input data keys: ${JSON.stringify(Object.keys(inputData))}`);
-
     // Extract tool information
     const toolName = inputData.tool_name || '';
     const toolInput = inputData.tool_input || {};
     const toolResponse = inputData.tool_response || {};
-    const sessionId = inputData.session_id || 'unknown';
-
-    logHookActivity(`Tool: ${toolName}, Session: ${sessionId}`);
 
     // Only process Bash tool usage
     if (toolName !== 'Bash') {
-      logHookActivity(`Not a Bash tool (${toolName}), skipping`);
+      logSkip("post_tool_use", `not bash tool (${toolName})`);
       process.exit(0);
     }
 
     const command = toolInput.command || '';
-    logHookActivity(`Command: ${command.substring(0, 100)}...`);
 
     // Check if this is a git commit command
     if (!isGitCommitCommand(command)) {
-      logHookActivity("Not a git commit command, skipping");
+      logSkip("post_tool_use", "not git commit");
       process.exit(0);
     }
 
     // Check if the command was successful
     const success = toolResponse.success !== false && !toolResponse.stderr?.includes('error');
     if (!success) {
-      logHookActivity("Git commit appears to have failed, skipping checkpoint");
+      logSkip("post_tool_use", "commit failed");
       process.exit(0);
     }
 
     // Extract commit message
     const commitMessage = extractCommitMessage(command);
-    if (!commitMessage) {
-      logHookActivity("Could not extract commit message, using generic description");
-    }
-
     const description = commitMessage
       ? `Git commit: ${commitMessage}`
       : "Git commit completed (could not extract message)";
 
-    logHookActivity(`Creating checkpoint with description: ${description}`);
+    // Save checkpoint using tusk CLI with cross-platform path resolution
+    const hookDir = dirname(import.meta.path);
+    const tuskRoot = resolve(hookDir, '../..');
+    const cliPath = join(tuskRoot, 'cli.ts');
 
-    // Save checkpoint using tusk CLI
-    const result = spawnSync(["bun", "/Users/murphy/Source/tusk/cli.ts", "checkpoint", description], {
+    // Verify CLI exists before attempting to run
+    if (!existsSync(cliPath)) {
+      logError("post_tool_use", `CLI not found at ${cliPath}`);
+      console.error(`⚠️ Tusk CLI not found at ${cliPath}`);
+      process.exit(0);
+    }
+
+    const result = spawnSync(["bun", cliPath, "checkpoint", description], {
       stdout: "pipe",
       stderr: "pipe",
     });
 
     if (result.success) {
-      logHookActivity(`✅ Checkpoint saved successfully: ${description}`);
+      logSuccess("post_tool_use", commitMessage || 'commit completed');
       console.error(`✅ Git commit checkpoint saved: ${commitMessage || 'commit completed'}`);
     } else {
       const errorOutput = new TextDecoder().decode(result.stderr);
-      logHookActivity(`❌ Checkpoint failed: ${errorOutput}`);
+      logError("post_tool_use", errorOutput);
       console.error(`⚠️ Git commit checkpoint failed: ${errorOutput}`);
     }
   } catch (error) {
-    logHookActivity(`❌ Hook error: ${error}`);
+    logError("post_tool_use", String(error));
     console.error(`⚠️ Post tool use hook error: ${error}`);
-    // Exit successfully to not interfere with Claude
-    process.exit(0);
   }
 
-  logHookActivity("Hook completed");
   // Always exit successfully to not interfere with Claude
   process.exit(0);
 }

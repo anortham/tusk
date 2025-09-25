@@ -30,15 +30,39 @@ bun run index.ts
 
 Add to your Claude Desktop MCP configuration:
 
-**Mac**: `~/Library/Application Support/Claude/claude_desktop_config.json`
+**macOS**: `~/Library/Application Support/Claude/claude_desktop_config.json`
 **Windows**: `%APPDATA%\Claude\claude_desktop_config.json`
+**Linux**: `~/.config/claude/claude_desktop_config.json`
 
 ```json
 {
   "mcpServers": {
     "tusk": {
       "command": "bun",
-      "args": ["run", "/path/to/tusk/index.ts"]
+      "args": ["run", "/absolute/path/to/tusk/index.ts"]
+    }
+  }
+}
+```
+
+**Platform-specific paths**:
+```json
+// Windows example
+{
+  "mcpServers": {
+    "tusk": {
+      "command": "bun",
+      "args": ["run", "C:\\Users\\YourName\\tusk\\index.ts"]
+    }
+  }
+}
+
+// macOS/Linux example
+{
+  "mcpServers": {
+    "tusk": {
+      "command": "bun",
+      "args": ["run", "/Users/yourname/tusk/index.ts"]
     }
   }
 }
@@ -70,7 +94,58 @@ bun cli.ts standup --style executive --days 3
 
 ### Claude Code Hook Integration
 
-Add to your project's `CLAUDE.md` for automatic progress tracking:
+Tusk provides automatic checkpoint capture through Claude Code hooks. These hooks work cross-platform on Windows, macOS, and Linux.
+
+#### Quick Setup
+
+**Step 1**: Copy hooks to your project:
+```bash
+# Copy hooks from tusk installation to your project
+cp -r /path/to/tusk/.claude ./
+
+# Or create .claude/hooks directory and copy manually
+mkdir -p .claude/hooks
+cp /path/to/tusk/.claude/hooks/* .claude/hooks/
+```
+
+**Step 2**: Configure hooks in Claude Code settings:
+
+**macOS**: `~/Library/Application Support/Claude/claude_desktop_config.json`
+**Windows**: `%APPDATA%\Claude\claude_desktop_config.json`
+**Linux**: `~/.config/claude/claude_desktop_config.json`
+
+```json
+{
+  "hooks": {
+    "user_prompt_submit": {
+      "command": ".claude/hooks/user_prompt_submit.ts"
+    },
+    "stop": {
+      "command": ".claude/hooks/stop.ts"
+    },
+    "post_tool_use": {
+      "command": ".claude/hooks/post_tool_use.ts"
+    },
+    "pre_compact": {
+      "command": ".claude/hooks/pre_compact.ts"
+    }
+  }
+}
+```
+
+#### Cross-Platform Notes
+
+**All Platforms** (Windows, macOS, Linux):
+- Bun executes `.ts` files directly with the shebang line
+- Hooks automatically detect tusk CLI location relative to the hook directory
+- No need to modify paths when copying hooks between projects
+- Ensure Bun is in your system PATH
+- Hook files should be executable on Unix systems: `chmod +x .claude/hooks/*.ts`
+- Hooks log minimal activity to `~/.tusk/hooks.log` with daily rotation
+
+#### Manual Integration
+
+If you prefer manual checkpointing, add to your project's `CLAUDE.md`:
 
 ```markdown
 ## Post-Work Hook

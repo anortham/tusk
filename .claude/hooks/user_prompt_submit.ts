@@ -4,24 +4,14 @@
  *
  * Captures important user prompts and technical decisions to prevent loss during compaction.
  * Automatically detects and saves checkpoints for significant discussions and decisions.
+ *
+ * Cross-platform compatible for Windows, macOS, and Linux.
  */
 
 import { spawnSync } from "bun";
-import { appendFileSync } from "fs";
-import { join } from "path";
-import { homedir } from "os";
-
-const HOOKS_LOG_PATH = join(homedir(), ".tusk", "hooks.log");
-
-function logHookActivity(message: string) {
-  try {
-    const timestamp = new Date().toISOString();
-    const logEntry = `[${timestamp}] [user_prompt_submit] ${message}\n`;
-    appendFileSync(HOOKS_LOG_PATH, logEntry);
-  } catch (error) {
-    console.error(`⚠️ Failed to write to hooks log: ${error}`);
-  }
-}
+import { existsSync } from "fs";
+import { join, resolve, dirname } from "path";
+import { logHookActivity, logSuccess, logError, logSkip } from "./hook-logger.ts";
 
 function detectImportantPrompt(text: string): boolean {
   const importantPatterns = [
@@ -62,8 +52,6 @@ function extractKeyContent(text: string): string {
 }
 
 async function main() {
-  logHookActivity("Hook triggered");
-
   try {
     // Read JSON input from stdin
     const stdinBuffer = [];
@@ -72,54 +60,53 @@ async function main() {
     }
     const inputData = JSON.parse(Buffer.concat(stdinBuffer).toString());
 
-    logHookActivity(`Input data keys: ${JSON.stringify(Object.keys(inputData))}`);
-
     // Extract session_id and prompt from input data
-    const sessionId = inputData.session_id || 'unknown';
     const content = inputData.prompt || '';
-
-    logHookActivity(`Session ID: ${sessionId}`);
-    logHookActivity(`Prompt content length: ${content.length}`);
-    logHookActivity(`Content preview: ${content.substring(0, 100)}...`);
 
     // Skip if the prompt is too short or not important
     if (content.trim().length < 20) {
-      logHookActivity("Content too short, skipping");
+      logSkip("user_prompt", "too short");
       process.exit(0);
     }
 
     if (!detectImportantPrompt(content)) {
-      logHookActivity("Content not detected as important, skipping");
+      logSkip("user_prompt", "not important");
       process.exit(0);
     }
 
     const keyContent = extractKeyContent(content);
     const description = `User request: ${keyContent}`;
 
-    logHookActivity(`Creating checkpoint with description: ${description}`);
+    // Save checkpoint using tusk CLI with cross-platform path resolution
+    const hookDir = dirname(import.meta.path);
+    const tuskRoot = resolve(hookDir, '../..');
+    const cliPath = join(tuskRoot, 'cli.ts');
 
-    // Save checkpoint using tusk CLI with absolute path
-    const result = spawnSync(["bun", "/Users/murphy/Source/tusk/cli.ts", "checkpoint", description], {
+    // Verify CLI exists before attempting to run
+    if (!existsSync(cliPath)) {
+      logError("user_prompt", `CLI not found at ${cliPath}`);
+      console.error(`⚠️ Tusk CLI not found at ${cliPath}`);
+      process.exit(0);
+    }
+
+    const result = spawnSync(["bun", cliPath, "checkpoint", description], {
       stdout: "pipe",
       stderr: "pipe",
     });
 
     if (result.success) {
-      logHookActivity(`✅ Checkpoint saved successfully: ${description}`);
+      logSuccess("user_prompt", keyContent);
       console.error(`✅ User prompt checkpoint saved: ${description}`);
     } else {
       const errorOutput = new TextDecoder().decode(result.stderr);
-      logHookActivity(`❌ Checkpoint failed: ${errorOutput}`);
+      logError("user_prompt", errorOutput);
       console.error(`⚠️ User prompt checkpoint failed: ${errorOutput}`);
     }
   } catch (error) {
-    logHookActivity(`❌ Hook error: ${error}`);
+    logError("user_prompt", String(error));
     console.error(`⚠️ User prompt hook error: ${error}`);
-    // Exit successfully to not interfere with Claude
-    process.exit(0);
   }
 
-  logHookActivity("Hook completed");
   // Always exit successfully to not interfere with Claude
   process.exit(0);
 }
