@@ -45,6 +45,12 @@ Your goal is to build a rich history of checkpoints that capture the essence of 
 This history is your lifeline to continuity and context in future sessions.
 Losing context is like losing your mind - you must avoid it at all costs!
 
+## 🎯 Core Workflow
+1. **Start:** recall() to restore context
+2. **Work:** Code, debug, implement, discover
+3. **Save:** checkpoint() after each milestone
+4. **Repeat:** Build continuous memory
+
 ## 🎯 CORE BEHAVIORAL PRINCIPLES
 
 ### 1. SESSION RECOVERY (Always Start Here)
@@ -195,7 +201,15 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
     tools: [
       {
         name: "checkpoint",
-        description: "Save work progress. Your memory across Claude sessions. Use this to capture important moments, breakthroughs, or progress that should be remembered later.",
+        description: `Save work progress to persistent memory that survives Claude sessions.
+
+Captures important moments, breakthroughs, or completed tasks. Use after fixing bugs, completing features, making discoveries, or before ending work sessions.
+
+Parameters:
+- description: Your progress in clear, specific terms (e.g., "Fixed auth timeout by implementing JWT refresh tokens")
+- tags (optional): Categories like ["bug-fix", "auth", "critical"]
+
+Returns: Confirmation with unique ID, timestamp, and git context.`,
         inputSchema: {
           type: "object",
           properties: {
@@ -214,7 +228,18 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
       },
       {
         name: "recall",
-        description: "Restore context from previous work. ALWAYS use this at the start of sessions to recover important context that might have been lost due to Claude crashes or compaction.",
+        description: `Restore context from previous work sessions. CRITICAL: Always use first in new sessions.
+
+Recovers lost context from Claude crashes, memory limits, or session restarts. Essential for maintaining continuity.
+
+Parameters:
+- days (default: 2): How far back to look
+- search: Find specific topics (e.g., "authentication", "database schema")
+- project: Filter by project name
+- workspace: "current" (default), "all", or specific ID
+- listWorkspaces: See all workspaces and stats
+
+Returns: Chronological entries with descriptions, timestamps, and git context.`,
         inputSchema: {
           type: "object",
           properties: {
@@ -252,7 +277,17 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
       },
       {
         name: "standup",
-        description: "Generate beautiful standup reports from your journal. Perfect for team meetings, progress summaries, or understanding what you've accomplished recently.",
+        description: `Generate formatted progress reports from checkpoint history.
+
+Perfect for daily standups, weekly reviews, or project summaries. Transforms your checkpoints into professional updates.
+
+Parameters:
+- style: "meeting" (bullet points), "written" (narrative), "executive" (high-level), "metrics" (statistics)
+- days (default: 1): Period to cover
+- includeMetrics: Add productivity statistics
+- includeFiles: List modified files
+
+Returns: Formatted report ready for team communication or personal review.`,
         inputSchema: {
           type: "object",
           properties: {
@@ -358,7 +393,9 @@ ${gitInfo.project ? `📁 **Project:** ${gitInfo.project}` : ""}
 ${gitInfo.branch ? `🌿 **Git:** ${gitStatus}` : ""}
 ${tags && tags.length > 0 ? `🏷️ **Tags:** ${tags.join(", ")}` : ""}
 
-Your progress is now safely captured and will survive Claude sessions! 🐘`,
+Your progress is now safely captured and will survive Claude sessions! 🐘
+
+💡 **Next:** Use recall() when starting your next session to restore this context.`,
       },
     ],
   };
@@ -479,6 +516,9 @@ No journal entries found${filterDesc.length > 0 ? ` for ${filterDesc.join(", ")}
   if (stats.projects.length > 0) {
     contextLines.push(`🗂️ **Projects:** ${stats.projects.join(", ")}`);
   }
+
+  contextLines.push("");
+  contextLines.push("🎯 **Context restored!** Continue your work with this background knowledge.");
 
   return {
     content: [
