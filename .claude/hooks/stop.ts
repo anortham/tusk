@@ -53,21 +53,30 @@ async function main() {
   logHookActivity("Hook triggered");
 
   try {
-    const args = process.argv.slice(2);
-    logHookActivity(`Args received: ${JSON.stringify(args)}`);
+    // Read JSON input from stdin
+    const stdinBuffer = [];
+    for await (const chunk of process.stdin) {
+      stdinBuffer.push(chunk);
+    }
+    const inputData = JSON.parse(Buffer.concat(stdinBuffer).toString());
 
-    const dataIndex = args.indexOf('--data');
+    logHookActivity(`Input data keys: ${JSON.stringify(Object.keys(inputData))}`);
 
-    if (dataIndex === -1 || !args[dataIndex + 1]) {
-      logHookActivity("No --data argument found, exiting");
-      process.exit(0);
+    // Extract session_id and try to find assistant message content
+    const sessionId = inputData.session_id || 'unknown';
+
+    // Try multiple possible paths for assistant content
+    let content = '';
+    if (inputData.assistant_message?.content) {
+      content = inputData.assistant_message.content;
+    } else if (inputData.content) {
+      content = inputData.content;
+    } else if (inputData.message?.content) {
+      content = inputData.message.content;
     }
 
-    const data = JSON.parse(args[dataIndex + 1]);
-    const assistantMessage = data.assistant_message || {};
-    const content = assistantMessage.content || '';
-
-    logHookActivity(`Assistant message content length: ${content.length}`);
+    logHookActivity(`Session ID: ${sessionId}`);
+    logHookActivity(`Content length: ${content.length}`);
     logHookActivity(`Content preview: ${content.substring(0, 100)}...`);
 
     // Check if this looks like completion
@@ -100,6 +109,8 @@ async function main() {
   } catch (error) {
     logHookActivity(`❌ Hook error: ${error}`);
     console.error(`⚠️ Stop hook error: ${error}`);
+    // Exit successfully to not interfere with Claude
+    process.exit(0);
   }
 
   logHookActivity("Hook completed");

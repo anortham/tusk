@@ -65,21 +65,21 @@ async function main() {
   logHookActivity("Hook triggered");
 
   try {
-    const args = process.argv.slice(2);
-    logHookActivity(`Args received: ${JSON.stringify(args)}`);
-
-    const dataIndex = args.indexOf('--data');
-
-    if (dataIndex === -1 || !args[dataIndex + 1]) {
-      logHookActivity("No --data argument found, exiting");
-      process.exit(0);
+    // Read JSON input from stdin
+    const stdinBuffer = [];
+    for await (const chunk of process.stdin) {
+      stdinBuffer.push(chunk);
     }
+    const inputData = JSON.parse(Buffer.concat(stdinBuffer).toString());
 
-    const data = JSON.parse(args[dataIndex + 1]);
-    const userMessage = data.user_message || {};
-    const content = userMessage.content || '';
+    logHookActivity(`Input data keys: ${JSON.stringify(Object.keys(inputData))}`);
 
-    logHookActivity(`User message content length: ${content.length}`);
+    // Extract session_id and prompt from input data
+    const sessionId = inputData.session_id || 'unknown';
+    const content = inputData.prompt || '';
+
+    logHookActivity(`Session ID: ${sessionId}`);
+    logHookActivity(`Prompt content length: ${content.length}`);
     logHookActivity(`Content preview: ${content.substring(0, 100)}...`);
 
     // Skip if the prompt is too short or not important
@@ -115,6 +115,8 @@ async function main() {
   } catch (error) {
     logHookActivity(`❌ Hook error: ${error}`);
     console.error(`⚠️ User prompt hook error: ${error}`);
+    // Exit successfully to not interfere with Claude
+    process.exit(0);
   }
 
   logHookActivity("Hook completed");
