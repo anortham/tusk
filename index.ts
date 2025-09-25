@@ -21,7 +21,11 @@ import {
   getRecentEntries,
   getWorkspaceSummary,
   saveEntry,
-  searchEntries
+  searchEntries,
+  clusterSimilarCheckpoints,
+  mergeCheckpointCluster,
+  sortByRelevance,
+  filterByRelevance,
 } from "./journal.js";
 import { generateStandup } from "./standup.js";
 
@@ -182,6 +186,14 @@ const RecallSchema = z.object({
   project: z.string().optional().describe("Filter by specific project name"),
   workspace: z.string().optional().describe("Filter by specific workspace ID ('current' for current workspace, 'all' for all workspaces)"),
   listWorkspaces: z.boolean().optional().describe("List all workspaces with statistics"),
+
+  // Enhanced processing options
+  deduplicate: z.boolean().optional().default(true).describe("Enable smart deduplication of similar entries (default: true)"),
+  similarityThreshold: z.number().optional().default(0.7).describe("Similarity threshold for deduplication (0-1, default: 0.7)"),
+  summarize: z.boolean().optional().default(false).describe("Generate executive summary of key insights (default: false)"),
+  groupBy: z.enum(["chronological", "project", "topic", "session", "relevance"]).optional().default("chronological").describe("Grouping strategy for entries"),
+  relevanceThreshold: z.number().optional().default(0.0).describe("Minimum relevance score filter (0-1, default: 0.0)"),
+  maxEntries: z.number().optional().default(50).describe("Maximum number of entries to return after processing (default: 50)"),
 });
 
 const StandupSchema = z.object({
@@ -228,18 +240,26 @@ Returns: Confirmation with unique ID, timestamp, and git context.`,
       },
       {
         name: "recall",
-        description: `Restore context from previous work sessions. CRITICAL: Always use first in new sessions.
+        description: `Restore context from previous work sessions with intelligent deduplication and relevance scoring.
 
-Recovers lost context from Claude crashes, memory limits, or session restarts. Essential for maintaining continuity.
+CRITICAL: Always use first in new sessions. Recovers lost context from Claude crashes, memory limits, or session restarts.
 
-Parameters:
+Basic Parameters:
 - days (default: 2): How far back to look
 - search: Find specific topics (e.g., "authentication", "database schema")
 - project: Filter by project name
 - workspace: "current" (default), "all", or specific ID
 - listWorkspaces: See all workspaces and stats
 
-Returns: Chronological entries with descriptions, timestamps, and git context.`,
+Enhanced Processing:
+- deduplicate (default: true): Smart deduplication of similar entries
+- similarityThreshold (default: 0.7): Similarity threshold for deduplication (0-1)
+- summarize (default: false): Generate executive summary of key insights
+- groupBy (default: "chronological"): Group by chronological, project, topic, session, or relevance
+- relevanceThreshold (default: 0.0): Filter by minimum relevance score (0-1)
+- maxEntries (default: 50): Maximum entries after processing
+
+Returns: Intelligently processed entries with reduced redundancy and enhanced context.`,
         inputSchema: {
           type: "object",
           properties: {
@@ -271,6 +291,37 @@ Returns: Chronological entries with descriptions, timestamps, and git context.`,
             listWorkspaces: {
               type: "boolean",
               description: "List all workspaces with statistics",
+            },
+            deduplicate: {
+              type: "boolean",
+              description: "Enable smart deduplication of similar entries (default: true)",
+              default: true,
+            },
+            similarityThreshold: {
+              type: "number",
+              description: "Similarity threshold for deduplication (0-1, default: 0.7)",
+              default: 0.7,
+            },
+            summarize: {
+              type: "boolean",
+              description: "Generate executive summary of key insights (default: false)",
+              default: false,
+            },
+            groupBy: {
+              type: "string",
+              enum: ["chronological", "project", "topic", "session", "relevance"],
+              description: "Grouping strategy for entries (default: chronological)",
+              default: "chronological",
+            },
+            relevanceThreshold: {
+              type: "number",
+              description: "Minimum relevance score filter (0-1, default: 0.0)",
+              default: 0.0,
+            },
+            maxEntries: {
+              type: "number",
+              description: "Maximum number of entries to return after processing (default: 50)",
+              default: 50,
             },
           },
         },
@@ -405,7 +456,10 @@ Your progress is now safely captured and will survive Claude sessions! 🐘
  * Handle recall tool - restore previous context
  */
 async function handleRecall(args: any) {
-  const { days, from, to, search, project, workspace, listWorkspaces } = RecallSchema.parse(args);
+  const {
+    days, from, to, search, project, workspace, listWorkspaces,
+    deduplicate, similarityThreshold, summarize, groupBy, relevanceThreshold, maxEntries
+  } = RecallSchema.parse(args);
 
   // Handle workspace listing if requested
   if (listWorkspaces) {
@@ -453,7 +507,7 @@ No workspaces have been detected. Start by creating checkpoints in different pro
   }
 
   // Get entries based on filters
-  const entries = search
+  let entries = search
     ? await searchEntries(search, { workspace: workspace || 'current' })
     : await getRecentEntries({ days, from, to, project, workspace: workspace || 'current' });
 
@@ -477,34 +531,89 @@ No journal entries found${filterDesc.length > 0 ? ` for ${filterDesc.join(", ")}
     };
   }
 
+  const originalCount = entries.length;
+
+  // === ENHANCED PROCESSING PIPELINE ===
+
+  // 1. Apply relevance filtering
+  if (relevanceThreshold > 0) {
+    entries = filterByRelevance(entries, relevanceThreshold);
+  }
+
+  // 2. Apply deduplication if enabled
+  if (deduplicate) {
+    const clusters = clusterSimilarCheckpoints(entries, similarityThreshold);
+    entries = clusters.map(cluster => mergeCheckpointCluster(cluster));
+  }
+
+  // 3. Sort by relevance if requested or apply intelligent sorting
+  if (groupBy === 'relevance') {
+    const sortedWithScores = sortByRelevance(entries);
+    entries = sortedWithScores.slice(0, maxEntries);
+  } else {
+    // Cap entries before grouping
+    entries = entries.slice(0, maxEntries);
+  }
+
+  // 4. Generate summary if requested
+  let summarySection = "";
+  if (summarize && entries.length > 3) {
+    summarySection = generateExecutiveSummary(entries);
+  }
+
   // Format the entries for display
   const contextLines: string[] = [];
-  contextLines.push(`🧠 **Context Restored** (${entries.length} entries found)`);
+
+  // Show processing stats
+  const processingStats = [];
+  if (originalCount !== entries.length) {
+    processingStats.push(`${entries.length} selected from ${originalCount} entries`);
+  }
+  if (deduplicate) {
+    processingStats.push(`deduplication enabled (threshold: ${similarityThreshold})`);
+  }
+  if (relevanceThreshold > 0) {
+    processingStats.push(`relevance filter: ${relevanceThreshold}`);
+  }
+
+  const headerText = processingStats.length > 0
+    ? `🧠 **Context Restored** (${processingStats.join(", ")})`
+    : `🧠 **Context Restored** (${entries.length} entries found)`;
+
+  contextLines.push(headerText);
   contextLines.push("");
 
-  // Group by project
-  const projectGroups = entries.reduce((groups, entry) => {
-    const proj = entry.project || "General";
-    if (!groups[proj]) groups[proj] = [];
-    groups[proj].push(entry);
-    return groups;
-  }, {} as Record<string, JournalEntry[]>);
+  // Add summary section if generated
+  if (summarySection) {
+    contextLines.push(summarySection);
+    contextLines.push("");
+  }
 
-  for (const [projectName, projectEntries] of Object.entries(projectGroups)) {
-    if (Object.keys(projectGroups).length > 1) {
-      contextLines.push(`📁 **${projectName}:**`);
+  // Apply grouping strategy
+  const groupedEntries = applyGroupingStrategy(entries, groupBy);
+
+  // Format grouped entries for display
+  for (const [groupName, groupEntries] of Object.entries(groupedEntries)) {
+    if (Object.keys(groupedEntries).length > 1) {
+      contextLines.push(`📁 **${groupName}:**`);
     }
 
-    projectEntries.slice(0, 8).forEach(entry => {
+    const entriesToShow = groupEntries.slice(0, 8);
+    entriesToShow.forEach(entry => {
       const time = formatTimeAgo(entry.timestamp);
       const gitInfo = entry.gitBranch ? ` (${entry.gitBranch})` : "";
       const tags = entry.tags && entry.tags.length > 0 ? ` [${entry.tags.join(", ")}]` : "";
 
-      contextLines.push(`   • ${entry.description}${gitInfo}${tags} ${time}`);
+      // Show consolidation info if present
+      const consolidationInfo = entry.consolidationInfo
+        ? ` [merged: ${entry.consolidationInfo.mergedEntries}]`
+        : "";
+
+      contextLines.push(`   • ${entry.description}${gitInfo}${tags}${consolidationInfo} ${time}`);
     });
 
-    if (projectEntries.length > 8) {
-      contextLines.push(`   ... and ${projectEntries.length - 8} more entries`);
+    if (groupEntries.length > 8) {
+      contextLines.push(`   ... and ${groupEntries.length - 8} more entries`);
     }
     contextLines.push("");
   }
@@ -549,6 +658,196 @@ async function handleStandup(args: any) {
       },
     ],
   };
+}
+
+/**
+ * Generate executive summary from checkpoint entries
+ */
+function generateExecutiveSummary(entries: JournalEntry[]): string {
+  const summaryLines: string[] = [];
+  summaryLines.push("📋 **Executive Summary:**");
+  summaryLines.push("");
+
+  // Analyze patterns
+  const projects = [...new Set(entries.map(e => e.project).filter(Boolean))];
+  const tags = entries.flatMap(e => e.tags || []);
+  const tagCounts = tags.reduce((counts, tag) => {
+    counts[tag] = (counts[tag] || 0) + 1;
+    return counts;
+  }, {} as Record<string, number>);
+
+  const topTags = Object.entries(tagCounts)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5)
+    .map(([tag, count]) => `${tag} (${count})`);
+
+  // Identify key achievements and patterns
+  const achievements = entries.filter(e => {
+    const desc = e.description.toLowerCase();
+    return desc.includes("completed") || desc.includes("fixed") ||
+           desc.includes("implemented") || desc.includes("resolved");
+  });
+
+  const workInProgress = entries.filter(e => {
+    const desc = e.description.toLowerCase();
+    return desc.includes("working on") || desc.includes("progress") ||
+           desc.includes("implementing") || desc.includes("debugging");
+  });
+
+  // Build summary
+  if (achievements.length > 0) {
+    summaryLines.push(`🎯 **Key Achievements:** ${achievements.length} completed items`);
+    achievements.slice(0, 3).forEach(entry => {
+      summaryLines.push(`   • ${entry.description.substring(0, 80)}${entry.description.length > 80 ? '...' : ''}`);
+    });
+    summaryLines.push("");
+  }
+
+  if (workInProgress.length > 0) {
+    summaryLines.push(`🔄 **Active Work:** ${workInProgress.length} items in progress`);
+    workInProgress.slice(0, 2).forEach(entry => {
+      summaryLines.push(`   • ${entry.description.substring(0, 80)}${entry.description.length > 80 ? '...' : ''}`);
+    });
+    summaryLines.push("");
+  }
+
+  if (projects.length > 0) {
+    summaryLines.push(`📁 **Active Projects:** ${projects.join(", ")}`);
+  }
+
+  if (topTags.length > 0) {
+    summaryLines.push(`🏷️ **Common Tags:** ${topTags.join(", ")}`);
+  }
+
+  return summaryLines.join("\n");
+}
+
+/**
+ * Apply grouping strategy to entries
+ */
+function applyGroupingStrategy(entries: JournalEntry[], strategy: string): Record<string, JournalEntry[]> {
+  switch (strategy) {
+    case 'project':
+      return entries.reduce((groups, entry) => {
+        const proj = entry.project || "General";
+        if (!groups[proj]) groups[proj] = [];
+        groups[proj].push(entry);
+        return groups;
+      }, {} as Record<string, JournalEntry[]>);
+
+    case 'topic':
+      // Group by common keywords in descriptions
+      return groupByTopic(entries);
+
+    case 'session':
+      // Group by time proximity (within hours)
+      return groupBySession(entries);
+
+    case 'relevance':
+      // Already sorted by relevance, just group all together
+      return { "Most Relevant": entries };
+
+    case 'chronological':
+    default:
+      // Group by date
+      return entries.reduce((groups, entry) => {
+        const date = new Date(entry.timestamp).toLocaleDateString();
+        if (!groups[date]) groups[date] = [];
+        groups[date].push(entry);
+        return groups;
+      }, {} as Record<string, JournalEntry[]>);
+  }
+}
+
+/**
+ * Group entries by topic using keyword analysis
+ */
+function groupByTopic(entries: JournalEntry[]): Record<string, JournalEntry[]> {
+  const topics: Record<string, JournalEntry[]> = {
+    "Bug Fixes": entries.filter(e =>
+      e.description.toLowerCase().includes("fix") ||
+      e.description.toLowerCase().includes("bug") ||
+      e.tags?.some(tag => tag.toLowerCase().includes("bug"))
+    ),
+    "Features": entries.filter(e =>
+      e.description.toLowerCase().includes("implement") ||
+      e.description.toLowerCase().includes("feature") ||
+      e.description.toLowerCase().includes("add") ||
+      e.tags?.some(tag => tag.toLowerCase().includes("feature"))
+    ),
+    "Configuration": entries.filter(e =>
+      e.description.toLowerCase().includes("config") ||
+      e.description.toLowerCase().includes("setup") ||
+      e.description.toLowerCase().includes("install")
+    ),
+    "Documentation": entries.filter(e =>
+      e.description.toLowerCase().includes("document") ||
+      e.description.toLowerCase().includes("readme") ||
+      e.description.toLowerCase().includes("docs")
+    ),
+    "Testing": entries.filter(e =>
+      e.description.toLowerCase().includes("test") ||
+      e.tags?.some(tag => tag.toLowerCase().includes("test"))
+    ),
+  };
+
+  // Add remaining entries to "General" category
+  const categorized = Object.values(topics).flat();
+  const remaining = entries.filter(e => !categorized.includes(e));
+  if (remaining.length > 0) {
+    topics["General"] = remaining;
+  }
+
+  // Remove empty categories
+  return Object.fromEntries(
+    Object.entries(topics).filter(([_, entries]) => entries.length > 0)
+  );
+}
+
+/**
+ * Group entries by work session (time proximity)
+ */
+function groupBySession(entries: JournalEntry[]): Record<string, JournalEntry[]> {
+  if (entries.length === 0) return {};
+
+  const sessions: Record<string, JournalEntry[]> = {};
+  let currentSessionId = 1;
+  let currentSession: JournalEntry[] = [];
+
+  // Sort by timestamp first
+  const sorted = [...entries].sort((a, b) =>
+    new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+  );
+
+  for (let i = 0; i < sorted.length; i++) {
+    const entry = sorted[i];
+    if (!entry) continue; // Skip undefined entries
+
+    const prevEntry = i > 0 ? sorted[i - 1] : null;
+
+    if (prevEntry) {
+      const timeDiff = new Date(entry.timestamp).getTime() - new Date(prevEntry.timestamp).getTime();
+      const hoursDiff = timeDiff / (1000 * 60 * 60);
+
+      // If more than 4 hours apart, start a new session
+      if (hoursDiff > 4) {
+        if (currentSession.length > 0) {
+          sessions[`Session ${currentSessionId}`] = currentSession;
+          currentSessionId++;
+          currentSession = [];
+        }
+      }
+    }
+
+    currentSession.push(entry);
+  }
+
+  // Add final session
+  if (currentSession.length > 0) {
+    sessions[`Session ${currentSessionId}`] = currentSession;
+  }
+
+  return sessions;
 }
 
 /**
