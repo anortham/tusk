@@ -9,24 +9,18 @@
  */
 
 import { spawnSync } from "bun";
-import { existsSync } from "fs";
-import { join, resolve, dirname } from "path";
-import { logHookActivity, logSuccess, logError } from "./hook-logger.ts";
+import { logSuccess, logError, findTuskCli } from "./hook-logger.ts";
 
 async function main() {
   try {
     const now = new Date();
     const description = `Auto-saved before compaction to preserve context - ${now.toLocaleString()}`;
 
-    // Save checkpoint using tusk CLI with cross-platform path resolution
-    const hookDir = dirname(import.meta.path);
-    const tuskRoot = resolve(hookDir, '../..');
-    const cliPath = join(tuskRoot, 'cli.ts');
-
-    // Verify CLI exists before attempting to run
-    if (!existsSync(cliPath)) {
-      logError("pre_compact", `CLI not found at ${cliPath}`);
-      console.error(`⚠️ Tusk CLI not found at ${cliPath}`);
+    // Find tusk CLI using smart path resolution
+    const cliPath = findTuskCli(import.meta.path);
+    if (!cliPath) {
+      logError("pre_compact", "CLI not found in any expected location");
+      console.error(`⚠️ Tusk CLI not found. Set TUSK_CLI_PATH environment variable or ensure tusk is in a standard location.`);
       process.exit(0);
     }
 

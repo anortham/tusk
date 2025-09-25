@@ -6,11 +6,47 @@
  */
 
 import { appendFileSync, existsSync, writeFileSync, statSync } from "fs";
-import { join } from "path";
+import { join, resolve, dirname } from "path";
 import { homedir } from "os";
 
 const HOOKS_LOG_PATH = join(homedir(), ".tusk", "hooks.log");
 const MAX_LOG_AGE_MS = 24 * 60 * 60 * 1000; // 24 hours
+
+/**
+ * Find tusk CLI path - works from both project and global hook directories
+ */
+export function findTuskCli(hookPath: string): string | null {
+  // Try relative path first (for project-local hooks)
+  const hookDir = dirname(hookPath);
+  const projectCliPath = resolve(hookDir, '../../cli.ts');
+  if (existsSync(projectCliPath)) {
+    return projectCliPath;
+  }
+
+  // Common development locations
+  const commonPaths = [
+    join(homedir(), 'Source/tusk/cli.ts'),
+    join(homedir(), 'source/tusk/cli.ts'),
+    join(homedir(), 'src/tusk/cli.ts'),
+    join(homedir(), 'dev/tusk/cli.ts'),
+    join(homedir(), 'projects/tusk/cli.ts'),
+    join(homedir(), 'tusk/cli.ts'),
+  ];
+
+  for (const path of commonPaths) {
+    if (existsSync(path)) {
+      return path;
+    }
+  }
+
+  // Check environment variable
+  const envPath = process.env.TUSK_CLI_PATH;
+  if (envPath && existsSync(envPath)) {
+    return envPath;
+  }
+
+  return null;
+}
 
 function shouldRotateLog(): boolean {
   if (!existsSync(HOOKS_LOG_PATH)) {
