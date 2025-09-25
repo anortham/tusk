@@ -7,6 +7,21 @@
  */
 
 import { spawnSync } from "bun";
+import { appendFileSync } from "fs";
+import { join } from "path";
+import { homedir } from "os";
+
+const HOOKS_LOG_PATH = join(homedir(), ".tusk", "hooks.log");
+
+function logHookActivity(message: string) {
+  try {
+    const timestamp = new Date().toISOString();
+    const logEntry = `[${timestamp}] [user_prompt_submit] ${message}\n`;
+    appendFileSync(HOOKS_LOG_PATH, logEntry);
+  } catch (error) {
+    console.error(`⚠️ Failed to write to hooks log: ${error}`);
+  }
+}
 
 function detectImportantPrompt(text: string): boolean {
   const importantPatterns = [
@@ -47,11 +62,16 @@ function extractKeyContent(text: string): string {
 }
 
 async function main() {
+  logHookActivity("Hook triggered");
+
   try {
     const args = process.argv.slice(2);
+    logHookActivity(`Args received: ${JSON.stringify(args)}`);
+
     const dataIndex = args.indexOf('--data');
 
     if (dataIndex === -1 || !args[dataIndex + 1]) {
+      logHookActivity("No --data argument found, exiting");
       process.exit(0);
     }
 
@@ -59,13 +79,24 @@ async function main() {
     const userMessage = data.user_message || {};
     const content = userMessage.content || '';
 
+    logHookActivity(`User message content length: ${content.length}`);
+    logHookActivity(`Content preview: ${content.substring(0, 100)}...`);
+
     // Skip if the prompt is too short or not important
-    if (content.trim().length < 20 || !detectImportantPrompt(content)) {
+    if (content.trim().length < 20) {
+      logHookActivity("Content too short, skipping");
+      process.exit(0);
+    }
+
+    if (!detectImportantPrompt(content)) {
+      logHookActivity("Content not detected as important, skipping");
       process.exit(0);
     }
 
     const keyContent = extractKeyContent(content);
     const description = `User request: ${keyContent}`;
+
+    logHookActivity(`Creating checkpoint with description: ${description}`);
 
     // Save checkpoint using tusk CLI with absolute path
     const result = spawnSync(["bun", "/Users/murphy/Source/tusk/cli.ts", "checkpoint", description], {
@@ -74,12 +105,19 @@ async function main() {
     });
 
     if (result.success) {
+      logHookActivity(`✅ Checkpoint saved successfully: ${description}`);
       console.error(`✅ User prompt checkpoint saved: ${description}`);
+    } else {
+      const errorOutput = new TextDecoder().decode(result.stderr);
+      logHookActivity(`❌ Checkpoint failed: ${errorOutput}`);
+      console.error(`⚠️ User prompt checkpoint failed: ${errorOutput}`);
     }
   } catch (error) {
+    logHookActivity(`❌ Hook error: ${error}`);
     console.error(`⚠️ User prompt hook error: ${error}`);
   }
 
+  logHookActivity("Hook completed");
   // Always exit successfully to not interfere with Claude
   process.exit(0);
 }
