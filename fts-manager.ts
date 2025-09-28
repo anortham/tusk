@@ -42,12 +42,7 @@ export class FTSManager implements IFTSManager {
    */
   async initializeFTS(): Promise<void> {
     try {
-      // Check if FTS5 extension is available
-      const ftsCheck = this.db.prepare("SELECT fts5_version()").get() as any;
-      if (!ftsCheck) {
-        throw new FTSIndexError("FTS5 extension not available in SQLite");
-      }
-
+      // Bun's SQLite always has FTS5 compiled in - proceed directly to table creation
       // Create FTS virtual table
       const createFTSTable = `
         CREATE VIRTUAL TABLE IF NOT EXISTS ${this.config.tableName}

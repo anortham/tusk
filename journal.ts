@@ -4,7 +4,7 @@
  */
 
 import { Database } from "bun:sqlite";
-import { existsSync, mkdirSync, readFileSync, statSync } from "fs";
+import { existsSync, mkdirSync, readFileSync, statSync, realpathSync } from "fs";
 import { homedir } from "os";
 import { join, normalize, resolve, dirname, basename } from "path";
 import { createHash } from "crypto";
@@ -377,20 +377,18 @@ export class JournalDB {
       resolved = resolve(path);
     }
 
-    // Handle macOS symlinks (e.g., /var -> /private/var)
+    // Resolve symlinks for consistent workspace detection
     try {
       if (existsSync(resolved)) {
-        const stat = statSync(resolved);
-        if (stat.isSymbolicLink()) {
-          resolved = resolve(resolved);
-        }
+        // Use realpathSync to properly resolve all symlinks in the path
+        resolved = realpathSync(resolved);
       }
       // On macOS, normalize /private/var to /var for consistency
       if (process.platform === 'darwin' && resolved.startsWith('/private/var/')) {
         resolved = resolved.replace('/private/var/', '/var/');
       }
     } catch {
-      // If we can't stat the path, just use the resolved version
+      // If we can't resolve the path, just use the resolved version
     }
 
     // Always use forward slashes for consistency
@@ -810,7 +808,9 @@ export class JournalDB {
         description LIKE '%' || $query || '%' OR
         project LIKE '%' || $query || '%' OR
         git_branch LIKE '%' || $query || '%' OR
-        tags LIKE '%' || $query || '%'
+        git_commit LIKE '%' || $query || '%' OR
+        tags LIKE '%' || $query || '%' OR
+        files LIKE '%' || $query || '%'
       )
     `;
 
@@ -925,6 +925,17 @@ export class JournalDB {
     const query = "SELECT name FROM sqlite_master WHERE type='index' AND name NOT LIKE 'sqlite_%'";
     const rows = this.db.prepare(query).all() as any[];
     return rows.map(row => row.name);
+  }
+
+  /**
+   * Get current workspace information
+   */
+  getCurrentWorkspace(): { id: string; path: string; name: string } {
+    return {
+      id: this.workspaceId,
+      path: this.workspacePath,
+      name: this.workspaceName,
+    };
   }
 
   /**
@@ -1276,4 +1287,8 @@ export async function getWorkspaceSummary(): Promise<Array<{
   projects: string[];
 }>> {
   return getDefaultJournal().getWorkspaceSummary();
+}
+
+export function getCurrentWorkspace(): { id: string; path: string; name: string } {
+  return getDefaultJournal().getCurrentWorkspace();
 }

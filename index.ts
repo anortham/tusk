@@ -20,6 +20,7 @@ import {
   getJournalStats,
   getRecentEntries,
   getWorkspaceSummary,
+  getCurrentWorkspace,
   saveEntry,
   searchEntries,
   clusterSimilarCheckpoints,
@@ -182,9 +183,9 @@ const RecallSchema = z.object({
   days: z.number().optional().default(2).describe("Number of days to look back (default: 2)"),
   from: z.string().optional().describe("Start date (YYYY-MM-DD or ISO 8601)"),
   to: z.string().optional().describe("End date (YYYY-MM-DD or ISO 8601)"),
-  search: z.string().optional().describe("Search term to filter entries"),
+  search: z.string().optional().describe("Search term to filter entries (searches descriptions, projects, git branches, git commits, tags, and files)"),
   project: z.string().optional().describe("Filter by specific project name"),
-  workspace: z.string().optional().describe("Filter by specific workspace ID ('current' for current workspace, 'all' for all workspaces)"),
+  workspace: z.string().optional().describe("Workspace scope: 'current' (default - current workspace only), 'all' (all workspaces), or '/path/to/workspace' (specific)"),
   listWorkspaces: z.boolean().optional().describe("List all workspaces with statistics"),
 
   // Enhanced processing options
@@ -248,7 +249,7 @@ Basic Parameters:
 - days (default: 2): How far back to look
 - search: Find specific topics (e.g., "authentication", "database schema")
 - project: Filter by project name
-- workspace: "current" (default), "all", or specific ID
+- workspace: "current" (default - current workspace only), "all" (search all workspaces), or specific path
 - listWorkspaces: See all workspaces and stats
 
 Enhanced Processing:
@@ -270,7 +271,7 @@ Returns: Intelligently processed entries with reduced redundancy and enhanced co
             },
             search: {
               type: "string",
-              description: "Search term to filter entries (searches descriptions, tags, projects)",
+              description: "Search term to filter entries (searches descriptions, projects, git branches, git commits, tags, and files)",
             },
             project: {
               type: "string",
@@ -278,7 +279,7 @@ Returns: Intelligently processed entries with reduced redundancy and enhanced co
             },
             workspace: {
               type: "string",
-              description: "Filter by specific workspace ID ('current' for current workspace, 'all' for all workspaces)",
+              description: "Workspace scope: 'current' (default - only current workspace for security/relevance), 'all' (search across all workspaces), or '/path/to/workspace' (specific workspace)",
             },
             from: {
               type: "string",
@@ -517,15 +518,30 @@ No workspaces have been detected. Start by creating checkpoints in different pro
     if (project) filterDesc.push(`project: "${project}"`);
     if (days !== 2) filterDesc.push(`${days} days`);
 
+    // Get workspace info for diagnostics
+    const currentWorkspace = getCurrentWorkspace();
+    const workspaceScope = workspace || 'current';
+
+    let workspaceInfo = '';
+    if (workspaceScope === 'current') {
+      workspaceInfo = `\n🏠 **Searched workspace:** ${currentWorkspace.name} (${currentWorkspace.path})`;
+    } else if (workspaceScope === 'all') {
+      workspaceInfo = `\n🌐 **Searched scope:** All workspaces`;
+    } else {
+      workspaceInfo = `\n📁 **Searched workspace:** ${workspaceScope}`;
+    }
+
+    const suggestions = workspaceScope === 'current'
+      ? `\n💡 **Try:** Use \`workspace: 'all'\` to search across all workspaces, or use \`checkpoint("your progress description")\` to start capturing work in this workspace.`
+      : `\n💡 **Tip:** Try adjusting your search criteria or use \`checkpoint("your progress description")\` to start capturing your work!`;
+
     return {
       content: [
         {
           type: "text",
           text: `🔍 **No entries found**
 
-No journal entries found${filterDesc.length > 0 ? ` for ${filterDesc.join(", ")}` : ` in the last ${days} days`}.
-
-💡 **Tip:** Try adjusting your search criteria or use \`checkpoint("your progress description")\` to start capturing your work!`,
+No journal entries found${filterDesc.length > 0 ? ` for ${filterDesc.join(", ")}` : ` in the last ${days} days`}.${workspaceInfo}${suggestions}`,
         },
       ],
     };
