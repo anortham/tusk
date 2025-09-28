@@ -101,7 +101,7 @@ async function createTestServer() {
           },
           required: ["description"],
         },
-      } satisfies ToolSchema,
+      },
       {
         name: "recall",
         description: "Restore context from previous work",
@@ -113,7 +113,7 @@ async function createTestServer() {
             project: { type: "string" },
           },
         },
-      } satisfies ToolSchema,
+      },
       {
         name: "standup",
         description: "Generate beautiful standup reports",
@@ -130,7 +130,7 @@ async function createTestServer() {
             includeFiles: { type: "boolean", default: false },
           },
         },
-      } satisfies ToolSchema,
+      },
     ],
   }));
 
@@ -229,7 +229,7 @@ describe("MCP Server - Tool Parameter Validation", () => {
 
       // Test would validate the input against the schema
       expect(validInput.description).toBeDefined();
-      expect(invalidInput.description).toBeUndefined();
+      expect((invalidInput as any).description).toBeUndefined();
     });
 
     test("should accept optional tags parameter", () => {
@@ -244,7 +244,7 @@ describe("MCP Server - Tool Parameter Validation", () => {
 
       expect(inputWithTags.tags).toBeDefined();
       expect(Array.isArray(inputWithTags.tags)).toBe(true);
-      expect(inputWithoutTags.tags).toBeUndefined();
+      expect((inputWithoutTags as any).tags).toBeUndefined();
     });
 
     test("should reject invalid parameter types", () => {
@@ -623,13 +623,13 @@ describe("MCP Server - Error Handling", () => {
     ];
 
     extremeLengthInputs.forEach(input => {
-      if ("description" in input && input.description.length > 50000) {
+      if ("description" in input && input.description && input.description.length > 50000) {
         expect(true).toBe(true); // Should detect excessive length
       }
-      if ("tags" in input && input.tags.length > 100) {
+      if ("tags" in input && input.tags && input.tags.length > 100) {
         expect(true).toBe(true); // Should detect too many tags
       }
-      if ("search" in input && input.search.length > 1000) {
+      if ("search" in input && input.search && input.search.length > 1000) {
         expect(true).toBe(true); // Should detect excessive search length
       }
     });

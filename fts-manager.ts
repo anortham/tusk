@@ -442,7 +442,7 @@ export class FTSManager implements IFTSManager {
         ) VALUES (?, ?, ?, ?, ?, ?, ?)
       `);
 
-      stmt.run([
+      stmt.run(
         checkpointId,
         entry.workspaceId || '',
         entry.description,
@@ -450,7 +450,7 @@ export class FTSManager implements IFTSManager {
         entry.gitBranch || '',
         JSON.stringify(entry.tags || []),
         entry.timestamp
-      ]);
+      );
     } catch (error) {
       // Don't throw - FTS updates should not break main functionality
       console.warn('FTS document update failed:', error);

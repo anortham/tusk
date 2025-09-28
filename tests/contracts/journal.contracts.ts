@@ -3,6 +3,8 @@
  * Defines what success looks like BEFORE implementation (TDD approach)
  */
 
+import type { JournalEntry } from "../../types.js";
+
 export interface JournalTestContracts {
   // ========== CORE FUNCTIONALITY CONTRACTS ==========
 

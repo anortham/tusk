@@ -306,19 +306,19 @@ describe("Enhanced Recall Integration", () => {
 
       // Verify key categories are present and have expected content
       expect(grouped["Bug Fixes"]).toHaveLength(1);
-      expect(grouped["Bug Fixes"][0].description).toContain("Fixed authentication bug");
+      expect(grouped["Bug Fixes"]?.[0]?.description).toContain("Fixed authentication bug");
 
       expect(grouped["Features"]).toHaveLength(1);
-      expect(grouped["Features"][0].description).toContain("Implemented dashboard feature");
+      expect(grouped["Features"]?.[0]?.description).toContain("Implemented dashboard feature");
 
       expect(grouped["Testing"]).toHaveLength(1);
-      expect(grouped["Testing"][0].description).toContain("Wrote unit tests");
+      expect(grouped["Testing"]?.[0]?.description).toContain("Wrote unit tests");
 
       expect(grouped["Configuration"]).toHaveLength(1);
-      expect(grouped["Configuration"][0].description).toContain("Updated configuration");
+      expect(grouped["Configuration"]?.[0]?.description).toContain("Updated configuration");
 
       expect(grouped["General"]).toHaveLength(1);
-      expect(grouped["General"][0].description).toContain("Random unrelated work");
+      expect(grouped["General"]?.[0]?.description).toContain("Random unrelated work");
     });
 
     test("applyGroupingStrategy - groups by session", () => {

@@ -386,9 +386,9 @@ describe("Enhanced Recall System", () => {
 
       const sorted = sortByRelevance(entries);
 
-      expect(sorted[0].relevanceScore).toBeGreaterThan(sorted[1].relevanceScore);
-      expect(sorted[1].relevanceScore).toBeGreaterThan(sorted[2].relevanceScore);
-      expect(sorted[0].description).toContain("critical bug fix");
+      expect(sorted[0]?.relevanceScore).toBeGreaterThan(sorted[1]?.relevanceScore!);
+      expect(sorted[1]?.relevanceScore).toBeGreaterThan(sorted[2]?.relevanceScore!);
+      expect(sorted[0]?.description).toContain("critical bug fix");
     });
 
     test("filterByRelevance - filters correctly", () => {

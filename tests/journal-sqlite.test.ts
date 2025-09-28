@@ -207,8 +207,8 @@ describe("SQLite Journal - Multi-Workspace Support", () => {
 
       expect(workspace1Entries).toHaveLength(1);
       expect(workspace2Entries).toHaveLength(1);
-      expect(workspace1Entries[0].description).toBe("Workspace 1 checkpoint");
-      expect(workspace2Entries[0].description).toBe("Workspace 2 checkpoint");
+      expect(workspace1Entries[0]?.description).toBe("Workspace 1 checkpoint");
+      expect(workspace2Entries[0]?.description).toBe("Workspace 2 checkpoint");
     });
 
     test("queries current workspace only", async () => {
@@ -259,7 +259,7 @@ describe("SQLite Journal - Multi-Workspace Support", () => {
       const workspace1Entries = await journal2.getRecentCheckpoints({ workspace: workspace1Path });
 
       expect(workspace1Entries).toHaveLength(1);
-      expect(workspace1Entries[0].description).toBe("Specific workspace 1 entry");
+      expect(workspace1Entries[0]?.description).toBe("Specific workspace 1 entry");
     });
 
     test("queries all workspaces", async () => {
@@ -333,9 +333,9 @@ describe("SQLite Journal - Multi-Workspace Support", () => {
       expect(entries).toHaveLength(1);
 
       const entry = entries[0];
-      expect(entry.workspaceId).toBeDefined();
-      expect(entry.workspacePath).toBe(workspacePath);
-      expect(entry.workspaceName).toBe("metadata-test");
+      expect(entry?.workspaceId).toBeDefined();
+      expect(entry?.workspacePath).toBe(workspacePath);
+      expect(entry?.workspaceName).toBe("metadata-test");
     });
   });
 
@@ -517,10 +517,10 @@ describe("SQLite Journal - Multi-Workspace Support", () => {
       expect(saved).toHaveLength(1);
 
       const savedEntry = saved[0];
-      expect(savedEntry.description).toBe(entry.description);
-      expect(savedEntry.project).toBe(entry.project);
-      expect(savedEntry.workspaceId).toBeDefined();
-      expect(savedEntry.workspacePath).toBe(workspacePath);
+      expect(savedEntry?.description).toBe(entry.description);
+      expect(savedEntry?.project).toBe(entry.project);
+      expect(savedEntry?.workspaceId).toBeDefined();
+      expect(savedEntry?.workspacePath).toBe(workspacePath);
     });
 
     test("retrieves checkpoints by workspace", async () => {
@@ -664,7 +664,8 @@ describe("SQLite Journal - Multi-Workspace Support", () => {
 
       // Measure query performance
       const { executionTime } = await PerformanceTester.measureExecution(() =>
-        journal.getRecentCheckpoints({ workspace: 'current' })
+        journal.getRecentCheckpoints({ workspace: 'current' }),
+        1000 // 1 second threshold
       );
 
       expect(executionTime).toBeLessThan(50); // 50ms threshold
@@ -682,12 +683,14 @@ describe("SQLite Journal - Multi-Workspace Support", () => {
 
       // Measure batch insert performance
       const { executionTime: insertTime } = await PerformanceTester.measureExecution(() =>
-        journal.saveCheckpointBatch(largeDataset)
+        journal.saveCheckpointBatch(largeDataset),
+        5000 // 5 second threshold for batch insert
       );
 
       // Measure query performance
       const { executionTime: queryTime } = await PerformanceTester.measureExecution(() =>
-        journal.getRecentCheckpoints({ days: 30 })
+        journal.getRecentCheckpoints({ days: 30 }),
+        2000 // 2 second threshold for query
       );
 
       expect(insertTime).toBeLessThan(5000); // 5 second threshold for 1000 inserts
@@ -723,10 +726,10 @@ describe("SQLite Journal - Multi-Workspace Support", () => {
           timestamp: "not-a-date", // Invalid timestamp
         } as CheckpointEntry);
 
-        fail("Should have thrown an error");
+        throw new Error("Should have thrown an error");
       } catch (error) {
-        expect(error.message).toContain("description");
-        expect(error.message).toContain("timestamp");
+        expect((error as Error).message).toContain("description");
+        expect((error as Error).message).toContain("timestamp");
       }
     });
   });

@@ -224,7 +224,7 @@ class PerformanceBenchmark {
           () => getJournalStats(),
         ];
 
-        const promises = Array.from({ length: 8 }, (_, i) => operations[i % operations.length]());
+        const promises = Array.from({ length: 8 }, (_, i) => operations[i % operations.length]?.());
         await Promise.all(promises);
       }
     ));

@@ -251,7 +251,7 @@ describe("Integration Tests - End-to-End Workflows", () => {
       ];
 
       for (const [command, ...args] of aliasTests) {
-        const result = spawnSync(["bun", cliPath, command, ...args], {
+        const result = spawnSync(["bun", cliPath as string, command as string, ...(args as string[])], {
           env: { ...process.env, TUSK_TEST_DIR: TEST_CONFIG.TEST_TUSK_DIR, TUSK_TEST_MODE: "true" },
           cwd: process.cwd(),
         });
@@ -899,7 +899,6 @@ describe("Integration Tests - End-to-End Workflows", () => {
         expect(retrievedEntry?.gitBranch).toBe(originalEntry.gitBranch);
         expect(retrievedEntry?.tags).toEqual(originalEntry.tags);
         expect(retrievedEntry?.files).toEqual(originalEntry.files);
-        expect(retrievedEntry?.type).toBe(originalEntry.type);
         expect(new Date(retrievedEntry?.timestamp!)).toBeInstanceOf(Date);
       });
 

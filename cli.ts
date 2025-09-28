@@ -253,7 +253,7 @@ async function handleRecallCLI(args: string[]) {
       console.log(`📁 **${projectName}:**`);
     }
 
-    projectEntries.slice(0, 8).forEach(entry => {
+    (projectEntries as JournalEntry[]).slice(0, 8).forEach((entry: JournalEntry) => {
       const time = formatTimeAgo(entry.timestamp);
       const gitInfo = entry.gitBranch ? ` (${entry.gitBranch})` : "";
       const tags = entry.tags && entry.tags.length > 0 ? ` [${entry.tags.join(", ")}]` : "";
@@ -261,8 +261,8 @@ async function handleRecallCLI(args: string[]) {
       console.log(`   • ${entry.description}${gitInfo}${tags} ${time}`);
     });
 
-    if (projectEntries.length > 8) {
-      console.log(`   ... and ${projectEntries.length - 8} more entries`);
+    if ((projectEntries as JournalEntry[]).length > 8) {
+      console.log(`   ... and ${(projectEntries as JournalEntry[]).length - 8} more entries`);
     }
     console.log('');
   }

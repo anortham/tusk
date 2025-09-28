@@ -156,7 +156,7 @@ class TestRunner {
       return false;
     }
 
-    const success = await this.executeBunTest(suiteName, suite.files, suite.exclude, suite.options);
+    const success = await this.executeBunTest(suiteName, suite.files, (suite as any).exclude, (suite as any).options);
     this.finishSession();
     return success;
   }
@@ -291,7 +291,7 @@ class TestRunner {
     let coverage: number | undefined;
     const coverageMatch = stdout.match(/Coverage:\s*(\d+(?:\.\d+)?)%/);
     if (coverageMatch) {
-      coverage = parseFloat(coverageMatch[1]);
+      coverage = parseFloat(coverageMatch[1] || "0");
     }
 
     return {
@@ -446,7 +446,7 @@ async function main() {
         options.watch = true;
         break;
       case "--timeout":
-        options.timeout = parseInt(args[++i]);
+        options.timeout = parseInt(args[++i] || "5000");
         break;
       case "--reporter":
         options.reporter = args[++i] as any;

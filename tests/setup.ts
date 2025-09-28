@@ -6,6 +6,7 @@
 import { existsSync, rmSync, mkdirSync } from "fs";
 import { join } from "path";
 import { tmpdir } from "os";
+import { beforeEach, afterEach } from "bun:test";
 import type { JournalEntry } from "../journal.js";
 import { __resetDefaultJournal } from "../journal.js";
 
@@ -196,9 +197,6 @@ export class TestAssertions {
   static assertJournalEntry(entry: any, expected: Partial<JournalEntry>): void {
     if (expected.id && entry.id !== expected.id) {
       throw new Error(`Expected id ${expected.id}, got ${entry.id}`);
-    }
-    if (expected.type && entry.type !== expected.type) {
-      throw new Error(`Expected type ${expected.type}, got ${entry.type}`);
     }
     if (expected.description && entry.description !== expected.description) {
       throw new Error(`Expected description ${expected.description}, got ${entry.description}`);

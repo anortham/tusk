@@ -30,7 +30,7 @@ class CLITestUtils {
 
     const result = spawnSync(["bun", cliPath, ...args], {
       cwd: options.cwd || process.cwd(),
-      stdin: options.input || null,
+      stdin: options.input ? 'pipe' : undefined,
       timeout: options.timeout || 5000,
       env: {
         ...process.env,

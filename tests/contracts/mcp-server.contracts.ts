@@ -3,6 +3,84 @@
  * Defines comprehensive testing for MCP protocol compliance and tool behavior
  */
 
+// Define local test types since MCP SDK only exports schemas
+interface InitRequest {
+  method: string;
+  params: any;
+}
+
+interface InitResponse {
+  capabilities: any;
+  serverInfo: any;
+}
+
+interface CapabilityRequest {
+  method: string;
+}
+
+interface CapabilityResponse {
+  capabilities: string[];
+}
+
+interface JSONRPCRequest {
+  jsonrpc: string;
+  method: string;
+  params?: any;
+  id?: string | number;
+}
+
+interface JSONRPCResponse {
+  jsonrpc: string;
+  result?: any;
+  error?: any;
+  id?: string | number;
+}
+
+interface RecoveryResult {
+  success: boolean;
+  entriesRecovered: number;
+}
+
+interface MethodSupport {
+  supported: boolean;
+  methods: string[];
+}
+
+interface TransportResult {
+  connected: boolean;
+  transport: string;
+}
+
+interface ConcurrencyTestInput {
+  concurrentRequests: number;
+}
+
+interface MemoryTestInput {
+  memoryPressure: number;
+}
+
+interface PayloadTestInput {
+  payloadSize: number;
+}
+
+interface WorkflowTestInput {
+  workflow: string[];
+}
+
+interface WorkflowResult {
+  completed: boolean;
+  steps: string[];
+}
+
+interface ConsistencyTestInput {
+  operations: string[];
+}
+
+interface ConsistencyResult {
+  consistent: boolean;
+  operations: number;
+}
+
 export interface MCPServerTestContracts {
   // ========== SERVER INITIALIZATION CONTRACTS ==========
 
