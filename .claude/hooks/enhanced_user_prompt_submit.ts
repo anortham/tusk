@@ -275,7 +275,7 @@ async function main() {
     }
 
     // Skip low-confidence matches
-    if (analysis.confidence < 0.6) {
+    if (analysis.confidence < 0.4) {
       logSkip("enhanced_user_prompt", `low confidence: ${analysis.confidence.toFixed(2)}`);
       process.exit(0);
     }

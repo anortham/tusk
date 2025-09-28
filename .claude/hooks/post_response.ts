@@ -116,7 +116,7 @@ async function main() {
       content = inputData.message.content;
     }
 
-    if (!content || content.length < 100) {
+    if (!content || content.length < 50) {
       logSkip("post_response", "response too short");
       process.exit(0);
     }
