@@ -51,18 +51,47 @@ async function main() {
 async function handleCheckpointCLI(args: string[]) {
   if (args.length === 0) {
     console.error('❌ Description required for checkpoint');
-    console.error('Usage: bun cli.ts checkpoint "your progress description" [tag1,tag2]');
+    console.error('Usage: bun cli.ts checkpoint "your progress description" [tag1,tag2] [--session-id=ID] [--entry-type=TYPE] [--confidence=SCORE]');
     process.exit(1);
   }
 
   const description = args[0];
   if (!description) {
     console.error('❌ Description required for checkpoint');
-    console.error('Usage: bun cli.ts checkpoint "your progress description" [tag1,tag2]');
+    console.error('Usage: bun cli.ts checkpoint "your progress description" [tag1,tag2] [--session-id=ID] [--entry-type=TYPE] [--confidence=SCORE]');
     process.exit(1);
   }
 
-  const tags = args[1] ? args[1].split(',').map(t => t.trim()) : undefined;
+  // Parse tags (can be second positional arg or comma-separated in description parsing)
+  let tags: string[] | undefined;
+  let sessionId: string | undefined;
+  let entryType: 'user-request' | 'session-marker' | 'auto-save' | 'progress' | 'completion' = 'user-request';
+  let confidenceScore: number = 1.0;
+
+  // Handle positional tags argument
+  if (args[1] && !args[1].startsWith('--')) {
+    tags = args[1].split(',').map(t => t.trim());
+  }
+
+  // Parse optional arguments
+  for (const arg of args) {
+    if (arg.startsWith('--session-id=')) {
+      sessionId = arg.split('=')[1];
+    } else if (arg.startsWith('--entry-type=')) {
+      const type = arg.split('=')[1];
+      if (type && ['user-request', 'session-marker', 'auto-save', 'progress', 'completion'].includes(type)) {
+        entryType = type as any;
+      }
+    } else if (arg.startsWith('--confidence=')) {
+      const confidenceStr = arg.split('=')[1];
+      if (confidenceStr) {
+        const confidence = parseFloat(confidenceStr);
+        if (!isNaN(confidence) && confidence >= 0 && confidence <= 1) {
+          confidenceScore = confidence;
+        }
+      }
+    }
+  }
 
   // Capture git context
   const gitInfo = getGitContext();
@@ -76,6 +105,9 @@ async function handleCheckpointCLI(args: string[]) {
     gitCommit: gitInfo.commit,
     files: gitInfo.files,
     tags,
+    sessionId,
+    entryType,
+    confidenceScore,
   };
 
   await saveEntry(entry);
@@ -84,6 +116,9 @@ async function handleCheckpointCLI(args: string[]) {
   console.log(`📝 ${description}`);
   console.log(`🆔 ${entry.id}`);
   if (gitInfo.project) console.log(`📁 ${gitInfo.project}`);
+  if (sessionId) console.log(`🔗 Session: ${sessionId}`);
+  if (entryType !== 'user-request') console.log(`📋 Type: ${entryType}`);
+  if (confidenceScore !== 1.0) console.log(`🎯 Confidence: ${confidenceScore}`);
   if (tags) console.log(`🏷️  ${tags.join(', ')}`);
 }
 

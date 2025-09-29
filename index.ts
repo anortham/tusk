@@ -177,6 +177,9 @@ Remember: Every checkpoint builds the data that saves future sessions from start
 const CheckpointSchema = z.object({
   description: z.string().describe("Progress description to save"),
   tags: z.array(z.string()).optional().describe("Optional tags for categorization"),
+  sessionId: z.string().optional().describe("Claude Code session ID (automatically captured from hook context)"),
+  entryType: z.enum(['user-request', 'session-marker', 'auto-save', 'progress', 'completion']).optional().default('user-request').describe("Type of checkpoint entry"),
+  confidenceScore: z.number().min(0).max(1).optional().default(1.0).describe("Confidence score for auto-captured entries (0.0-1.0)"),
 });
 
 const RecallSchema = z.object({
@@ -187,6 +190,13 @@ const RecallSchema = z.object({
   project: z.string().optional().describe("Filter by specific project name"),
   workspace: z.string().optional().describe("Workspace scope: 'current' (default - current workspace only), 'all' (all workspaces), or '/path/to/workspace' (specific)"),
   listWorkspaces: z.boolean().optional().describe("List all workspaces with statistics"),
+
+  // Session-aware parameters
+  sessions: z.number().optional().describe("Number of sessions to retrieve (overrides days when specified)"),
+  sessionId: z.string().optional().describe("Retrieve specific session by ID"),
+  smart: z.boolean().optional().default(false).describe("Smart mode: automatically determine optimal recall scope based on current context"),
+  minConfidence: z.number().min(0).max(1).optional().default(0.0).describe("Minimum confidence score for entries (0.0-1.0)"),
+  excludeTypes: z.array(z.string()).optional().describe("Entry types to exclude (e.g., ['session-marker', 'auto-save'])"),
 
   // Enhanced processing options
   deduplicate: z.boolean().optional().default(true).describe("Enable smart deduplication of similar entries (default: true)"),
@@ -409,7 +419,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
  * Handle checkpoint tool - save progress to journal
  */
 async function handleCheckpoint(args: any) {
-  const { description, tags } = CheckpointSchema.parse(args);
+  const { description, tags, sessionId, entryType, confidenceScore } = CheckpointSchema.parse(args);
 
   // Capture git context automatically
   const gitInfo = getGitContext();
@@ -424,6 +434,9 @@ async function handleCheckpoint(args: any) {
     gitCommit: gitInfo.commit,
     files: gitInfo.files,
     tags,
+    sessionId,
+    entryType,
+    confidenceScore,
   };
 
   // Save to journal
@@ -459,6 +472,7 @@ Your progress is now safely captured and will survive Claude sessions! 🐘
 async function handleRecall(args: any) {
   const {
     days, from, to, search, project, workspace, listWorkspaces,
+    sessions, sessionId, smart, minConfidence, excludeTypes,
     deduplicate, similarityThreshold, summarize, groupBy, relevanceThreshold, maxEntries
   } = RecallSchema.parse(args);
 
@@ -507,10 +521,70 @@ No workspaces have been detected. Start by creating checkpoints in different pro
     };
   }
 
-  // Get entries based on filters
-  let entries = search
-    ? await searchEntries(search, { workspace: workspace || 'current' })
-    : await getRecentEntries({ days, from, to, project, workspace: workspace || 'current' });
+  // Get entries using session-aware logic
+  let entries: JournalEntry[] = [];
+
+  // Import the journal database for session-aware queries
+  const { JournalDB } = await import("./journal-db.js");
+  const journalDB = new JournalDB();
+
+  try {
+    // Handle specific session ID request
+    if (sessionId) {
+      entries = await journalDB.getSessionById(sessionId, workspace || 'current');
+    }
+    // Handle sessions-based request
+    else if (sessions && sessions > 0) {
+      const sessionInfos = await journalDB.getLastNSessions(sessions, workspace || 'current');
+      entries = sessionInfos.flatMap(session => session.entries);
+    }
+    // Handle smart mode
+    else if (smart) {
+      const smartContext = await journalDB.getSmartRecallContext(workspace || 'current');
+      entries = [];
+
+      // Include current session entries if available
+      if (smartContext.currentSession) {
+        entries.push(...smartContext.currentSession.entries);
+      }
+
+      // Include last session if needed for context
+      if (smartContext.needsMoreContext && smartContext.lastSession) {
+        entries.push(...smartContext.lastSession.entries);
+      }
+
+      // If still not enough context, get high-quality entries
+      if (entries.length < 10) {
+        const additionalEntries = await journalDB.getHighQualityEntries({
+          workspace: workspace || 'current',
+          days,
+          minConfidence: Math.max(minConfidence || 0.0, 0.7),
+          excludeTypes: excludeTypes || ['session-marker'],
+          limit: 20
+        });
+        entries.push(...additionalEntries);
+      }
+    }
+    // Handle high-quality filtered entries
+    else if (minConfidence && minConfidence > 0) {
+      entries = await journalDB.getHighQualityEntries({
+        workspace: workspace || 'current',
+        days,
+        minConfidence,
+        excludeTypes,
+        limit: maxEntries
+      });
+    }
+    // Default behavior with search or recent entries
+    else if (search) {
+      entries = await searchEntries(search, { workspace: workspace || 'current' });
+    }
+    else {
+      entries = await getRecentEntries({ days, from, to, project, workspace: workspace || 'current' });
+    }
+  } finally {
+    journalDB.close();
+  }
 
   if (entries.length === 0) {
     const filterDesc = [];

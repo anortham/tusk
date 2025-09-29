@@ -40,6 +40,8 @@ function isGitCommitCommand(command: string): boolean {
 }
 
 async function main() {
+  let claudeCodeSessionId: string | undefined;
+
   try {
     // Read JSON input from stdin
     const stdinBuffer = [];
@@ -47,6 +49,7 @@ async function main() {
       stdinBuffer.push(chunk);
     }
     const inputData = JSON.parse(Buffer.concat(stdinBuffer).toString());
+    claudeCodeSessionId = inputData.session_id;
 
     // Extract tool information
     const toolName = inputData.tool_name || '';
@@ -88,13 +91,26 @@ async function main() {
       process.exit(0);
     }
 
-    const result = spawnSync(["bun", cliPath, "checkpoint", description], {
+    const cliArgs = [
+      "bun", cliPath, "checkpoint", description,
+      "git-commit,completion",
+      "--entry-type=completion",
+      "--confidence=1.0"
+    ];
+
+    // Add session ID if available
+    if (claudeCodeSessionId) {
+      cliArgs.push(`--session-id=${claudeCodeSessionId}`);
+    }
+
+    const result = spawnSync(cliArgs, {
       stdout: "pipe",
       stderr: "pipe",
     });
 
     if (result.success) {
-      logSuccess("post_tool_use", commitMessage || 'commit completed');
+      const sessionInfo = claudeCodeSessionId ? ` [${claudeCodeSessionId.slice(0, 8)}...]` : "";
+      logSuccess("post_tool_use", `${commitMessage || 'commit completed'}${sessionInfo}`);
       console.error(`✅ Git commit checkpoint saved: ${commitMessage || 'commit completed'}`);
     } else {
       const errorOutput = new TextDecoder().decode(result.stderr);

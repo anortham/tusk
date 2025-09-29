@@ -11,6 +11,7 @@ import { FTSManager } from "./fts-manager.js";
 import type { FTSSearchOptions, FTSSearchResult } from "./fts-types.js";
 import type { CheckpointEntry, WorkspaceInfo, QueryOptions, StandupEntry } from "./types.js";
 import { detectWorkspace, normalizePaths } from "./workspace-utils.js";
+import { SessionDetector, type SessionInfo, type SessionBoundary, DEFAULT_SESSION_CONFIG } from "./session-detector.js";
 
 /**
  * SQLite-based Journal Database with Multi-Workspace Support
@@ -23,6 +24,7 @@ export class JournalDB {
   private readonly workspaceInfo: WorkspaceInfo;
   private ftsManager: FTSManager;
   private ftsEnabled: boolean = false;
+  private sessionDetector: SessionDetector;
 
   constructor(options: { cwd?: string; testMode?: boolean; dbPath?: string } = {}) {
     // Initialize workspace context
@@ -53,6 +55,9 @@ export class JournalDB {
     // Initialize FTS manager and setup
     this.ftsManager = new FTSManager(this.db, this.workspaceId);
     this.initializeFTSAsync();
+
+    // Initialize session detector
+    this.sessionDetector = new SessionDetector(DEFAULT_SESSION_CONFIG);
   }
 
   /**
@@ -108,6 +113,11 @@ export class JournalDB {
         tags TEXT,  -- JSON array
         files TEXT, -- JSON array
 
+        -- Session tracking fields
+        session_id TEXT,
+        entry_type TEXT DEFAULT 'user-request',  -- 'user-request', 'session-marker', 'auto-save', 'progress', 'completion'
+        confidence_score REAL DEFAULT 1.0,      -- 0.0-1.0 for auto-captured entries
+
         -- Sync fields for future API integration
         sync_status TEXT DEFAULT 'local',
         remote_id TEXT,
@@ -122,6 +132,9 @@ export class JournalDB {
         PRIMARY KEY (workspace_id, id)
       )
     `);
+
+    // Add session tracking columns to existing tables (backward compatibility)
+    this.addSessionTrackingColumns();
 
     // Create standalone standups table
     this.db.run(`
@@ -141,6 +154,26 @@ export class JournalDB {
 
     // Create indexes for optimal performance
     this.createIndexes();
+  }
+
+  /**
+   * Add session tracking columns to existing checkpoints table for backward compatibility
+   */
+  private addSessionTrackingColumns(): void {
+    const columnsToAdd = [
+      { name: 'session_id', type: 'TEXT' },
+      { name: 'entry_type', type: 'TEXT DEFAULT \'user-request\'' },
+      { name: 'confidence_score', type: 'REAL DEFAULT 1.0' }
+    ];
+
+    columnsToAdd.forEach(column => {
+      try {
+        this.db.run(`ALTER TABLE checkpoints ADD COLUMN ${column.name} ${column.type}`);
+      } catch (error) {
+        // Column already exists or other error - this is expected for existing installations
+        // We can safely ignore SQLITE_ERROR when column already exists
+      }
+    });
   }
 
   /**
@@ -168,6 +201,12 @@ export class JournalDB {
       "CREATE INDEX IF NOT EXISTS idx_workspace_timestamp ON checkpoints(workspace_id, timestamp DESC)",
       "CREATE INDEX IF NOT EXISTS idx_workspace_sync ON checkpoints(workspace_id, sync_status)",
       "CREATE INDEX IF NOT EXISTS idx_workspace_project ON checkpoints(workspace_id, project)",
+
+      // Session-based queries
+      "CREATE INDEX IF NOT EXISTS idx_session_id ON checkpoints(session_id, timestamp DESC)",
+      "CREATE INDEX IF NOT EXISTS idx_workspace_session ON checkpoints(workspace_id, session_id, timestamp DESC)",
+      "CREATE INDEX IF NOT EXISTS idx_entry_type ON checkpoints(workspace_id, entry_type, timestamp DESC)",
+      "CREATE INDEX IF NOT EXISTS idx_confidence_score ON checkpoints(workspace_id, confidence_score DESC)",
 
       // Global queries (cross-workspace)
       "CREATE INDEX IF NOT EXISTS idx_global_recent ON checkpoints(timestamp DESC)",
@@ -231,11 +270,13 @@ export class JournalDB {
       INSERT INTO checkpoints (
         id, workspace_id, workspace_path, workspace_name,
         timestamp, description, project, git_branch, git_commit,
-        tags, files, sync_status, version, created_at, updated_at
+        tags, files, session_id, entry_type, confidence_score,
+        sync_status, version, created_at, updated_at
       ) VALUES (
         $id, $workspace_id, $workspace_path, $workspace_name,
         $timestamp, $description, $project, $git_branch, $git_commit,
-        $tags, $files, $sync_status, $version, $created_at, $updated_at
+        $tags, $files, $session_id, $entry_type, $confidence_score,
+        $sync_status, $version, $created_at, $updated_at
       )
     `);
 
@@ -251,6 +292,9 @@ export class JournalDB {
       $git_commit: entry.gitCommit || null,
       $tags: JSON.stringify(entry.tags || []),
       $files: JSON.stringify(normalizePaths(entry.files || [], this.workspacePath)),
+      $session_id: entry.sessionId || null,
+      $entry_type: entry.entryType || 'user-request',
+      $confidence_score: entry.confidenceScore !== undefined ? entry.confidenceScore : 1.0,
       $sync_status: entry.syncStatus || 'local',
       $version: entry.version || 1,
       $created_at: now,
@@ -277,7 +321,8 @@ export class JournalDB {
       SELECT
         id, workspace_id, workspace_path, workspace_name,
         timestamp, description, project, git_branch, git_commit,
-        tags, files, sync_status, remote_id, last_synced_at, version,
+        tags, files, session_id, entry_type, confidence_score,
+        sync_status, remote_id, last_synced_at, version,
         created_at, updated_at
       FROM checkpoints
       WHERE 1=1
@@ -383,7 +428,8 @@ export class JournalDB {
       SELECT
         id, workspace_id, workspace_path, workspace_name,
         timestamp, description, project, git_branch, git_commit,
-        tags, files, sync_status, remote_id, last_synced_at, version,
+        tags, files, session_id, entry_type, confidence_score,
+        sync_status, remote_id, last_synced_at, version,
         created_at, updated_at
       FROM checkpoints
       WHERE (
@@ -392,7 +438,8 @@ export class JournalDB {
         git_branch LIKE '%' || $query || '%' OR
         git_commit LIKE '%' || $query || '%' OR
         tags LIKE '%' || $query || '%' OR
-        files LIKE '%' || $query || '%'
+        files LIKE '%' || $query || '%' OR
+        session_id LIKE '%' || $query || '%'
       )
     `;
 
@@ -534,6 +581,9 @@ export class JournalDB {
       gitCommit: row.git_commit,
       tags: row.tags ? JSON.parse(row.tags) : [],
       files: row.files ? JSON.parse(row.files) : [],
+      sessionId: row.session_id,
+      entryType: row.entry_type,
+      confidenceScore: row.confidence_score,
       syncStatus: row.sync_status,
       remoteId: row.remote_id,
       lastSyncedAt: row.last_synced_at,
@@ -552,6 +602,191 @@ export class JournalDB {
       path: this.workspacePath,
       name: this.workspaceName,
     };
+  }
+
+  // ===== SESSION-AWARE QUERY METHODS =====
+
+  /**
+   * Get session boundaries for the current workspace
+   */
+  async getSessionBoundaries(workspace: string = 'current', days: number = 30): Promise<SessionBoundary[]> {
+    const entries = await this.getRecentCheckpoints({ workspace, days, limit: 1000 });
+    return this.sessionDetector.getSessionBoundaries(entries);
+  }
+
+  /**
+   * Get entries from the last complete work session
+   */
+  async getLastCompleteSession(workspace: string = 'current'): Promise<SessionInfo | null> {
+    const entries = await this.getRecentCheckpoints({ workspace, days: 7, limit: 500 });
+    return this.sessionDetector.getLastCompleteSession(entries);
+  }
+
+  /**
+   * Get entries from the current active session
+   */
+  async getCurrentSession(workspace: string = 'current'): Promise<SessionInfo | null> {
+    const entries = await this.getRecentCheckpoints({ workspace, days: 1, limit: 200 });
+    return this.sessionDetector.getCurrentSession(entries);
+  }
+
+  /**
+   * Get entries from a specific session ID
+   */
+  async getSessionById(sessionId: string, workspace: string = 'current'): Promise<CheckpointEntry[]> {
+    let query = `
+      SELECT
+        id, workspace_id, workspace_path, workspace_name,
+        timestamp, description, project, git_branch, git_commit,
+        tags, files, session_id, entry_type, confidence_score,
+        sync_status, remote_id, last_synced_at, version,
+        created_at, updated_at
+      FROM checkpoints
+      WHERE session_id = $session_id
+    `;
+
+    const params: Record<string, any> = { $session_id: sessionId };
+
+    // Add workspace filtering
+    if (workspace === 'current') {
+      query += ' AND workspace_id = $workspace_id';
+      params.$workspace_id = this.workspaceId;
+    } else if (workspace !== 'all' && workspace) {
+      const { hashPath } = await import('./workspace-utils.js');
+      const targetWorkspaceId = hashPath(workspace);
+      query += ' AND workspace_id = $workspace_id';
+      params.$workspace_id = targetWorkspaceId;
+    }
+
+    query += ' ORDER BY timestamp ASC';
+
+    const stmt = this.db.prepare(query);
+    const rows = stmt.all(params) as any[];
+
+    return rows.map(row => this.rowToCheckpointEntry(row));
+  }
+
+  /**
+   * Get entries from the last N complete sessions
+   */
+  async getLastNSessions(n: number, workspace: string = 'current'): Promise<SessionInfo[]> {
+    const entries = await this.getRecentCheckpoints({ workspace, days: 30, limit: 1000 });
+    const allSessions = this.sessionDetector.detectSessions(entries);
+
+    // Filter complete sessions and return the last N
+    const completeSessions = allSessions.filter(s => s.boundaries.sessionEnd !== undefined);
+    return completeSessions.slice(-n);
+  }
+
+  /**
+   * Get intelligent recall context based on current session state
+   */
+  async getSmartRecallContext(workspace: string = 'current'): Promise<{
+    currentSession: SessionInfo | null;
+    lastSession: SessionInfo | null;
+    needsMoreContext: boolean;
+    totalRecentEntries: number;
+  }> {
+    const currentSession = await this.getCurrentSession(workspace);
+    const lastSession = await this.getLastCompleteSession(workspace);
+
+    const currentEntries = currentSession?.entries.length || 0;
+    const totalRecentEntries = currentEntries + (lastSession?.entries.length || 0);
+
+    // Determine if we need more context
+    const needsMoreContext = currentEntries < 5 ||
+      (currentSession ? this.isLongTimeSinceLastEntry(currentSession.entries) : false);
+
+    return {
+      currentSession,
+      lastSession,
+      needsMoreContext,
+      totalRecentEntries,
+    };
+  }
+
+  /**
+   * Check if there's been a long time since the last entry in a session
+   */
+  private isLongTimeSinceLastEntry(entries: CheckpointEntry[]): boolean {
+    if (entries.length === 0) return true;
+
+    const lastEntry = entries[entries.length - 1];
+    if (!lastEntry) return true;
+
+    const lastTime = new Date(lastEntry.timestamp).getTime();
+    const now = Date.now();
+    const hoursSince = (now - lastTime) / (1000 * 60 * 60);
+
+    return hoursSince > 4; // More than 4 hours since last entry
+  }
+
+  /**
+   * Get filtered entries by confidence score and entry type
+   */
+  async getHighQualityEntries(options: {
+    workspace?: string;
+    days?: number;
+    minConfidence?: number;
+    excludeTypes?: string[];
+    limit?: number;
+  } = {}): Promise<CheckpointEntry[]> {
+    const {
+      workspace = 'current',
+      days = 7,
+      minConfidence = 0.7,
+      excludeTypes = ['session-marker'],
+      limit = 50
+    } = options;
+
+    let query = `
+      SELECT
+        id, workspace_id, workspace_path, workspace_name,
+        timestamp, description, project, git_branch, git_commit,
+        tags, files, session_id, entry_type, confidence_score,
+        sync_status, remote_id, last_synced_at, version,
+        created_at, updated_at
+      FROM checkpoints
+      WHERE confidence_score >= $min_confidence
+    `;
+
+    const params: Record<string, any> = { $min_confidence: minConfidence };
+
+    // Add workspace filtering
+    if (workspace === 'current') {
+      query += ' AND workspace_id = $workspace_id';
+      params.$workspace_id = this.workspaceId;
+    } else if (workspace !== 'all' && workspace) {
+      const { hashPath } = await import('./workspace-utils.js');
+      const targetWorkspaceId = hashPath(workspace);
+      query += ' AND workspace_id = $workspace_id';
+      params.$workspace_id = targetWorkspaceId;
+    }
+
+    // Add entry type filtering
+    if (excludeTypes.length > 0) {
+      const typeConditions = excludeTypes.map((_, index) =>
+        `entry_type != $exclude_type${index}`
+      ).join(' AND ');
+      query += ` AND (${typeConditions})`;
+
+      excludeTypes.forEach((type, index) => {
+        params[`$exclude_type${index}`] = type;
+      });
+    }
+
+    // Add time filtering
+    if (days) {
+      query += ` AND datetime(timestamp) > datetime('now', '-${days} days')`;
+    }
+
+    query += ' ORDER BY timestamp DESC LIMIT $limit';
+    params.$limit = limit;
+
+    const stmt = this.db.prepare(query);
+    const rows = stmt.all(params) as any[];
+
+    return rows.map(row => this.rowToCheckpointEntry(row));
   }
 
   /**

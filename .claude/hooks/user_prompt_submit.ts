@@ -50,6 +50,8 @@ function extractKeyContent(text: string): string {
 }
 
 async function main() {
+  let claudeCodeSessionId: string | undefined;
+
   try {
     // Read JSON input from stdin
     const stdinBuffer = [];
@@ -57,6 +59,7 @@ async function main() {
       stdinBuffer.push(chunk);
     }
     const inputData = JSON.parse(Buffer.concat(stdinBuffer).toString());
+    claudeCodeSessionId = inputData.session_id;
 
     // Extract session_id and prompt from input data
     const content = inputData.prompt || '';
@@ -83,13 +86,26 @@ async function main() {
       process.exit(0);
     }
 
-    const result = spawnSync(["bun", cliPath, "checkpoint", description], {
+    const cliArgs = [
+      "bun", cliPath, "checkpoint", description,
+      "user-request",
+      "--entry-type=user-request",
+      "--confidence=0.8"
+    ];
+
+    // Add session ID if available
+    if (claudeCodeSessionId) {
+      cliArgs.push(`--session-id=${claudeCodeSessionId}`);
+    }
+
+    const result = spawnSync(cliArgs, {
       stdout: "pipe",
       stderr: "pipe",
     });
 
     if (result.success) {
-      logSuccess("user_prompt", keyContent);
+      const sessionInfo = claudeCodeSessionId ? ` [${claudeCodeSessionId.slice(0, 8)}...]` : "";
+      logSuccess("user_prompt", `${keyContent}${sessionInfo}`);
       console.error(`✅ User prompt checkpoint saved: ${description}`);
     } else {
       const errorOutput = new TextDecoder().decode(result.stderr);

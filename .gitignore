@@ -77,6 +77,7 @@ bun.lockb
 .coa/
 .serena/           # Serena MCP cache
 .serena/*          # All contents of .serena directory
+.julie/            # Julie MCP cache
 index/             # Whoosh search indexes
 *.db               # SQLite databases if any
 *.sqlite*

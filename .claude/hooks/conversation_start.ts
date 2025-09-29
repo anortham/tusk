@@ -126,7 +126,21 @@ async function getRecentContext(): Promise<string[]> {
 }
 
 async function main() {
+  let claudeCodeSessionId: string | undefined;
+
   try {
+    // Try to read Claude Code hook input from stdin
+    try {
+      const stdinInput = await new Response(Bun.stdin.stream()).text();
+      if (stdinInput.trim()) {
+        const hookInput = JSON.parse(stdinInput);
+        claudeCodeSessionId = hookInput.session_id;
+      }
+    } catch (stdinError) {
+      // No stdin input or invalid JSON - continue without session ID
+      console.error("📝 No Claude Code session input detected, running standalone");
+    }
+
     // Build session context
     const context: SessionContext = {
       workspaceInfo: getWorkspaceContext(),
@@ -154,19 +168,29 @@ async function main() {
       process.exit(0);
     }
 
-    // Create session start checkpoint with contextual tags
+    // Create session start checkpoint with contextual tags and session info
     const tags = ["session-start", sessionType, context.timeOfDay];
 
-    const result = spawnSync([
+    const cliArgs = [
       "bun", cliPath, "checkpoint", description,
-      tags.join(",")
-    ], {
+      tags.join(","),
+      "--entry-type=session-marker",
+      "--confidence=0.95"
+    ];
+
+    // Add session ID if available
+    if (claudeCodeSessionId) {
+      cliArgs.push(`--session-id=${claudeCodeSessionId}`);
+    }
+
+    const result = spawnSync(cliArgs, {
       stdout: "pipe",
       stderr: "pipe",
     });
 
     if (result.success) {
-      logSuccess("conversation_start", `${sessionType} (${context.timeOfDay})`);
+      const sessionInfo = claudeCodeSessionId ? ` [${claudeCodeSessionId.slice(0, 8)}...]` : "";
+      logSuccess("conversation_start", `${sessionType} (${context.timeOfDay})${sessionInfo}`);
 
       // Provide contextual session information
       if (context.recentWork.length > 0) {

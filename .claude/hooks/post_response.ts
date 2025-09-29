@@ -98,6 +98,8 @@ function extractKeyInsights(text: string, primaryType: string | null): string {
 }
 
 async function main() {
+  let claudeCodeSessionId: string | undefined;
+
   try {
     // Read JSON input from stdin
     const stdinBuffer = [];
@@ -105,6 +107,7 @@ async function main() {
       stdinBuffer.push(chunk);
     }
     const inputData = JSON.parse(Buffer.concat(stdinBuffer).toString());
+    claudeCodeSessionId = inputData.session_id;
 
     // Extract assistant response content
     let content = '';
@@ -148,16 +151,26 @@ async function main() {
       tags.push(analysis.primaryType);
     }
 
-    const result = spawnSync([
+    const cliArgs = [
       "bun", cliPath, "checkpoint", description,
-      "--tags", tags.join(",")
-    ], {
+      tags.join(","),
+      "--entry-type=progress",
+      `--confidence=${(analysis.score / 15).toFixed(2)}` // Normalize score to 0-1
+    ];
+
+    // Add session ID if available
+    if (claudeCodeSessionId) {
+      cliArgs.push(`--session-id=${claudeCodeSessionId}`);
+    }
+
+    const result = spawnSync(cliArgs, {
       stdout: "pipe",
       stderr: "pipe",
     });
 
     if (result.success) {
-      logSuccess("post_response", `${analysis.primaryType || 'insight'}: ${keyInsight.substring(0, 50)}...`);
+      const sessionInfo = claudeCodeSessionId ? ` [${claudeCodeSessionId.slice(0, 8)}...]` : "";
+      logSuccess("post_response", `${analysis.primaryType || 'insight'}: ${keyInsight.substring(0, 50)}...${sessionInfo}`);
     } else {
       const errorOutput = new TextDecoder().decode(result.stderr);
       logError("post_response", errorOutput);

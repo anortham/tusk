@@ -121,6 +121,8 @@ async function backupTranscript(transcriptPath: string, trigger: string): Promis
 }
 
 async function main() {
+  let claudeCodeSessionId: string | undefined;
+
   try {
     // Read JSON input from stdin if available
     let inputData: ClaudeCompactInput = {};
@@ -131,6 +133,7 @@ async function main() {
       }
       if (stdinBuffer.length > 0) {
         inputData = JSON.parse(Buffer.concat(stdinBuffer).toString()) || {};
+        claudeCodeSessionId = (inputData as any).session_id;
       }
     } catch {
       // No input or invalid JSON - continue with empty data
@@ -186,16 +189,26 @@ async function main() {
       "auto-checkpoint"
     ];
 
-    const result = spawnSync([
+    const cliArgs = [
       "bun", cliPath, "checkpoint", description,
-      tags.join(",")
-    ], {
+      tags.join(","),
+      "--entry-type=auto-save",
+      "--confidence=0.9"
+    ];
+
+    // Add session ID if available
+    if (claudeCodeSessionId) {
+      cliArgs.push(`--session-id=${claudeCodeSessionId}`);
+    }
+
+    const result = spawnSync(cliArgs, {
       stdout: "pipe",
       stderr: "pipe",
     });
 
     if (result.success) {
-      logSuccess("pre_compact", `rich context preserved (${trigger})`);
+      const sessionInfo = claudeCodeSessionId ? ` [${claudeCodeSessionId.slice(0, 8)}...]` : "";
+      logSuccess("pre_compact", `rich context preserved (${trigger})${sessionInfo}`);
       console.error(`✅ Enhanced pre-compact checkpoint saved with git and project context`);
     } else {
       const errorOutput = new TextDecoder().decode(result.stderr);

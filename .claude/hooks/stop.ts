@@ -38,6 +38,8 @@ function extractKeyContent(text: string): string {
 }
 
 async function main() {
+  let claudeCodeSessionId: string | undefined;
+
   try {
     // Read JSON input from stdin
     const stdinBuffer = [];
@@ -45,6 +47,7 @@ async function main() {
       stdinBuffer.push(chunk);
     }
     const inputData = JSON.parse(Buffer.concat(stdinBuffer).toString());
+    claudeCodeSessionId = inputData.session_id;
 
     // Try multiple possible paths for assistant content
     let content = '';
@@ -95,17 +98,27 @@ async function main() {
       "auto-checkpoint"
     ];
 
-    const result = spawnSync([
+    const cliArgs = [
       "bun", cliPath, "checkpoint",
       `${description}\n\n${details}`,
-      tags.join(",")
-    ], {
+      tags.join(","),
+      "--entry-type=completion",
+      "--confidence=0.95"
+    ];
+
+    // Add session ID if available
+    if (claudeCodeSessionId) {
+      cliArgs.push(`--session-id=${claudeCodeSessionId}`);
+    }
+
+    const result = spawnSync(cliArgs, {
       stdout: "pipe",
       stderr: "pipe",
     });
 
     if (result.success) {
-      logSuccess("stop", keyContent);
+      const sessionInfo = claudeCodeSessionId ? ` [${claudeCodeSessionId.slice(0, 8)}...]` : "";
+      logSuccess("stop", `${keyContent}${sessionInfo}`);
       console.error(`✅ Work completion detected and saved to journal`);
       console.error(`📝 Summary: ${keyContent}`);
       console.error(`🔖 Tagged: ${tags.join(", ")}`);

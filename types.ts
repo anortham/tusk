@@ -14,6 +14,11 @@ export interface CheckpointEntry {
   tags?: string[];
   files?: string[];
 
+  // Session tracking fields
+  sessionId?: string;
+  entryType?: 'user-request' | 'session-marker' | 'auto-save' | 'progress' | 'completion';
+  confidenceScore?: number; // 0.0-1.0 for auto-captured entries
+
   // Workspace context (populated automatically)
   workspaceId?: string;
   workspacePath?: string;

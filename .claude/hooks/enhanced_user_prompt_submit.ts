@@ -251,6 +251,8 @@ function extractSmartSummary(text: string, workType: string): string {
 }
 
 async function main() {
+  let claudeCodeSessionId: string | undefined;
+
   try {
     // Read JSON input from stdin
     const stdinBuffer = [];
@@ -260,6 +262,7 @@ async function main() {
     const inputData = JSON.parse(Buffer.concat(stdinBuffer).toString());
 
     const content = inputData.prompt || '';
+    claudeCodeSessionId = inputData.session_id;
 
     // Skip very short prompts
     if (content.trim().length < 15) {
@@ -299,16 +302,26 @@ async function main() {
       ...analysis.technologies.map(t => `tech-${t}`),
     ];
 
-    const result = spawnSync([
+    const cliArgs = [
       "bun", cliPath, "checkpoint", description,
-      "--tags", tags.join(",")
-    ], {
+      tags.join(","),
+      "--entry-type=user-request",
+      `--confidence=${analysis.confidence.toFixed(2)}`
+    ];
+
+    // Add session ID if available
+    if (claudeCodeSessionId) {
+      cliArgs.push(`--session-id=${claudeCodeSessionId}`);
+    }
+
+    const result = spawnSync(cliArgs, {
       stdout: "pipe",
       stderr: "pipe",
     });
 
     if (result.success) {
-      logSuccess("enhanced_user_prompt", `${analysis.workType}: ${analysis.summary.substring(0, 50)}...`);
+      const sessionInfo = claudeCodeSessionId ? ` [${claudeCodeSessionId.slice(0, 8)}...]` : "";
+      logSuccess("enhanced_user_prompt", `${analysis.workType}: ${analysis.summary.substring(0, 50)}...${sessionInfo}`);
       console.error(`✅ Enhanced prompt checkpoint: ${analysis.workType} (${analysis.technologies.join(', ') || 'general'})`);
     } else {
       const errorOutput = new TextDecoder().decode(result.stderr);
