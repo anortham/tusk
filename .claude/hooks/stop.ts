@@ -65,6 +65,20 @@ async function main() {
     const keyContent = extractKeyContent(content);
     const description = `Work completed: ${keyContent}`;
 
+    // Create detailed context from the full completion content
+    const details = [
+      "=== Completion Summary ===",
+      keyContent,
+      "",
+      "=== Full Response Context ===",
+      content.substring(0, 1000) + (content.length > 1000 ? "..." : ""),
+      "",
+      "=== Session Info ===",
+      `Completed at: ${new Date().toLocaleString()}`,
+      `Content length: ${content.length} characters`,
+      `Detection confidence: High (completion patterns matched)`
+    ].join('\n');
+
     // Find tusk CLI using smart path resolution
     const cliPath = findTuskCli(import.meta.path);
     if (!cliPath) {
@@ -73,14 +87,29 @@ async function main() {
       process.exit(0);
     }
 
-    const result = spawnSync(["bun", cliPath, "checkpoint", description], {
+    // Create checkpoint with rich completion context
+    const tags = [
+      "completion",
+      "work-done",
+      "session-end",
+      "auto-checkpoint"
+    ];
+
+    const result = spawnSync([
+      "bun", cliPath, "checkpoint",
+      `${description}\n\n${details}`,
+      tags.join(",")
+    ], {
       stdout: "pipe",
       stderr: "pipe",
     });
 
     if (result.success) {
       logSuccess("stop", keyContent);
-      console.error(`✅ Completion checkpoint saved: ${description}`);
+      console.error(`✅ Work completion detected and saved to journal`);
+      console.error(`📝 Summary: ${keyContent}`);
+      console.error(`🔖 Tagged: ${tags.join(", ")}`);
+      console.error(`💾 Context preserved with ${content.length} characters of completion details`);
     } else {
       const errorOutput = new TextDecoder().decode(result.stderr);
       logError("stop", errorOutput);

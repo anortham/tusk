@@ -87,8 +87,9 @@ async function getRecentContext(): Promise<string[]> {
     // Get recent checkpoints from current workspace
     const result = spawnSync([
       "bun", cliPath, "recall",
-      "--days", "1",
-      "--workspace", "current"
+      "--days", "2",
+      "--workspace", "current",
+      "--maxEntries", "5"
     ], {
       stdout: "pipe",
       stderr: "pipe",
@@ -96,11 +97,26 @@ async function getRecentContext(): Promise<string[]> {
 
     if (result.success) {
       const output = new TextDecoder().decode(result.stdout);
-      // Extract key recent activities (simplified parsing)
-      const lines = output.split('\n').filter(line =>
-        line.includes('•') && !line.includes('Found 0')
-      );
-      return lines.slice(0, 3); // Last 3 activities
+
+      // Extract key recent activities with better parsing
+      const lines = output.split('\n').filter(line => {
+        // Look for lines with bullet points that contain actual work descriptions
+        return (line.includes('•') || line.includes('-')) &&
+               !line.includes('Found 0') &&
+               !line.includes('workspace:') &&
+               line.trim().length > 10;
+      });
+
+      // Clean up the lines and extract meaningful descriptions
+      const cleanedLines = lines.map(line => {
+        // Remove timestamps and metadata, keep the description
+        return line.replace(/^\s*[•-]\s*/, '')
+                  .replace(/\s*\|\s*\d+[hm]\s+ago.*$/, '')
+                  .replace(/\s*\(\d{4}-\d{2}-\d{2}.*?\)/, '')
+                  .trim();
+      }).filter(line => line.length > 0);
+
+      return cleanedLines.slice(0, 3); // Last 3 meaningful activities
     }
   } catch {
     // Failed to get context, continue without it
@@ -143,7 +159,7 @@ async function main() {
 
     const result = spawnSync([
       "bun", cliPath, "checkpoint", description,
-      "--tags", tags.join(",")
+      tags.join(",")
     ], {
       stdout: "pipe",
       stderr: "pipe",
@@ -152,10 +168,24 @@ async function main() {
     if (result.success) {
       logSuccess("conversation_start", `${sessionType} (${context.timeOfDay})`);
 
-      // If we have recent context, also suggest a recall
+      // Provide contextual session information
       if (context.recentWork.length > 0) {
-        console.error(`💡 Context available: ${context.recentWork.length} recent activities found`);
-        console.error(`   Consider: Use /recall to restore context from recent work`);
+        console.error(`🔄 Session context restored (${sessionType})`);
+        console.error(`📋 Recent work found: ${context.recentWork.length} activities`);
+        context.recentWork.forEach((work, i) => {
+          console.error(`   ${i + 1}. ${work.substring(0, 60)}${work.length > 60 ? '...' : ''}`);
+        });
+        console.error(`💡 Use /recall for full context restoration`);
+      } else {
+        console.error(`🆕 Fresh session started (${sessionType})`);
+        if (sessionType === "work-continuation") {
+          console.error(`💡 No recent context found - consider /recall --days 7 for older work`);
+        }
+      }
+
+      // Additional workspace context
+      if (context.workspaceInfo.includes("uncommitted changes")) {
+        console.error(`⚠️  Uncommitted changes detected - work in progress`);
       }
     } else {
       const errorOutput = new TextDecoder().decode(result.stderr);
