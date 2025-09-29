@@ -9,7 +9,7 @@ import { test, expect, describe, beforeEach } from "bun:test";
 import {
   generateId,
   type CheckpointEntry,
-} from "../journal.js";
+} from '../src/utils/journal.js';
 
 describe("Enhanced Recall Integration", () => {
   // Helper functions from index.ts that we want to test

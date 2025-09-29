@@ -3,7 +3,7 @@
  * Functions for grouping, summarizing, and formatting journal entries
  */
 
-import type { JournalEntry } from "./types.js";
+import type { JournalEntry } from "../core/types.js";
 
 /**
  * Generate executive summary from journal entries

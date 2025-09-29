@@ -3,7 +3,7 @@
  * Automatically categorizes checkpoint entries and assigns confidence scores
  */
 
-import type { CheckpointEntry } from "./types.js";
+import type { CheckpointEntry } from "../core/types.js";
 
 export type EntryType = 'user-request' | 'session-marker' | 'auto-save' | 'progress' | 'completion';
 

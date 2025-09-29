@@ -9,7 +9,7 @@
  * - Adaptive content length management
  */
 
-import type { CheckpointEntry } from "./types.js";
+import type { CheckpointEntry } from "../core/types.js";
 
 // ===== CONTEXT TYPE PRIORITIZATION MATRIX =====
 

@@ -3,7 +3,7 @@
  * Functions for calculating similarity between entries and clustering similar checkpoints
  */
 
-import type { CheckpointEntry } from "./types.js";
+import type { CheckpointEntry } from "../core/types.js";
 
 // ===== DEDUPLICATION AND SIMILARITY UTILITIES =====
 

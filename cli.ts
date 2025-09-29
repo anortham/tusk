@@ -5,11 +5,11 @@
  * Allows calling tusk tools from command line and Claude Code hooks
  */
 
-import { saveEntry, getRecentEntries, searchEntries, generateId, getWorkspaceSummary } from "./journal.js";
-import type { JournalEntry } from "./journal.js";
-import { getGitContext } from "./git.js";
-import { generateStandup } from "./standup.js";
-import type { StandupStyle } from "./standup.js";
+import { saveEntry, getRecentEntries, searchEntries, generateId, getWorkspaceSummary } from "./src/utils/journal.js";
+import type { JournalEntry } from "./src/utils/journal.js";
+import { getGitContext } from "./src/integrations/git.js";
+import { generateStandup } from "./src/reports/standup.js";
+import type { StandupStyle } from "./src/reports/standup.js";
 
 // Parse command line arguments
 const [, , command, ...args] = process.argv;

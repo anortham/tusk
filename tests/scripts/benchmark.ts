@@ -9,8 +9,8 @@ import { join } from "path";
 import { existsSync, mkdirSync, writeFileSync } from "fs";
 import { tmpdir } from "os";
 
-import { saveEntry, getRecentEntries, getJournalStats } from "../../journal.js";
-import { generateStandup } from "../../standup.js";
+import { saveEntry, getRecentEntries, getJournalStats } from "../../src/utils/journal.js";
+import { generateStandup } from "../../src/reports/standup.js";
 import { TestDataFactory, TestEnvironment, TEST_CONFIG } from "../setup.js";
 
 interface BenchmarkResult {

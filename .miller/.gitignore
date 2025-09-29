@@ -1,6 +1,0 @@
-# Miller data directory - ignore all contents
-*
-!.gitignore
-
-# This ensures the .miller directory structure is preserved
-# but none of the generated data/logs/cache is committed

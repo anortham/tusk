@@ -7,8 +7,8 @@ import { existsSync, rmSync, mkdirSync } from "fs";
 import { join } from "path";
 import { tmpdir } from "os";
 import { beforeEach, afterEach } from "bun:test";
-import type { JournalEntry } from "../journal.js";
-import { __resetDefaultJournal } from "../journal.js";
+import type { JournalEntry } from '../src/utils/journal.js';
+import { __resetDefaultJournal } from '../src/utils/journal.js';
 
 // Test environment configuration
 export const TEST_CONFIG = {

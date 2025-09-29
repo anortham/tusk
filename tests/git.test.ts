@@ -15,7 +15,7 @@ import {
   isGitRepo,
   getGitContext,
   getStatusSummary,
-} from "../git.js";
+} from '../src/integrations/git.js';
 import {
   TestEnvironment,
   PerformanceTester,

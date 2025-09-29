@@ -92,3 +92,4 @@ temp/
 config.local.json
 .env.local
 .claude/settings.local.json
+.julie/

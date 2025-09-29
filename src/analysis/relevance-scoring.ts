@@ -3,8 +3,8 @@
  * Functions for calculating and applying relevance scores to checkpoint entries
  */
 
-import type { CheckpointEntry, RelevanceWeights } from "./types.js";
-import { DEFAULT_RELEVANCE_WEIGHTS } from "./types.js";
+import type { CheckpointEntry, RelevanceWeights } from "../core/types.js";
+import { DEFAULT_RELEVANCE_WEIGHTS } from "../core/types.js";
 
 // ===== RELEVANCE SCORING SYSTEM =====
 

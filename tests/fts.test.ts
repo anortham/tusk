@@ -6,9 +6,9 @@
 import { describe, test, expect, beforeAll, afterAll, beforeEach } from 'bun:test';
 import { join } from 'path';
 import { existsSync, rmSync, mkdirSync } from 'fs';
-import { JournalDB } from './journal.js';
-import type { CheckpointEntry } from './journal.js';
-import type { FTSSearchOptions, FTSSearchResult, FTSStats, IFTSManager } from './fts-types.js';
+import { JournalDB } from './src/core/journal-db.js';
+import type { CheckpointEntry } from './src/core/types.js';
+import type { FTSSearchOptions, FTSSearchResult, FTSStats, IFTSManager } from './src/search/fts-types.js';
 
 // Test data and setup
 const TEST_DIR = join(import.meta.dir, 'test-fts');

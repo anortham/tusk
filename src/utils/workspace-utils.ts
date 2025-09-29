@@ -6,7 +6,7 @@
 import { existsSync, readFileSync, realpathSync } from "fs";
 import { join, normalize, resolve, dirname, basename } from "path";
 import { createHash } from "crypto";
-import type { WorkspaceInfo } from "./types.js";
+import type { WorkspaceInfo } from "../core/types.js";
 
 /**
  * Detect workspace context using git root, package.json, or cwd

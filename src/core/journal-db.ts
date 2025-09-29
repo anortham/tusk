@@ -7,11 +7,11 @@ import { Database } from "bun:sqlite";
 import { existsSync, mkdirSync } from "fs";
 import { homedir } from "os";
 import { join } from "path";
-import { FTSManager } from "./fts-manager.js";
-import type { FTSSearchOptions, FTSSearchResult } from "./fts-types.js";
+import { FTSManager } from "../search/fts-manager.js";
+import type { FTSSearchOptions, FTSSearchResult } from "../search/fts-types.js";
 import type { CheckpointEntry, WorkspaceInfo, QueryOptions, StandupEntry } from "./types.js";
-import { detectWorkspace, normalizePaths } from "./workspace-utils.js";
-import { SessionDetector, type SessionInfo, type SessionBoundary, DEFAULT_SESSION_CONFIG } from "./session-detector.js";
+import { detectWorkspace, normalizePaths } from "../utils/workspace-utils.js";
+import { SessionDetector, type SessionInfo, type SessionBoundary, DEFAULT_SESSION_CONFIG } from "../analysis/session-detector.js";
 
 /**
  * SQLite-based Journal Database with Multi-Workspace Support
@@ -92,6 +92,10 @@ export class JournalDB {
     this.db.run("PRAGMA synchronous = NORMAL");
     this.db.run("PRAGMA cache_size = 10000");
     this.db.run("PRAGMA temp_store = memory");
+
+    // Configure automatic WAL checkpointing to prevent unbounded growth
+    // Checkpoint after 1000 pages (~4MB) to prevent disk I/O errors
+    this.db.run("PRAGMA wal_autocheckpoint = 1000");
   }
 
   /**
@@ -336,7 +340,7 @@ export class JournalDB {
       params.$workspace_id = this.workspaceId;
     } else if (workspace !== 'all' && workspace) {
       // Specific workspace path
-      const { hashPath } = await import('./workspace-utils.js');
+      const { hashPath } = await import('../utils/workspace-utils.js');
       const targetWorkspaceId = hashPath(workspace);
       query += ' AND workspace_id = $workspace_id';
       params.$workspace_id = targetWorkspaceId;
@@ -450,7 +454,7 @@ export class JournalDB {
       sql += ' AND workspace_id = $workspace_id';
       params.$workspace_id = this.workspaceId;
     } else if (workspace !== 'all' && workspace) {
-      const { hashPath } = await import('./workspace-utils.js');
+      const { hashPath } = await import('../utils/workspace-utils.js');
       const targetWorkspaceId = hashPath(workspace);
       sql += ' AND workspace_id = $workspace_id';
       params.$workspace_id = targetWorkspaceId;
@@ -652,7 +656,7 @@ export class JournalDB {
       query += ' AND workspace_id = $workspace_id';
       params.$workspace_id = this.workspaceId;
     } else if (workspace !== 'all' && workspace) {
-      const { hashPath } = await import('./workspace-utils.js');
+      const { hashPath } = await import('../utils/workspace-utils.js');
       const targetWorkspaceId = hashPath(workspace);
       query += ' AND workspace_id = $workspace_id';
       params.$workspace_id = targetWorkspaceId;
@@ -757,7 +761,7 @@ export class JournalDB {
       query += ' AND workspace_id = $workspace_id';
       params.$workspace_id = this.workspaceId;
     } else if (workspace !== 'all' && workspace) {
-      const { hashPath } = await import('./workspace-utils.js');
+      const { hashPath } = await import('../utils/workspace-utils.js');
       const targetWorkspaceId = hashPath(workspace);
       query += ' AND workspace_id = $workspace_id';
       params.$workspace_id = targetWorkspaceId;
@@ -793,6 +797,13 @@ export class JournalDB {
    * Close the database connection
    */
   close(): void {
+    // Checkpoint WAL before closing to ensure all data is persisted
+    try {
+      this.db.run("PRAGMA wal_checkpoint(TRUNCATE)");
+    } catch (error) {
+      // Ignore checkpoint errors during close
+      console.error("WAL checkpoint warning during close:", error);
+    }
     this.db.close();
   }
 }

@@ -3,7 +3,7 @@
  * Identifies session boundaries and groups entries into logical work sessions
  */
 
-import type { CheckpointEntry } from "./types.js";
+import type { CheckpointEntry } from "../core/types.js";
 
 export interface SessionBoundary {
   sessionStart: string; // timestamp

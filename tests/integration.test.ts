@@ -8,8 +8,8 @@ import { join } from "path";
 import { existsSync, mkdirSync, writeFileSync, readFileSync } from "fs";
 import { spawnSync } from "bun";
 
-import { generateStandup } from "../standup.js";
-import { saveEntry, getRecentEntries, getJournalStats, getWorkspaceSummary } from "../journal.js";
+import { generateStandup } from '../src/reports/standup.js';
+import { saveEntry, getRecentEntries, getJournalStats, getWorkspaceSummary } from '../src/utils/journal.js';
 import {
   TestEnvironment,
   TestDataFactory,

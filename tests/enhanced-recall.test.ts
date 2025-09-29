@@ -16,7 +16,7 @@ import {
   type CheckpointEntry,
   type RelevanceWeights,
   DEFAULT_RELEVANCE_WEIGHTS,
-} from "../journal.js";
+} from '../src/utils/journal.js';
 
 describe("Enhanced Recall System", () => {
   // Test data factory

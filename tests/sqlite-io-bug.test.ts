@@ -13,8 +13,8 @@ import { test, expect, describe, beforeEach, afterEach } from "bun:test";
 import { join } from "path";
 import { existsSync, mkdirSync, rmSync } from "fs";
 import { tmpdir } from "os";
-import { saveEntry, getRecentEntries } from "../journal.js";
-import type { JournalEntry } from "../journal.js";
+import { saveEntry, getRecentEntries } from '../src/utils/journal.js';
+import type { JournalEntry } from '../src/utils/journal.js';
 import { TestEnvironment, TestDataFactory } from "./setup.js";
 
 describe("SQLite I/O Bug Reproduction", () => {

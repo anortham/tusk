@@ -11,9 +11,9 @@ export type {
   QueryOptions,
   StandupEntry,
   RelevanceWeights
-} from "./types.js";
+} from "../core/types.js";
 
-export { DEFAULT_RELEVANCE_WEIGHTS } from "./types.js";
+export { DEFAULT_RELEVANCE_WEIGHTS } from "../core/types.js";
 
 // Export similarity utilities
 export {
@@ -22,14 +22,14 @@ export {
   calculateSemanticSimilarity,
   clusterSimilarCheckpoints,
   mergeCheckpointCluster
-} from "./similarity-utils.js";
+} from "../analysis/similarity-utils.js";
 
 // Export relevance scoring utilities
 export {
   calculateRelevanceScore,
   sortByRelevance,
   filterByRelevance
-} from "./relevance-scoring.js";
+} from "../analysis/relevance-scoring.js";
 
 // Export workspace utilities
 export {
@@ -41,10 +41,10 @@ export {
 } from "./workspace-utils.js";
 
 // Export core database functionality
-export { JournalDB } from "./journal-db.js";
+export { JournalDB } from "../core/journal-db.js";
 
 // Create default database instance and re-export key functions
-import { JournalDB } from "./journal-db.js";
+import { JournalDB } from "../core/journal-db.js";
 
 // Default instance for backward compatibility
 let defaultJournal: JournalDB | null = null;

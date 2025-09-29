@@ -3,13 +3,13 @@
  * Handler functions for checkpoint, recall, and standup tools
  */
 
-import { getGitContext, getStatusSummary } from "./git.js";
-import { generateId, saveEntry, getRecentEntries, searchEntries, getWorkspaceSummary, getCurrentWorkspace } from "./journal.js";
-import { generateStandup } from "./standup.js";
-import { CheckpointSchema, RecallSchema, StandupSchema } from "./schemas.js";
-import { clusterSimilarCheckpoints, mergeCheckpointCluster } from "./similarity-utils.js";
-import { sortByRelevance, filterByRelevance } from "./relevance-scoring.js";
-import type { JournalEntry } from "./types.js";
+import { getGitContext, getStatusSummary } from "../integrations/git.js";
+import { generateId, saveEntry, getRecentEntries, searchEntries, getWorkspaceSummary, getCurrentWorkspace } from "../utils/journal.js";
+import { generateStandup } from "../reports/standup.js";
+import { CheckpointSchema, RecallSchema, StandupSchema } from "../core/schemas.js";
+import { clusterSimilarCheckpoints, mergeCheckpointCluster } from "../analysis/similarity-utils.js";
+import { sortByRelevance, filterByRelevance } from "../analysis/relevance-scoring.js";
+import type { JournalEntry } from "../core/types.js";
 
 /**
  * Handle checkpoint tool - save progress to journal

@@ -11,8 +11,8 @@ import {
   type StandupOptions,
   type StandupStyle,
   type StandupData,
-} from "../standup.js";
-import { saveEntry, type JournalEntry } from "../journal.js";
+} from '../src/reports/standup.js';
+import { saveEntry, type JournalEntry } from '../src/utils/journal.js';
 import {
   TestEnvironment,
   TestDataFactory,

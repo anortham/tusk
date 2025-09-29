@@ -8,11 +8,11 @@
  * - Query-aware filtering
  */
 
-import { RecallSchema } from "./schemas.js";
-import { searchEntries, getRecentEntries, getCurrentWorkspace } from "./journal.js";
+import { RecallSchema } from "../core/schemas.js";
+import { searchEntries, getRecentEntries, getCurrentWorkspace } from "../utils/journal.js";
 import { manageContextLength, groupContextByIntelligence, calculateEnhancedRelevanceScore } from "./enhanced-relevance-scoring.js";
-import { clusterSimilarCheckpoints, mergeCheckpointCluster } from "./similarity-utils.js";
-import type { CheckpointEntry } from "./types.js";
+import { clusterSimilarCheckpoints, mergeCheckpointCluster } from "../analysis/similarity-utils.js";
+import type { CheckpointEntry } from "../core/types.js";
 
 interface CurrentWorkContext {
   activeProject?: string;

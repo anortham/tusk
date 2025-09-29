@@ -3,10 +3,10 @@
  * Defines interfaces for enhanced search functionality with ranking and relevance
  */
 
-import type { CheckpointEntry, QueryOptions } from './journal.js';
+import type { CheckpointEntry, QueryOptions } from '../utils/journal.js';
 
 // Re-export CheckpointEntry for FTS modules
-export type { CheckpointEntry } from './journal.js';
+export type { CheckpointEntry } from '../utils/journal.js';
 
 // ===== FTS SEARCH OPTIONS =====
 
