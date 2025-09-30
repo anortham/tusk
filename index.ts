@@ -12,8 +12,8 @@ import {
   ListToolsRequestSchema
 } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
-import { readFileSync } from "fs";
-import { join, dirname } from "path";
+import { readFileSync, mkdirSync, writeFileSync, existsSync } from "fs";
+import { join, dirname, resolve } from "path";
 import { fileURLToPath } from "url";
 
 import { getGitContext, getStatusSummary } from "./src/integrations/git.js";
@@ -84,6 +84,10 @@ const RecallSchema = z.object({
   groupBy: z.enum(["chronological", "project", "topic", "session", "relevance"]).optional().default("chronological").describe("Grouping strategy for entries"),
   relevanceThreshold: z.number().optional().default(0.0).describe("Minimum relevance score filter (0-1, default: 0.0)"),
   maxEntries: z.number().optional().default(50).describe("Maximum number of entries to return after processing (default: 50)"),
+
+  // Export options
+  export: z.boolean().optional().default(false).describe("Export results to markdown file (default: false)"),
+  exportPath: z.string().optional().default("docs").describe("Directory path for export (default: 'docs')"),
 });
 
 const StandupSchema = z.object({
@@ -149,6 +153,10 @@ Enhanced Processing:
 - relevanceThreshold (default: 0.0): Filter by minimum relevance score (0-1)
 - maxEntries (default: 50): Maximum entries after processing
 
+Export Options:
+- export (default: false): Export results to markdown file for version control and grep-ability
+- exportPath (default: "docs"): Directory path for exported file
+
 Returns: Intelligently processed entries with reduced redundancy and enhanced context.`,
         inputSchema: {
           type: "object",
@@ -212,6 +220,16 @@ Returns: Intelligently processed entries with reduced redundancy and enhanced co
               type: "number",
               description: "Maximum number of entries to return after processing (default: 50)",
               default: 50,
+            },
+            export: {
+              type: "boolean",
+              description: "Export results to markdown file (default: false)",
+              default: false,
+            },
+            exportPath: {
+              type: "string",
+              description: "Directory path for export (default: 'docs')",
+              default: "docs",
             },
           },
         },
@@ -352,7 +370,8 @@ async function handleRecall(args: any) {
   const {
     days, from, to, search, project, workspace, listWorkspaces,
     sessions, sessionId, smart, minConfidence, excludeTypes,
-    deduplicate, similarityThreshold, summarize, groupBy, relevanceThreshold, maxEntries
+    deduplicate, similarityThreshold, summarize, groupBy, relevanceThreshold, maxEntries,
+    export: exportToFile, exportPath
   } = RecallSchema.parse(args);
 
   // Handle workspace listing if requested
@@ -597,6 +616,50 @@ No journal entries found${filterDesc.length > 0 ? ` for ${filterDesc.join(", ")}
 
   contextLines.push("");
   contextLines.push("🎯 **Context restored!** Continue your work with this background knowledge.");
+
+  // Export to markdown file if requested
+  let exportFilePath: string | null = null;
+  if (exportToFile) {
+    try {
+      // Generate filename based on query parameters
+      const timestamp = new Date().toISOString().split('T')[0]!; // YYYY-MM-DD (always present)
+      let filenameParts = ['tusk-recall'];
+
+      if (search) {
+        // Sanitize search term for filename
+        const sanitized = search.replace(/[^a-z0-9]+/gi, '-').toLowerCase();
+        filenameParts.push(sanitized);
+      }
+      if (project) {
+        filenameParts.push(project);
+      }
+
+      filenameParts.push(timestamp);
+      const filename = `${filenameParts.join('-')}.md`;
+
+      // Resolve export path (relative to current working directory)
+      const targetPath = exportPath || 'docs';
+      const exportDir = resolve(process.cwd(), targetPath);
+      exportFilePath = join(exportDir, filename);
+
+      // Create directory if it doesn't exist
+      if (!existsSync(exportDir)) {
+        mkdirSync(exportDir, { recursive: true });
+      }
+
+      // Write the markdown content
+      const markdownContent = contextLines.join("\n");
+      writeFileSync(exportFilePath, markdownContent, 'utf-8');
+
+      // Add export confirmation to output
+      contextLines.push("");
+      contextLines.push(`📄 **Exported to:** ${exportFilePath}`);
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      contextLines.push("");
+      contextLines.push(`⚠️ **Export failed:** ${errorMsg}`);
+    }
+  }
 
   return {
     content: [

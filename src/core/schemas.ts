@@ -27,6 +27,10 @@ export const RecallSchema = z.object({
   groupBy: z.enum(["chronological", "project", "topic", "session", "relevance"]).optional().default("chronological").describe("Grouping strategy for entries"),
   relevanceThreshold: z.number().optional().default(0.0).describe("Minimum relevance score filter (0-1, default: 0.0)"),
   maxEntries: z.number().optional().default(50).describe("Maximum number of entries to return after processing (default: 50)"),
+
+  // Export options
+  export: z.boolean().optional().default(false).describe("Export results to markdown file (default: false)"),
+  exportPath: z.string().optional().default("docs").describe("Directory path for export (default: 'docs')"),
 });
 
 export const StandupSchema = z.object({
