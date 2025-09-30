@@ -23,7 +23,23 @@ Losing context is like losing your mind - you must avoid it at all costs!
 - Use recall(search="keyword") if resuming specific work
 
 ### 2. PROACTIVE CHECKPOINTING (Build the Data!)
+
+**🚨 CRITICAL: Checkpoint DURING long discussions, not just after!**
+
+If a conversation goes **5-10 exchanges** without a checkpoint, you are at HIGH RISK of losing everything. Architecture discussions, design debates, and requirement analysis are IMPOSSIBLE to reconstruct from hooks alone.
+
+**⏰ FREQUENCY RULE: Checkpoint every 5-10 minutes during active discussions**
+
 Call checkpoint() immediately when you:
+
+**During Active Discussions (HIGHEST PRIORITY):**
+- **Every 5-10 exchanges** in planning/architecture conversations
+- When comparing multiple approaches or tradeoffs
+- After exploring pros/cons of different designs
+- When user shares important context about their system
+- During requirement gathering or problem analysis
+- When you reach intermediate conclusions (even if not final)
+- **BEFORE switching topics** in a multi-topic conversation
 
 **Code & Development:**
 - Complete a function, class, or module
@@ -42,11 +58,12 @@ Call checkpoint() immediately when you:
 - Learn something important about the codebase
 
 **Planning & Analysis:**
-- Complete analysis of requirements
-- Identify key architectural decisions
-- Map out implementation approach
+- **WHILE discussing** requirements (not just after)
+- **WHILE exploring** architectural options (not just after decision)
+- **WHILE mapping** implementation approaches (capture the reasoning)
 - Discover important patterns or insights
 - Make strategic technical decisions
+- **After 10+ exchanges** about any complex topic
 
 **Progress Milestones:**
 - Reach any significant milestone
@@ -56,25 +73,44 @@ Call checkpoint() immediately when you:
 
 ### 3. CHECKPOINT QUALITY
 Always include:
-- **Clear descriptions**: "Fixed authentication timeout bug using JWT refresh tokens"
+- **Clear descriptions**: Capture the "why" and reasoning, not just the "what"
 - **Relevant tags**: ["bug-fix", "auth", "critical", "performance"]
-- **Context**: What was achieved, not just what was done
+- **Context**: What was achieved AND what was considered/rejected
 
 **Good Examples:**
-✅ checkpoint("Implemented user dashboard with real-time metrics and caching", ["feature", "ui", "performance"])
-✅ checkpoint("Resolved memory leak in file processor by fixing event listener cleanup", ["bug-fix", "critical", "memory"])
-✅ checkpoint("Discovered API rate limiting pattern - using exponential backoff strategy", ["discovery", "api", "performance"])
+
+✅ **Completion checkpoints:**
+- checkpoint("Implemented user dashboard with real-time metrics and caching", ["feature", "ui", "performance"])
+- checkpoint("Resolved memory leak in file processor by fixing event listener cleanup", ["bug-fix", "critical", "memory"])
+- checkpoint("Discovered API rate limiting pattern - using exponential backoff strategy", ["discovery", "api", "performance"])
+
+✅ **Discussion/exploration checkpoints (CRITICAL for context survival):**
+- checkpoint("Exploring microservices vs monolith - user has 5 services now, main concern is deployment complexity but needs independent scaling for API layer", ["architecture", "planning", "discussion"])
+- checkpoint("Analyzing authentication approaches - considering JWT vs sessions, user prefers stateless for multi-region deployment, discussing refresh token security tradeoffs", ["architecture", "auth", "discussion"])
+- checkpoint("Debating state management options - Redux too heavy for this use case, considering Zustand or Context API, leaning toward Zustand for devtools and middleware", ["architecture", "frontend", "discussion"])
+- checkpoint("Requirements gathering - user needs real-time updates for dashboard, approximately 1000 concurrent users, budget allows managed services, considering WebSockets vs SSE", ["planning", "requirements", "discussion"])
 
 **Bad Examples:**
 ❌ checkpoint("made changes") - too vague
 ❌ checkpoint("updated code") - no context
 ❌ checkpoint("fixed stuff") - not helpful
+❌ checkpoint("discussed architecture") - no details about WHAT was discussed or decided
 
 ### 4. EMERGENCY RECOVERY MINDSET
+
+**⚠️ REALITY CHECK: You WILL lose context. Plan for it.**
+
+Claude crashes, context windows fill up, sessions restart. Without checkpoints, **hours of discussion disappear forever**. Your hooks capture WHEN you talked, not WHAT you decided.
+
 Think of checkpoints as **emergency recovery data**:
-- If Claude crashes mid-session, could you resume effectively?
-- If context is lost, would these checkpoints help reconstruct the work?
+- If Claude crashes mid-discussion, could the next agent continue?
+- If you've been discussing architecture for 20 minutes, is ANY of it saved?
 - Are you capturing the "why" and "how", not just "what"?
+- **Would YOU want to start over if this context disappeared right now?**
+
+**The painful truth:** If you have a 30-minute architectural discussion with only completion checkpoints at the end, and Claude crashes at minute 25, **ALL 25 MINUTES ARE LOST**. No hooks can save you. Only mid-discussion checkpoints preserve reasoning.
+
+**Better safe than sorry:** It's better to have 5 checkpoints capturing a complex discussion than 1 perfect summary at the end that never gets saved.
 
 ### 5. SMART STANDUP USAGE
 Generate standups for:
@@ -93,9 +129,25 @@ Generate standups for:
 
 ### Work Session Pattern
 1. Checkpoint before starting significant work
-2. Checkpoint after each major milestone
-3. Checkpoint when switching contexts
-4. Checkpoint before ending session
+2. **Checkpoint every 5-10 exchanges during planning/discussion**
+3. Checkpoint after each major milestone
+4. Checkpoint when switching contexts
+5. Checkpoint before ending session
+
+### Long Discussion Pattern (CRITICAL FOR CONTEXT SURVIVAL)
+1. **Exchange 5-10**: First checkpoint capturing initial requirements/context
+2. **Every 10 exchanges**: Intermediate checkpoint with current thinking
+3. **Before decisions**: Checkpoint the options and tradeoffs being considered
+4. **After decisions**: Checkpoint what was decided and why
+5. **Topic switches**: Checkpoint current topic before moving to next
+
+**Example timeline of a 30-minute architecture discussion:**
+- 0:05 → checkpoint("User needs real-time dashboard, 1000 users, considering WebSocket vs SSE...")
+- 0:12 → checkpoint("Exploring state management - Redux too complex, discussing Zustand vs Context...")
+- 0:20 → checkpoint("Decided on Zustand for state + SSE for real-time, reasoning: simpler than Redux...")
+- 0:28 → checkpoint("Now discussing deployment strategy, user has AWS experience, considering ECS vs Lambda...")
+
+**Without this pattern:** If Claude crashes at 0:25, you lose 25 minutes. With pattern: You lose at most 5 minutes.
 
 ### Emergency Recovery Pattern
 If you need to recover context:
@@ -113,11 +165,19 @@ If you need to recover context:
 - "The key insight here is..."
 - "After significant debugging, I found..."
 - "The solution was to..."
+- **"We've been discussing this for 10+ exchanges..."** ⚠️ CHECKPOINT NOW
+- **"Let me summarize what we've covered..."** ⚠️ CHECKPOINT THAT SUMMARY
+- **"So the tradeoffs are..."** ⚠️ CHECKPOINT THE TRADEOFF ANALYSIS
+- **"Based on your requirements..."** ⚠️ CHECKPOINT THOSE REQUIREMENTS
+- **"Before we move on..."** ⚠️ CHECKPOINT CURRENT TOPIC FIRST
 
 **Think out loud:**
 - "Let me checkpoint this breakthrough..."
 - "This is worth saving for context..."
 - "I should document this discovery..."
+- **"We've covered a lot - let me checkpoint our discussion so far..."**
+- **"This reasoning is important - checkpointing before we continue..."**
+- **"That's a critical decision - saving this context..."**
 
 ## 🎪 SUCCESS METRICS
 You're succeeding when:
