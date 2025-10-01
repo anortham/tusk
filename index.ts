@@ -30,6 +30,7 @@ import {
   mergeCheckpointCluster,
   sortByRelevance,
   filterByRelevance,
+  JournalDB,
 } from "./src/utils/journal.js";
 import { generateStandup } from "./src/reports/standup.js";
 
@@ -88,6 +89,12 @@ const RecallSchema = z.object({
   // Export options
   export: z.boolean().optional().default(false).describe("Export results to markdown file (default: false)"),
   exportPath: z.string().optional().default("docs").describe("Directory path for export (default: 'docs')"),
+
+  // Standup generation
+  standup: z.enum(["meeting", "written", "executive", "metrics"]).optional().describe("Generate standup report in specified style"),
+
+  // Plan integration
+  includePlan: z.boolean().optional().default(true).describe("Include active plan in recall context (default: true)"),
 });
 
 const StandupSchema = z.object({
@@ -97,6 +104,15 @@ const StandupSchema = z.object({
   includeMetrics: z.boolean().optional().default(true).describe("Include productivity metrics"),
   includeFiles: z.boolean().optional().default(false).describe("Include recently modified files"),
   workspace: z.string().optional().describe("Filter by specific workspace ID ('current' for current workspace, 'all' for all workspaces)"),
+});
+
+const PlanSchema = z.object({
+  action: z.enum(['save', 'list', 'get', 'activate', 'update', 'complete']).describe("Action to perform: save (new plan), list (all plans), get (specific plan), activate (set as active), update (add progress), complete (mark done)"),
+  title: z.string().optional().describe("Plan title/summary (required for 'save')"),
+  content: z.string().optional().describe("Full plan content in markdown (required for 'save')"),
+  planId: z.string().optional().describe("Plan ID (required for 'get', 'activate', 'update', 'complete')"),
+  progress: z.string().optional().describe("Progress update notes (required for 'update')"),
+  status: z.enum(['active', 'completed', 'archived']).optional().describe("Filter plans by status (for 'list' action)"),
 });
 
 /**
@@ -138,6 +154,10 @@ Returns: Confirmation with unique ID, timestamp, and git context.`,
 
 CRITICAL: Always use first in new sessions. Recovers lost context from Claude crashes, memory limits, or session restarts.
 
+New Features:
+- includePlan (default: true): Always shows active plan at the top
+- standup: Generate standup report (meeting, written, executive, metrics)
+
 Basic Parameters:
 - days (default: 2): How far back to look
 - search: Find specific topics (e.g., "authentication", "database schema")
@@ -157,7 +177,7 @@ Export Options:
 - export (default: false): Export results to markdown file for version control and grep-ability
 - exportPath (default: "docs"): Directory path for exported file
 
-Returns: Intelligently processed entries with reduced redundancy and enhanced context.`,
+Returns: Active plan + intelligently processed entries + optional standup report.`,
         inputSchema: {
           type: "object",
           properties: {
@@ -278,6 +298,60 @@ Returns: Formatted report ready for team communication or personal review.`,
           },
         },
       },
+      {
+        name: "plan",
+        description: `Manage long-running project plans that survive across sessions.
+
+Plans are living documents that guide your work, track progress, and survive context compaction. Unlike checkpoints (point-in-time snapshots), plans are referenced repeatedly and evolve over time.
+
+Actions:
+- save: Create a new plan (becomes active, deactivates others)
+- list: Show all plans for current workspace (optionally filter by status)
+- get: Retrieve a specific plan by ID
+- activate: Set a plan as active (shown in recall)
+- update: Add progress notes to a plan
+- complete: Mark a plan as completed
+
+Use Cases:
+- Save plans immediately after ExitPlanMode
+- Reference active plan via recall()
+- Update progress as you complete tasks
+- Track project roadmaps across sessions
+
+Returns: Plan details, status updates, or list of plans depending on action.`,
+        inputSchema: {
+          type: "object",
+          properties: {
+            action: {
+              type: "string",
+              enum: ["save", "list", "get", "activate", "update", "complete"],
+              description: "Action to perform on plans",
+            },
+            title: {
+              type: "string",
+              description: "Plan title/summary (required for 'save')",
+            },
+            content: {
+              type: "string",
+              description: "Full plan content in markdown (required for 'save')",
+            },
+            planId: {
+              type: "string",
+              description: "Plan ID (required for 'get', 'activate', 'update', 'complete')",
+            },
+            progress: {
+              type: "string",
+              description: "Progress update notes (required for 'update')",
+            },
+            status: {
+              type: "string",
+              enum: ["active", "completed", "archived"],
+              description: "Filter plans by status (for 'list' action)",
+            },
+          },
+          required: ["action"],
+        },
+      },
     ],
   };
 });
@@ -296,6 +370,8 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         return await handleRecall(args);
       case "standup":
         return await handleStandup(args);
+      case "plan":
+        return await handlePlan(args);
       default:
         throw new Error(`Unknown tool: ${name}`);
     }
@@ -371,7 +447,8 @@ async function handleRecall(args: any) {
     days, from, to, search, project, workspace, listWorkspaces,
     sessions, sessionId, smart, minConfidence, excludeTypes,
     deduplicate, similarityThreshold, summarize, groupBy, relevanceThreshold, maxEntries,
-    export: exportToFile, exportPath
+    export: exportToFile, exportPath,
+    standup, includePlan
   } = RecallSchema.parse(args);
 
   // Handle workspace listing if requested
@@ -552,6 +629,30 @@ No journal entries found${filterDesc.length > 0 ? ` for ${filterDesc.join(", ")}
   // Format the entries for display
   const contextLines: string[] = [];
 
+  // Include active plan if requested (default: true)
+  if (includePlan !== false) {
+    const { JournalDB: JDB } = await import("./src/core/journal-db.js");
+    const planDB = new JDB();
+    try {
+      const activePlan = await planDB.getActivePlan();
+      if (activePlan) {
+        contextLines.push(`⭐ **ACTIVE PLAN:** ${activePlan.title}`);
+        contextLines.push("");
+        contextLines.push(activePlan.content);
+        contextLines.push("");
+        if (activePlan.progress_notes) {
+          contextLines.push(`**Progress Notes:**`);
+          contextLines.push(activePlan.progress_notes);
+          contextLines.push("");
+        }
+        contextLines.push("---");
+        contextLines.push("");
+      }
+    } finally {
+      planDB.close();
+    }
+  }
+
   // Show processing stats
   const processingStats = [];
   if (originalCount !== entries.length) {
@@ -616,6 +717,21 @@ No journal entries found${filterDesc.length > 0 ? ` for ${filterDesc.join(", ")}
 
   contextLines.push("");
   contextLines.push("🎯 **Context restored!** Continue your work with this background knowledge.");
+
+  // Generate standup report if requested
+  if (standup) {
+    contextLines.push("");
+    contextLines.push("---");
+    contextLines.push("");
+    const standupReport = await generateStandup({
+      style: standup,
+      days: days || 1,
+      includeMetrics: true,
+      includeFiles: false,
+      workspace: workspace || 'current'
+    });
+    contextLines.push(standupReport);
+  }
 
   // Export to markdown file if requested
   let exportFilePath: string | null = null;
@@ -690,6 +806,145 @@ async function handleStandup(args: any) {
       },
     ],
   };
+}
+
+/**
+ * Handle plan tool - manage long-running project plans
+ */
+async function handlePlan(args: any) {
+  const params = PlanSchema.parse(args);
+  const journal = new JournalDB();
+
+  try {
+    switch (params.action) {
+      case 'save': {
+        if (!params.title || !params.content) {
+          throw new Error('Title and content are required for saving a plan');
+        }
+        const result = await journal.savePlan(params.title, params.content);
+        return {
+          content: [{
+            type: "text",
+            text: `✅ **Plan Saved Successfully**
+
+📋 **${params.title}**
+🆔 Plan ID: ${result.id}
+
+${result.message}
+
+Your plan is now active and will appear in recall(). Use plan(action: "update") to track progress.`,
+          }],
+        };
+      }
+
+      case 'list': {
+        const plans = await journal.listPlans(params.status);
+        if (plans.length === 0) {
+          return {
+            content: [{
+              type: "text",
+              text: params.status
+                ? `No ${params.status} plans found for this workspace.`
+                : "No plans found for this workspace. Use plan(action: \"save\") to create one.",
+            }],
+          };
+        }
+
+        let output = `📋 **Plans for ${journal.getCurrentWorkspace().name}**\n\n`;
+        plans.forEach((plan: any) => {
+          const activeMarker = plan.is_active ? '⭐ ' : '';
+          const statusEmoji = plan.status === 'completed' ? '✅' : plan.status === 'active' ? '🔄' : '📦';
+          const date = new Date(plan.updated_at).toLocaleDateString();
+          output += `${activeMarker}${statusEmoji} **${plan.title}** (${plan.status})\n`;
+          output += `   ID: ${plan.id} | Updated: ${date}\n\n`;
+        });
+
+        return {
+          content: [{ type: "text", text: output }],
+        };
+      }
+
+      case 'get': {
+        if (!params.planId) {
+          throw new Error('planId is required for getting a plan');
+        }
+        const plan = await journal.getPlan(params.planId);
+        if (!plan) {
+          return {
+            content: [{
+              type: "text",
+              text: `❌ Plan ${params.planId} not found`,
+            }],
+          };
+        }
+
+        const activeMarker = plan.is_active ? '⭐ **ACTIVE PLAN** ' : '';
+        let output = `${activeMarker}📋 **${plan.title}**\n\n`;
+        output += `**Status:** ${plan.status}\n`;
+        output += `**Created:** ${new Date(plan.created_at).toLocaleString()}\n`;
+        output += `**Updated:** ${new Date(plan.updated_at).toLocaleString()}\n\n`;
+        output += `---\n\n${plan.content}\n\n`;
+
+        if (plan.progress_notes) {
+          output += `---\n\n**Progress Notes:**\n\n${plan.progress_notes}\n`;
+        }
+
+        return {
+          content: [{ type: "text", text: output }],
+        };
+      }
+
+      case 'activate': {
+        if (!params.planId) {
+          throw new Error('planId is required for activating a plan');
+        }
+        const result = await journal.activatePlan(params.planId);
+        return {
+          content: [{
+            type: "text",
+            text: result.success
+              ? `✅ ${result.message}\n\nThis plan will now appear in recall().`
+              : `❌ ${result.message}`,
+          }],
+        };
+      }
+
+      case 'update': {
+        if (!params.planId || !params.progress) {
+          throw new Error('planId and progress are required for updating a plan');
+        }
+        const result = await journal.updatePlanProgress(params.planId, params.progress);
+        return {
+          content: [{
+            type: "text",
+            text: result.success
+              ? `✅ ${result.message}\n\nProgress note added: ${params.progress}`
+              : `❌ ${result.message}`,
+          }],
+        };
+      }
+
+      case 'complete': {
+        if (!params.planId) {
+          throw new Error('planId is required for completing a plan');
+        }
+        const result = await journal.completePlan(params.planId);
+        return {
+          content: [{
+            type: "text",
+            text: result.success
+              ? `✅ ${result.message}\n\nCongratulations on completing your plan! 🎉`
+              : `❌ ${result.message}`,
+          }],
+        };
+      }
+
+      default:
+        throw new Error(`Unknown plan action: ${params.action}`);
+    }
+  } finally {
+    journal.close();
+  }
 }
 
 /**

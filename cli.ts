@@ -391,15 +391,46 @@ async function handleStandupCLI(args: string[]) {
     }
   }
 
-  const report = await generateStandup({
-    style,
-    days,
-    includeMetrics,
-    includeFiles,
-    workspace
-  });
+  // Import and create journal DB to get active plan
+  const { JournalDB } = await import("./src/core/journal-db.js");
+  const journalDB = new JournalDB();
 
-  console.log(report);
+  try {
+    // Get active plan
+    const activePlan = await journalDB.getActivePlan();
+
+    // Build output with active plan first
+    const outputLines: string[] = [];
+
+    if (activePlan) {
+      outputLines.push(`⭐ **ACTIVE PLAN:** ${activePlan.title}`);
+      outputLines.push("");
+      outputLines.push(activePlan.content);
+      outputLines.push("");
+      if (activePlan.progress_notes) {
+        outputLines.push(`**Progress Notes:**`);
+        outputLines.push(activePlan.progress_notes);
+        outputLines.push("");
+      }
+      outputLines.push("---");
+      outputLines.push("");
+    }
+
+    // Generate and add standup report
+    const report = await generateStandup({
+      style,
+      days,
+      includeMetrics,
+      includeFiles,
+      workspace
+    });
+
+    outputLines.push(report);
+
+    console.log(outputLines.join("\n"));
+  } finally {
+    journalDB.close();
+  }
 }
 
 function formatTimeAgo(timestamp: string): string {

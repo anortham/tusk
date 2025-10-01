@@ -209,7 +209,8 @@ async function main() {
     if (result.success) {
       const sessionInfo = claudeCodeSessionId ? ` [${claudeCodeSessionId.slice(0, 8)}...]` : "";
       logSuccess("pre_compact", `rich context preserved (${trigger})${sessionInfo}`);
-      console.error(`✅ Enhanced pre-compact checkpoint saved with git and project context`);
+      console.error(`✅ Pre-compaction checkpoint saved`);
+      console.error(`💡 Your active plan and context will survive - use recall() after restart`);
     } else {
       const errorOutput = new TextDecoder().decode(result.stderr);
       logError("pre_compact", errorOutput);

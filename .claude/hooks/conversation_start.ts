@@ -199,11 +199,13 @@ async function main() {
         context.recentWork.forEach((work, i) => {
           console.error(`   ${i + 1}. ${work.substring(0, 60)}${work.length > 60 ? '...' : ''}`);
         });
-        console.error(`💡 Use /recall for full context restoration`);
+        console.error(`💡 Use recall() to restore full context + active plan`);
       } else {
         console.error(`🆕 Fresh session started (${sessionType})`);
         if (sessionType === "work-continuation") {
-          console.error(`💡 No recent context found - consider /recall --days 7 for older work`);
+          console.error(`💡 No recent context found - use recall(days: 7) for older work + active plan`);
+        } else {
+          console.error(`💡 Use recall() to see your active plan and recent context`);
         }
       }
 

@@ -20,11 +20,17 @@ The system automatically determines the ideal lookback period:
 - After breaks: Up to 14 days for full context arc
 
 This helps maintain continuity across Claude sessions by recovering:
+- **Active plan** - Your current project roadmap (always shown first)
 - Recent checkpoints and progress
 - Project context and decisions
 - Key breakthroughs and discoveries
 
 Use `/recall 7` for week-long context or `/recall 1` for just today if you need manual control.
+
+**New features:**
+- Active plans shown automatically at the top
+- Optional standup report: add `standup: "meeting"` parameter
+- Plans survive compaction and guide your work
 
 Multi-workspace support: By default shows current workspace only. The tool supports workspace filtering for cross-project context.
 $endif

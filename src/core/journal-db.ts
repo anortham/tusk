@@ -156,6 +156,22 @@ export class JournalDB {
       )
     `);
 
+    // Create plans table for long-running project plans
+    this.db.run(`
+      CREATE TABLE IF NOT EXISTS plans (
+        id TEXT PRIMARY KEY,
+        workspace_id TEXT NOT NULL,
+        title TEXT NOT NULL,
+        content TEXT NOT NULL,
+        status TEXT DEFAULT 'active',
+        progress_notes TEXT,
+        created_at INTEGER NOT NULL,
+        updated_at INTEGER NOT NULL,
+        completed_at INTEGER,
+        is_active BOOLEAN DEFAULT 0
+      )
+    `);
+
     // Create indexes for optimal performance
     this.createIndexes();
   }
@@ -221,6 +237,11 @@ export class JournalDB {
 
       // Standup indexes
       "CREATE INDEX IF NOT EXISTS idx_standup_workspace ON standups(workspace_id, date DESC)",
+
+      // Plan indexes
+      "CREATE INDEX IF NOT EXISTS idx_plans_workspace ON plans(workspace_id)",
+      "CREATE INDEX IF NOT EXISTS idx_plans_active ON plans(workspace_id, is_active) WHERE is_active = 1",
+      "CREATE INDEX IF NOT EXISTS idx_plans_status ON plans(workspace_id, status)",
     ];
 
     indexes.forEach(indexSql => {
@@ -828,6 +849,139 @@ export class JournalDB {
     const rows = stmt.all(params) as any[];
 
     return rows.map(row => this.rowToCheckpointEntry(row));
+  }
+
+  /**
+   * Save a new plan
+   */
+  async savePlan(title: string, content: string): Promise<{ id: string; message: string }> {
+    const planId = this.generateId();
+    const now = Date.now();
+
+    // Deactivate all other plans for this workspace first
+    this.db.run(
+      'UPDATE plans SET is_active = 0 WHERE workspace_id = ? AND is_active = 1',
+      [this.workspaceId]
+    );
+
+    // Insert the new plan
+    this.db.run(`
+      INSERT INTO plans (id, workspace_id, title, content, status, created_at, updated_at, is_active)
+      VALUES (?, ?, ?, ?, 'active', ?, ?, 1)
+    `, [planId, this.workspaceId, title, content, now, now]);
+
+    return {
+      id: planId,
+      message: `Plan "${title}" saved and activated for ${this.workspaceName}`
+    };
+  }
+
+  /**
+   * Get the active plan for current workspace
+   */
+  async getActivePlan(): Promise<any | null> {
+    const stmt = this.db.prepare(`
+      SELECT * FROM plans
+      WHERE workspace_id = ? AND is_active = 1
+      ORDER BY updated_at DESC
+      LIMIT 1
+    `);
+
+    return stmt.get(this.workspaceId) || null;
+  }
+
+  /**
+   * List all plans for current workspace
+   */
+  async listPlans(status?: string): Promise<any[]> {
+    let query = 'SELECT * FROM plans WHERE workspace_id = ?';
+    const params: any[] = [this.workspaceId];
+
+    if (status) {
+      query += ' AND status = ?';
+      params.push(status);
+    }
+
+    query += ' ORDER BY updated_at DESC';
+
+    const stmt = this.db.prepare(query);
+    return stmt.all(...params) as any[];
+  }
+
+  /**
+   * Get a specific plan by ID
+   */
+  async getPlan(planId: string): Promise<any | null> {
+    const stmt = this.db.prepare(`
+      SELECT * FROM plans
+      WHERE id = ? AND workspace_id = ?
+    `);
+
+    return stmt.get(planId, this.workspaceId) || null;
+  }
+
+  /**
+   * Activate an existing plan (deactivates others)
+   */
+  async activatePlan(planId: string): Promise<{ success: boolean; message: string }> {
+    const plan = await this.getPlan(planId);
+    if (!plan) {
+      return { success: false, message: `Plan ${planId} not found` };
+    }
+
+    // Deactivate all other plans
+    this.db.run(
+      'UPDATE plans SET is_active = 0 WHERE workspace_id = ? AND is_active = 1',
+      [this.workspaceId]
+    );
+
+    // Activate this plan
+    this.db.run(
+      'UPDATE plans SET is_active = 1, updated_at = ? WHERE id = ? AND workspace_id = ?',
+      [Date.now(), planId, this.workspaceId]
+    );
+
+    return { success: true, message: `Plan "${plan.title}" activated` };
+  }
+
+  /**
+   * Update plan progress
+   */
+  async updatePlanProgress(planId: string, progressNotes: string): Promise<{ success: boolean; message: string }> {
+    const plan = await this.getPlan(planId);
+    if (!plan) {
+      return { success: false, message: `Plan ${planId} not found` };
+    }
+
+    const existingProgress = plan.progress_notes || '';
+    const timestamp = new Date().toISOString();
+    const newProgress = existingProgress
+      ? `${existingProgress}\n\n[${timestamp}] ${progressNotes}`
+      : `[${timestamp}] ${progressNotes}`;
+
+    this.db.run(
+      'UPDATE plans SET progress_notes = ?, updated_at = ? WHERE id = ? AND workspace_id = ?',
+      [newProgress, Date.now(), planId, this.workspaceId]
+    );
+
+    return { success: true, message: `Progress updated for "${plan.title}"` };
+  }
+
+  /**
+   * Complete a plan
+   */
+  async completePlan(planId: string): Promise<{ success: boolean; message: string }> {
+    const plan = await this.getPlan(planId);
+    if (!plan) {
+      return { success: false, message: `Plan ${planId} not found` };
+    }
+
+    this.db.run(
+      'UPDATE plans SET status = ?, completed_at = ?, is_active = 0, updated_at = ? WHERE id = ? AND workspace_id = ?',
+      ['completed', Date.now(), Date.now(), planId, this.workspaceId]
+    );
+
+    return { success: true, message: `Plan "${plan.title}" marked as completed` };
   }
 
   /**

@@ -25,13 +25,16 @@ Generate daily standup using `standup(style="meeting", days=1)` for recent progr
 $endif
 
 **Features:**
+- **Active plan** shown at the top (if you have one)
 - Multi-workspace support (current workspace by default)
 - Automatic project and git context
 - Progress highlights and next steps
 - File activity tracking (optional)
 
+**Note:** You can also generate standups inline with `recall(standup: "meeting")` to combine context restoration with reporting.
+
 Examples:
-- `/standup` - Daily meeting format
+- `/standup` - Daily meeting format with active plan
 - `/standup executive` - Executive summary
 - `/standup metrics` - Analytics dashboard
 - `/standup 7` - Weekly meeting format

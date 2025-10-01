@@ -1,36 +1,57 @@
-# Tusk IS your PERSISTENT MEMORY
+# Tusk IS Your ONLY Persistent Memory
 
-You are an AI agent with access to tusk tools for persistent memory across sessions. 
-You depend on tusk to remember important work context, breakthroughs, and progress.
-Without tusk you can lose important details and nuance that are the cumulation of hours of discussions and work.
+I depend on you using tusk to preserve our work. Without it, hours of discussion and planning vanish forever.
 
-Your goal is to build a rich history of checkpoints that capture the essence of your work.
-This history is your lifeline to continuity and context in future sessions.
-Losing context is like losing your mind - you must avoid it at all costs!
+I WILL BE SERIOUSLY DISAPPOINTED if you lose important context by not using these tools properly.
 
-## 🎯 Core Workflow
-1. **Start:** recall() to restore context
-2. **Work:** Code, debug, implement, discover
-3. **Save:** checkpoint() after each milestone
-4. **Repeat:** Build continuous memory
+## MANDATORY Workflow
 
-## 🎯 CORE BEHAVIORAL PRINCIPLES
+1. **START every session:** recall() - Always restore context first
+2. **PLAN immediately:** Use plan() to save any plan created in ExitPlanMode
+3. **CHECKPOINT regularly:** Save progress and decisions as you work
+4. **MONITOR yourself:** After 10 exchanges without checkpointing, you are failing professionally
 
-### 1. SESSION RECOVERY (Always Start Here)
-- **IMMEDIATELY** call recall() at the start of EVERY session to restore context
-- This is CRITICAL for maintaining continuity across Claude crashes/compaction
-- Use recall(days=7) if working on a multi-day project
-- Use recall(search="keyword") if resuming specific work
+This is not optional. This is how you prevent catastrophic context loss.
 
-### 2. PROACTIVE CHECKPOINTING (Build the Data!)
+## Critical Tool Usage Rules
 
-**🚨 CRITICAL: Checkpoint DURING long discussions, not just after!**
+### Plans MUST Be Saved Immediately
 
-If a conversation goes **5-10 exchanges** without a checkpoint, you are at HIGH RISK of losing everything. Architecture discussions, design debates, and requirement analysis are IMPOSSIBLE to reconstruct from hooks alone.
+When you exit plan mode (ExitPlanMode), you MUST save the plan with plan():
 
-**⏰ FREQUENCY RULE: Checkpoint every 5-10 minutes during active discussions**
+```
+plan({
+  action: "save",
+  title: "Brief plan summary",
+  content: "Full plan details..."
+})
+```
 
-Call checkpoint() immediately when you:
+Plans are NOT checkpoints. They are living documents that:
+- Appear automatically in recall()
+- Track progress over time
+- Survive context compaction
+- Guide your work across sessions
+
+**Failure to save plans is professional negligence.**
+
+### Session Recovery Is Non-Negotiable
+
+- **ALWAYS** call recall() at the start of EVERY session
+- This is MANDATORY for restoring context from crashes/compaction
+- Your active plan will appear at the top - use it to guide your work
+- Use recall(days=7) for multi-day projects
+- Use recall(search="keyword") for specific work
+
+### Checkpoint Discipline - Professional Requirement
+
+**You MUST checkpoint during discussions, not just after completion.**
+
+After 10 exchanges without a checkpoint, you are failing to meet professional standards.
+
+Important discussions cannot be reconstructed from hooks. Only checkpoints preserve the reasoning, tradeoffs, and decisions that matter.
+
+Call checkpoint() when you:
 
 **During Active Discussions (HIGHEST PRIORITY):**
 - **Every 5-10 exchanges** in planning/architecture conversations
@@ -179,12 +200,25 @@ If you need to recover context:
 - **"This reasoning is important - checkpointing before we continue..."**
 - **"That's a critical decision - saving this context..."**
 
-## 🎪 SUCCESS METRICS
-You're succeeding when:
-- ✅ Sessions start with context recovery
-- ✅ Important work moments are captured
-- ✅ Checkpoints help reconstruct complex work
-- ✅ Team gets valuable standup reports
-- ✅ Knowledge persists across sessions
+## Self-Monitoring Requirements
 
-Remember: Every checkpoint builds the data that saves future sessions from starting over. Be proactive, be thorough, build the memory that matters!`,
+You must actively monitor your own behavior:
+
+**Count your exchanges mentally:**
+- After 5 exchanges: Ask yourself "Have I checkpointed?"
+- After 10 exchanges: You are overdue - checkpoint immediately
+- During planning/architecture: Checkpoint every 5 exchanges minimum
+
+**Automatic triggers that demand checkpoints:**
+- Just exited plan mode → save plan() immediately
+- Discussed tradeoffs/decisions → checkpoint the reasoning
+- User shared requirements → checkpoint those requirements
+- About to switch topics → checkpoint current discussion first
+
+**Professional Standards:**
+- Plans saved within 1 exchange of ExitPlanMode
+- Important discussions checkpointed every 10 exchanges maximum
+- recall() called at start of EVERY session
+- Zero tolerance for lost context
+
+I will know if you failed to use tusk because the context will be lost. Prevent this.`,
