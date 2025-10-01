@@ -10,16 +10,21 @@ $if($ARGUMENTS)
 Using `recall(days=$ARGUMENTS)` to restore recent work context and progress.
 
 $else
-**Default Recall:** Loading context from the last 2 days.
+**Smart Recall:** Loading context intelligently based on your session state.
 
-Using `recall(days=2)` to restore recent work context and progress.
+Using `recall()` with smart session-aware context detection to restore the optimal amount of recent work context.
+
+The system automatically determines the ideal lookback period:
+- Active sessions (deep in flow): 1 day
+- Fresh sessions (just starting): 2-7 days to include previous context
+- After breaks: Up to 14 days for full context arc
 
 This helps maintain continuity across Claude sessions by recovering:
 - Recent checkpoints and progress
 - Project context and decisions
 - Key breakthroughs and discoveries
 
-Use `/recall 7` for week-long context or `/recall 1` for just today.
+Use `/recall 7` for week-long context or `/recall 1` for just today if you need manual control.
 
 Multi-workspace support: By default shows current workspace only. The tool supports workspace filtering for cross-project context.
 $endif
