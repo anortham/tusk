@@ -42,36 +42,44 @@ async function main() {
       ?.trim()
       .substring(0, 80) || 'your plan';
 
-    // Inject a clear, actionable reminder
-    console.error(`
-📋 **IMPORTANT: Save Your Plan!**
+    // Create JSON output with additionalContext to inject reminder into Claude's conversation
+    // This makes the reminder visible to Claude, not just the user
+    const reminderContext = `📋 **IMPORTANT: Save Your Plan Immediately!**
 
-You just created a plan that needs to be preserved across sessions.
+You just exited plan mode and created a plan. You MUST save it now using the mcp__tusk__plan tool, or this planning work will be lost during context compaction.
 
-**Use the plan tool immediately:**
+**Save the plan with this exact pattern:**
 
-\`\`\`
+\`\`\`typescript
 mcp__tusk__plan({
   action: "save",
-  title: "Brief description of your plan",
-  content: "Your full plan details..."
+  title: "Brief summary of your plan (one line)",
+  content: "Full plan content from ExitPlanMode..."
 })
 \`\`\`
 
-**Why this matters:**
-- Plans survive context compaction
-- Recall will show your active plan automatically
-- Track progress over time
-- Never lose your roadmap
+**Critical reminder:** Plans are living documents that:
+- Survive context compaction and crashes
+- Appear automatically at the top of recall()
+- Track your progress over time
+- Guide your work across sessions
 
-**Don't let this planning work disappear!**
-`);
+**DO NOT skip this step!** Save the plan in your very next action.`;
+
+    // Output JSON to stdout for Claude to see
+    const output = {
+      hookSpecificOutput: {
+        hookEventName: "PostToolUse",
+        additionalContext: reminderContext
+      }
+    };
+    console.log(JSON.stringify(output));
 
     logHookActivity("plan_detector", "ExitPlanMode detected", `Plan preview: ${firstLine}`);
 
-    // Exit with code 1 to show stderr message to user (non-blocking)
-    // Exit code 0 would only show in transcript mode, invisible to conversation
-    process.exit(1);
+    // Exit with code 0 when using JSON output
+    // The additionalContext will be injected into Claude's conversation
+    process.exit(0);
   } catch (error) {
     // Silently fail - don't block Claude's workflow
     process.exit(0);
