@@ -462,7 +462,7 @@ describe("SQLite Journal - Multi-Workspace Support", () => {
       const journal = createTestJournal();
 
       // Test that database is functional by saving and retrieving
-      const entry = TestDataFactory.createCheckpoint({
+      const entry = TestDataFactory.createJournalEntry({
         description: "Test database initialization",
       });
 
@@ -470,7 +470,9 @@ describe("SQLite Journal - Multi-Workspace Support", () => {
       const recent = await journal.getRecentCheckpoints({ days: 1 });
 
       expect(recent.length).toBeGreaterThan(0);
-      expect(recent[0].description).toBe("Test database initialization");
+      const firstEntry = recent[0];
+      expect(firstEntry).toBeDefined();
+      expect(firstEntry?.description).toBe("Test database initialization");
     });
 
     // Note: The following tests check internal SQLite configuration details

@@ -97,15 +97,6 @@ const RecallSchema = z.object({
   includePlan: z.boolean().optional().default(true).describe("Include active plan in recall context (default: true)"),
 });
 
-const StandupSchema = z.object({
-  style: z.enum(["meeting", "written", "executive", "metrics"]).default("meeting")
-    .describe("Output style: meeting (classic standup), written (narrative), executive (high-level), metrics (dashboard)"),
-  days: z.number().optional().default(1).describe("Number of days to include (default: 1)"),
-  includeMetrics: z.boolean().optional().default(true).describe("Include productivity metrics"),
-  includeFiles: z.boolean().optional().default(false).describe("Include recently modified files"),
-  workspace: z.string().optional().describe("Filter by specific workspace ID ('current' for current workspace, 'all' for all workspaces)"),
-});
-
 const PlanSchema = z.object({
   action: z.enum(['save', 'list', 'get', 'activate', 'update', 'complete']).describe("Action to perform: save (new plan), list (all plans), get (specific plan), activate (set as active), update (add progress), complete (mark done)"),
   title: z.string().optional().describe("Plan title/summary (required for 'save')"),
@@ -255,50 +246,6 @@ Returns: Active plan + intelligently processed entries + optional standup report
         },
       },
       {
-        name: "standup",
-        description: `Generate formatted progress reports from checkpoint history.
-
-Perfect for daily standups, weekly reviews, or project summaries. Transforms your checkpoints into professional updates.
-
-Parameters:
-- style: "meeting" (bullet points), "written" (narrative), "executive" (high-level), "metrics" (statistics)
-- days (default: 1): Period to cover
-- includeMetrics: Add productivity statistics
-- includeFiles: List modified files
-
-Returns: Formatted report ready for team communication or personal review.`,
-        inputSchema: {
-          type: "object",
-          properties: {
-            style: {
-              type: "string",
-              enum: ["meeting", "written", "executive", "metrics"],
-              description: "Output style: meeting (classic standup format), written (narrative summary), executive (high-level impact), metrics (dashboard view)",
-              default: "meeting",
-            },
-            days: {
-              type: "number",
-              description: "Number of days to include in report (default: 1)",
-              default: 1,
-            },
-            includeMetrics: {
-              type: "boolean",
-              description: "Include productivity metrics and statistics",
-              default: true,
-            },
-            includeFiles: {
-              type: "boolean",
-              description: "Include recently modified files in the report",
-              default: false,
-            },
-            workspace: {
-              type: "string",
-              description: "Filter by specific workspace ID ('current' for current workspace, 'all' for all workspaces)",
-            },
-          },
-        },
-      },
-      {
         name: "plan",
         description: `Manage long-running project plans that survive across sessions.
 
@@ -368,8 +315,6 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         return await handleCheckpoint(args);
       case "recall":
         return await handleRecall(args);
-      case "standup":
-        return await handleStandup(args);
       case "plan":
         return await handlePlan(args);
       default:
@@ -788,27 +733,6 @@ No journal entries found${filterDesc.length > 0 ? ` for ${filterDesc.join(", ")}
 }
 
 /**
- * Handle standup tool - generate formatted reports
- */
-async function handleStandup(args: any) {
-  const options = StandupSchema.parse(args);
-
-  const report = await generateStandup({
-    ...options,
-    workspace: options.workspace || 'current'
-  });
-
-  return {
-    content: [
-      {
-        type: "text",
-        text: report,
-      },
-    ],
-  };
-}
-
-/**
  * Handle plan tool - manage long-running project plans
  */
 async function handlePlan(args: any) {
@@ -1165,7 +1089,7 @@ async function main() {
   // Log startup info to stderr (won't interfere with MCP protocol)
   console.error("🐘 Tusk MCP Server started");
   console.error("📁 Journal location: ~/.tusk/journal.db (SQLite)");
-  console.error("🔧 Tools available: checkpoint, recall, standup");
+  console.error("🔧 Tools available: checkpoint, recall, plan");
   console.error("🗂️ Multi-workspace support enabled");
   console.error("🧠 Behavioral instructions: Built into server initialization");
 }

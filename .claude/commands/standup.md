@@ -1,5 +1,5 @@
 ---
-allowed-tools: mcp__tusk__standup
+allowed-tools: mcp__tusk__recall
 description: Generate standup reports from your development journal
 argument-hint: [style] [days]
 ---
@@ -13,28 +13,29 @@ Available styles:
 - **metrics**: Dashboard with productivity stats
 
 $if($1 == "executive")
-Generate executive standup using `standup(style="executive", days=3)` for leadership updates.
+Generate executive standup using `recall(days=3, standup="executive")` for leadership updates.
 $elif($1 == "metrics")
-Generate metrics dashboard using `standup(style="metrics", days=7)` for detailed analytics.
+Generate metrics dashboard using `recall(days=7, standup="metrics")` for detailed analytics.
 $elif($1 == "written")
-Generate written summary using `standup(style="written", days=2)` for narrative format.
+Generate written summary using `recall(days=2, standup="written")` for narrative format.
 $elif($1)
-Generate standup using `standup(style="meeting", days=$1)` for the last $1 days.
+Generate standup using `recall(days=$1, standup="meeting")` for the last $1 days.
 $else
-Generate daily standup using `standup(style="meeting", days=1)` for recent progress.
+Generate daily standup using `recall(days=1, standup="meeting")` for recent progress.
 $endif
 
 **Features:**
 - **Active plan** shown at the top (if you have one)
+- Full context restoration combined with standup report
 - Multi-workspace support (current workspace by default)
 - Automatic project and git context
 - Progress highlights and next steps
 - File activity tracking (optional)
 
-**Note:** You can also generate standups inline with `recall(standup: "meeting")` to combine context restoration with reporting.
+**Note:** Standup is integrated into recall() for combined context + reporting.
 
 Examples:
-- `/standup` - Daily meeting format with active plan
-- `/standup executive` - Executive summary
-- `/standup metrics` - Analytics dashboard
-- `/standup 7` - Weekly meeting format
+- `/standup` - Daily meeting format with active plan and context
+- `/standup executive` - Executive summary with context
+- `/standup metrics` - Analytics dashboard with full context
+- `/standup 7` - Weekly meeting format with 7 days of context

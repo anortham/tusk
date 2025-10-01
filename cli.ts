@@ -10,6 +10,7 @@ import type { JournalEntry } from "./src/utils/journal.js";
 import { getGitContext } from "./src/integrations/git.js";
 import { generateStandup } from "./src/reports/standup.js";
 import type { StandupStyle } from "./src/reports/standup.js";
+import { showTimeline } from "./src/timeline/timeline-viewer.js";
 
 // Parse command line arguments
 const [, , command, ...args] = process.argv;
@@ -30,6 +31,11 @@ async function main() {
       case 'standup':
       case 'su':
         await handleStandupCLI(args);
+        break;
+
+      case 'timeline':
+      case 'tl':
+        await handleTimelineCLI(args);
         break;
 
       case 'help':
@@ -433,6 +439,68 @@ async function handleStandupCLI(args: string[]) {
   }
 }
 
+async function handleTimelineCLI(args: string[]) {
+  // Parse optional arguments
+  let days: number | undefined;
+  let date: string | undefined;
+  let verbose = false;
+
+  for (let i = 0; i < args.length; i++) {
+    const arg = args[i];
+    if (!arg) continue;
+
+    if (arg.startsWith('--days=')) {
+      const daysPart = arg.split('=')[1];
+      if (!daysPart) {
+        console.error('❌ --days= requires a value. Example: --days=7');
+        process.exit(1);
+      }
+      const parsedDays = parseInt(daysPart);
+      if (isNaN(parsedDays)) {
+        console.error('❌ Invalid days value. Must be a number.');
+        process.exit(1);
+      }
+      days = parsedDays;
+    } else if (arg.startsWith('--date=')) {
+      const datePart = arg.split('=')[1];
+      if (!datePart) {
+        console.error('❌ --date= requires a value. Example: --date=2025-10-01');
+        process.exit(1);
+      }
+      date = datePart;
+    } else if (arg === '--verbose' || arg === '-v') {
+      verbose = true;
+    } else if (arg === '--days' && i + 1 < args.length) {
+      const nextArg = args[++i];
+      if (!nextArg) {
+        console.error('❌ --days requires a value. Example: --days 7');
+        process.exit(1);
+      }
+      const parsedDays = parseInt(nextArg);
+      if (isNaN(parsedDays)) {
+        console.error('❌ Invalid days value. Must be a number.');
+        process.exit(1);
+      }
+      days = parsedDays;
+    } else if (arg === '--date' && i + 1 < args.length) {
+      const nextArg = args[++i];
+      if (!nextArg) {
+        console.error('❌ --date requires a value. Example: --date 2025-10-01');
+        process.exit(1);
+      }
+      date = nextArg;
+    }
+  }
+
+  try {
+    const output = await showTimeline({ days, date, verbose });
+    console.log(output);
+  } catch (error) {
+    console.error('❌ Error generating timeline:', error instanceof Error ? error.message : String(error));
+    process.exit(1);
+  }
+}
+
 function formatTimeAgo(timestamp: string): string {
   const now = new Date();
   const then = new Date(timestamp);
@@ -457,6 +525,7 @@ Commands:
   checkpoint, cp    Save work progress
   recall, rc        Restore context from previous work
   standup, su       Generate standup reports
+  timeline, tl      View transcript archive timeline
   help             Show this help
 
 Examples:
@@ -480,6 +549,12 @@ Examples:
   bun cli.ts standup --style metrics --all-workspaces
   bun cli.ts standup --workspace my-workspace-id
 
+  # View timeline
+  bun cli.ts timeline
+  bun cli.ts tl --days 30
+  bun cli.ts timeline --date 2025-10-01
+  bun cli.ts timeline --verbose
+
 Checkpoint Options:
   description       Progress description (required)
   tags             Comma-separated tags (optional)
@@ -501,6 +576,11 @@ Standup Options:
   --all-workspaces Include entries from all workspaces
   --no-metrics     Exclude productivity metrics
   --include-files  Include recently modified files
+
+Timeline Options:
+  --days N         Number of days to show (default: 7)
+  --date DATE      Show specific date (YYYY-MM-DD)
+  --verbose, -v    Show detailed archive information
 
 For Claude Code hooks, add to your project's CLAUDE.md:
   bun cli.ts checkpoint "Description of what was done"
