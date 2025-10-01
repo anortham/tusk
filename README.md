@@ -74,7 +74,8 @@ Add to your Claude Desktop MCP configuration:
 ```
 checkpoint("Started working on the auth system")
 recall()
-standup(style="meeting")
+recall(standup="meeting")  # Standup integrated into recall
+plan(action="save", title="Q4 Roadmap", content="...")
 ```
 
 **Via CLI (Command Line & Claude Code Hooks):**
@@ -90,6 +91,10 @@ bun cli.ts recall --days 7 --search auth
 # Generate standup
 bun cli.ts standup
 bun cli.ts standup --style executive --days 3
+
+# View transcript timeline
+bun cli.ts timeline
+bun cli.ts timeline --days 30 --verbose
 ```
 
 ### Claude Code Hook Integration
@@ -153,7 +158,7 @@ After completing any significant work, run:
 bun /path/to/tusk/cli.ts checkpoint "Brief description of what was accomplished"
 ```
 
-## The Three Tools
+## The Core Tools
 
 ### 📝 checkpoint
 Save work progress across Claude sessions:
@@ -163,19 +168,31 @@ checkpoint("Implemented user dashboard", ["feature", "ui"])
 ```
 
 ### 🧠 recall
-Restore context from previous work:
+Restore context from previous work (includes optional standup):
 ```
-recall()                           # Last 2 days
-recall(days=7, search="auth")      # Search last week
-recall(project="myproject")        # Project-specific
+recall()                                    # Last 2 days with active plan
+recall(days=7, search="auth")               # Search last week
+recall(project="myproject")                 # Project-specific
+recall(standup="meeting")                   # Context + standup report
+recall(days=7, standup="executive")         # Weekly executive summary
 ```
 
-### 📊 standup
-Generate beautiful reports:
+### 📋 plan
+Manage long-running project plans that survive sessions:
 ```
-standup()                          # Meeting format
-standup(style="executive")         # High-level summary
-standup(style="metrics", days=7)   # Weekly dashboard
+plan(action="save", title="...", content="...")   # Save new plan
+plan(action="list")                                # View all plans
+plan(action="update", planId="...", progress="...") # Track progress
+plan(action="complete", planId="...")              # Mark done
+```
+
+### 🕰️ timeline (CLI only)
+View transcript archive history (Time Machine style):
+```bash
+bun cli.ts timeline                    # Last 7 days
+bun cli.ts timeline --days 30          # Last 30 days
+bun cli.ts timeline --date 2025-10-01  # Specific date
+bun cli.ts timeline --verbose          # Detailed view
 ```
 
 ## Migration from Python Tusk
@@ -255,6 +272,7 @@ bun run dev
 bun cli.ts checkpoint "Test checkpoint from CLI"
 bun cli.ts recall --days 7
 bun cli.ts standup --style metrics
+bun cli.ts timeline --days 30
 
 # Using npm scripts
 bun run checkpoint "Test checkpoint"
@@ -270,14 +288,18 @@ bun run migrate.ts --help
 
 ## Architecture
 
-- **index.ts**: MCP server with three tools and behavioral instructions (~480 lines)
-- **cli.ts**: Command-line interface for hooks/direct usage (~295 lines)
-- **journal.ts**: SQLite storage with multi-workspace support (~845 lines)
-- **git.ts**: Git context capture (~200 lines)
-- **standup.ts**: Report formatters (~395 lines)
-- **migrate.ts**: Python tusk migration (~200 lines)
+**Core:**
+- **index.ts**: MCP server with 3 tools (checkpoint, recall, plan) + behavioral instructions
+- **cli.ts**: Command-line interface for hooks/direct usage
+- **src/core/journal-db.ts**: SQLite storage with multi-workspace support
+- **src/integrations/git.ts**: Git context capture
+- **src/reports/standup.ts**: Report formatters (integrated into recall)
+- **src/timeline/**: Transcript archive timeline viewer (6 modules)
 
-**Total**: ~2,400 lines of robust, production-ready code vs 6,358 lines in Python tusk!
+**Migration:**
+- **migrate.ts**: Python tusk migration utility
+
+Clean, focused architecture with ~3,200 lines vs 6,358 lines in Python tusk!
 
 ## Why Not Python Tusk?
 
@@ -291,16 +313,17 @@ bun run migrate.ts --help
 ### What We Do
 ✅ **Developer journaling** - capture progress moments
 ✅ **Context recovery** - survive Claude crashes
-✅ **Standup generation** - beautiful formatted reports
+✅ **Standup generation** - beautiful formatted reports (integrated into recall)
+✅ **Project planning** - long-running plans that survive compaction
+✅ **Timeline viewing** - Time Machine-style transcript history
 ✅ **Git integration** - automatic context capture
 ✅ **Robust storage** - SQLite with workspace isolation and concurrency
 
 ### What We Don't Do
 ❌ **Task management** - Claude's TodoWrite handles this
-❌ **Project planning** - unnecessary complexity
-❌ **Complex search** - SQLite queries are sufficient
+❌ **Complex search engines** - SQLite FTS is sufficient
 ❌ **Multiple backends** - SQLite works perfectly
-❌ **Progressive disclosure** - just three simple tools
+❌ **Over-abstraction** - just three core MCP tools
 
 ## Credits
 

@@ -18,6 +18,7 @@ bun run type-check
 bun cli.ts checkpoint "What you accomplished"
 bun cli.ts recall --days 7
 bun cli.ts standup --style executive
+bun cli.ts timeline --days 30
 
 # Migration from Python tusk
 bun run migrate.ts
@@ -25,11 +26,12 @@ bun run migrate.ts
 
 ## Architecture
 
-- **index.ts**: MCP server with behavioral instructions (~480 lines)
-- **cli.ts**: Command-line interface (~295 lines)
-- **journal.ts**: SQLite storage with multi-workspace support (~845 lines)
-- **git.ts**: Git context capture (~200 lines)
-- **standup.ts**: Report formatters (~395 lines)
+- **index.ts**: MCP server with 3 tools (checkpoint, recall, plan) + behavioral instructions
+- **cli.ts**: Command-line interface with 4 commands (checkpoint, recall, standup, timeline)
+- **src/core/journal-db.ts**: SQLite storage with multi-workspace support
+- **src/integrations/git.ts**: Git context capture
+- **src/reports/standup.ts**: Report formatters (integrated into recall)
+- **src/timeline/**: Transcript archive timeline viewer (6 modules)
 
 ## Data Storage
 
@@ -46,14 +48,15 @@ bun run migrate.ts
 
 ## Key Principles
 
-✅ **Simple**: 3 tools (checkpoint, recall, standup)
+✅ **Simple**: 3 MCP tools (checkpoint, recall with integrated standup, plan)
 ✅ **Fast**: Bun + SQLite with WAL mode
 ✅ **Persistent**: Survives Claude crashes/compaction
 ✅ **Git-aware**: Automatic workspace and context detection
 ✅ **Behavioral**: Built-in AI agent guidance for proactive usage
+✅ **Timeline**: Time Machine-style transcript archive viewer (CLI)
 
 ## Integration
 
-- **Claude Desktop**: MCP server auto-registers tools and behavioral instructions
-- **Claude Code**: CLI commands for post-work hooks
-- **Direct CLI**: Manual journaling and standup generation
+- **Claude Desktop**: MCP server auto-registers 3 tools and behavioral instructions
+- **Claude Code**: CLI commands for post-work hooks (checkpoint, recall, standup, timeline)
+- **Direct CLI**: Manual journaling, standup generation, and timeline viewing
