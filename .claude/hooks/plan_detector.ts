@@ -68,11 +68,14 @@ mcp__tusk__plan({
 `);
 
     logHookActivity("plan_detector", "ExitPlanMode detected", `Plan preview: ${firstLine}`);
+
+    // Exit with code 1 to show stderr message to user (non-blocking)
+    // Exit code 0 would only show in transcript mode, invisible to conversation
+    process.exit(1);
   } catch (error) {
     // Silently fail - don't block Claude's workflow
+    process.exit(0);
   }
-
-  process.exit(0);
 }
 
 main();

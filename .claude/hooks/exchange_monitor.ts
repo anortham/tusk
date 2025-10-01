@@ -140,7 +140,9 @@ async function main() {
     const reminder = getReminder(promptsSinceCheckpoint, state.discussionDepth, minutesSince);
 
     if (reminder) {
-      console.error(`\n${reminder}\n`);
+      // Use stdout (console.log) for UserPromptSubmit hooks so the reminder
+      // gets added as context to the conversation with exit code 0
+      console.log(`\n${reminder}\n`);
       state.lastReminderAt = state.promptCount;
     }
 
