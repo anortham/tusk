@@ -726,6 +726,43 @@ export class JournalDB {
   }
 
   /**
+   * Calculate smart number of days to recall based on session intelligence
+   * Returns the optimal number of days to capture relevant context
+   */
+  async calculateSmartRecallDays(workspace: string = 'current'): Promise<number> {
+    const context = await this.getSmartRecallContext(workspace);
+
+    // If we have a healthy current session with sufficient context
+    if (context.currentSession && context.currentSession.entries.length >= 5 && !context.needsMoreContext) {
+      return 1; // Just today's work
+    }
+
+    // If we're in early stages of a session or just restarted
+    if (context.currentSession && context.currentSession.entries.length < 5) {
+      // Include the previous session - calculate days to cover both
+      if (context.lastSession) {
+        const lastSessionStart = new Date(context.lastSession.boundaries.sessionStart).getTime();
+        const daysSinceLastSession = (Date.now() - lastSessionStart) / (1000 * 60 * 60 * 24);
+        return Math.min(Math.ceil(daysSinceLastSession) + 1, 7); // Cap at 7 days
+      }
+      return 2; // Default to 2 days if no previous session found
+    }
+
+    // If it's been a while since last entry (coming back after a break)
+    if (context.needsMoreContext) {
+      if (context.lastSession) {
+        const lastSessionStart = new Date(context.lastSession.boundaries.sessionStart).getTime();
+        const daysSinceLastSession = (Date.now() - lastSessionStart) / (1000 * 60 * 60 * 24);
+        return Math.min(Math.ceil(daysSinceLastSession) + 2, 14); // Cap at 14 days
+      }
+      return 7; // Default to a week if no session history
+    }
+
+    // Default fallback
+    return 2;
+  }
+
+  /**
    * Get filtered entries by confidence score and entry type
    */
   async getHighQualityEntries(options: {

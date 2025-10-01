@@ -5,7 +5,7 @@
  * Allows calling tusk tools from command line and Claude Code hooks
  */
 
-import { saveEntry, getRecentEntries, searchEntries, generateId, getWorkspaceSummary } from "./src/utils/journal.js";
+import { saveEntry, getRecentEntries, searchEntries, generateId, getWorkspaceSummary, JournalDB } from "./src/utils/journal.js";
 import type { JournalEntry } from "./src/utils/journal.js";
 import { getGitContext } from "./src/integrations/git.js";
 import { generateStandup } from "./src/reports/standup.js";
@@ -124,7 +124,7 @@ async function handleCheckpointCLI(args: string[]) {
 
 async function handleRecallCLI(args: string[]) {
   // Parse optional arguments
-  let days = 2;
+  let days: number | undefined = undefined; // Will be calculated smartly if not provided
   let search: string | undefined;
   let project: string | undefined;
   let workspace: string | 'current' | 'all' = 'current';
@@ -261,6 +261,15 @@ async function handleRecallCLI(args: string[]) {
       console.log('');
     });
     return;
+  }
+
+  // Calculate smart days if not explicitly provided
+  if (days === undefined && !from && !to) {
+    const journal = new JournalDB();
+    days = await journal.calculateSmartRecallDays(workspace);
+    console.log(`🧠 Smart recall: looking back ${days} day${days === 1 ? '' : 's'} based on session context`);
+  } else if (days === undefined) {
+    days = 2; // Fallback for date range queries
   }
 
   const entries = search
