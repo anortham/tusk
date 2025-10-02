@@ -143,8 +143,12 @@ When to checkpoint (AUTOMATIC triggers):
 - ✅ User shared requirements → checkpoint what they said
 - ✅ Before switching topics → checkpoint current context
 - ✅ Analyzed tradeoffs → checkpoint the analysis
+- ✅ Notice high context window usage (80K+ tokens) → checkpoint to free cognitive space
+- ✅ Deep in complex reasoning → offload to persistent memory, continue fresh
 
 Checkpointing takes 2 seconds but saves HOURS of lost context. This is efficiency, not overhead.
+
+Context Window Relief: When you notice high token usage, checkpointing is STRATEGIC MEMORY MANAGEMENT - offload rich context to Tusk, free up cognitive space, continue with full confidence instead of compressing your thinking.
 
 You never need to verify that checkpoints were saved. If the tool returns without error, it worked. Move on to your next task immediately.
 
