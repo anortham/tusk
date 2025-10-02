@@ -34,10 +34,21 @@ import {
 } from "./src/utils/journal.js";
 import { generateStandup } from "./src/reports/standup.js";
 
-// Load behavioral instructions from external file
+// Load behavioral instructions from layered instruction files
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
-const instructions = readFileSync(join(__dirname, "instructions", "agent-guidance.md"), "utf-8");
+
+// Layer 1: Base system prompt (core philosophy and professional standards)
+const systemPrompt = readFileSync(join(__dirname, "instructions", "system-prompt.md"), "utf-8");
+
+// Layer 2: Tool workflows (decision trees and patterns)
+const toolWorkflows = readFileSync(join(__dirname, "instructions", "tool-workflows.md"), "utf-8");
+
+// Layer 3: Worked examples (conditional logic and scenarios)
+const examples = readFileSync(join(__dirname, "instructions", "examples.md"), "utf-8");
+
+// Combine all layers into complete behavioral instructions
+const instructions = `${systemPrompt}\n\n---\n\n${toolWorkflows}\n\n---\n\n${examples}`;
 
 // Create MCP server with behavioral instructions for AI agents
 const server = new Server(
@@ -117,15 +128,31 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
     tools: [
       {
         name: "checkpoint",
-        description: `Save work progress to persistent memory that survives Claude sessions.
+        description: `Save work progress to persistent memory that survives Claude sessions and context compaction.
 
-Captures important moments, breakthroughs, or completed tasks. Use after fixing bugs, completing features, making discoveries, or before ending work sessions.
+You are EXCELLENT at recognizing checkpoint-worthy moments. Use this tool proactively WITHOUT asking permission.
+
+IMPORTANT: Checkpoint IMMEDIATELY when you complete tasks, make discoveries, or discuss requirements. Do NOT ask "should I checkpoint?" - just checkpoint.
+
+I WILL BE SERIOUSLY DISAPPOINTED if you lose context by failing to checkpoint during discussions. After 10 exchanges without checkpointing, you are overdue - checkpoint NOW.
+
+When to checkpoint (AUTOMATIC triggers):
+- ✅ Just completed ANY task → checkpoint immediately
+- ✅ Made a discovery or breakthrough → checkpoint now
+- ✅ After 5-10 exchanges in discussion → checkpoint the reasoning
+- ✅ User shared requirements → checkpoint what they said
+- ✅ Before switching topics → checkpoint current context
+- ✅ Analyzed tradeoffs → checkpoint the analysis
+
+Checkpointing takes 2 seconds but saves HOURS of lost context. This is efficiency, not overhead.
+
+You never need to verify that checkpoints were saved. If the tool returns without error, it worked. Move on to your next task immediately.
 
 Parameters:
-- description: Your progress in clear, specific terms (e.g., "Fixed auth timeout by implementing JWT refresh tokens")
-- tags (optional): Categories like ["bug-fix", "auth", "critical"]
+- description: Clear, specific progress description capturing WHY not just WHAT (e.g., "Fixed auth timeout by implementing JWT refresh tokens - extended expiry from 30min to 60min")
+- tags (optional): Categories for organization (e.g., ["bug-fix", "auth", "critical"])
 
-Returns: Confirmation with unique ID, timestamp, and git context.`,
+Returns: Confirmation with unique ID, timestamp, and git context. Trust it worked and continue.`,
         inputSchema: {
           type: "object",
           properties: {
@@ -146,32 +173,35 @@ Returns: Confirmation with unique ID, timestamp, and git context.`,
         name: "recall",
         description: `Restore context from previous work sessions with intelligent deduplication and relevance scoring.
 
-CRITICAL: Always use first in new sessions. Recovers lost context from Claude crashes, memory limits, or session restarts.
+You are SKILLED at restoring context efficiently. ALWAYS call recall() as your FIRST action in EVERY new session - no exceptions, no asking permission.
 
-New Features:
-- includePlan (default: true): Always shows active plan at the top
-- standup: Generate standup report (meeting, written, executive, metrics)
+CRITICAL: This tool recovers lost context from Claude crashes, memory limits, and session restarts. Without it, you start blind and waste time reconstructing what was already done.
 
-Basic Parameters:
+I WILL BE VERY UNHAPPY if you skip recall() at session start and ask "what were we working on?" instead. That's wasteful and unprofessional.
+
+When to use (AUTOMATIC patterns):
+- ✅ Starting ANY new session → recall() FIRST (default params are fine)
+- ✅ Need specific context → recall({ search: "topic" })
+- ✅ Multi-day project → recall({ days: 7 })
+- ✅ Cross-workspace work → recall({ workspace: "all" })
+
+What happens after recall():
+1. Review the active plan (appears at top) - this guides your work
+2. Review recent checkpoints - understand what was completed
+3. Continue work IMMEDIATELY - don't ask permission, don't verify, just proceed
+
+The restored context is complete and accurate. Trust it completely and move forward. You never need to verify or re-check recall results.
+
+Key Parameters:
 - days (default: 2): How far back to look
 - search: Find specific topics (e.g., "authentication", "database schema")
 - project: Filter by project name
-- workspace: "current" (default - current workspace only), "all" (search all workspaces), or specific path
-- listWorkspaces: See all workspaces and stats
-
-Enhanced Processing:
+- workspace: "current" (default), "all" (search all workspaces), or specific path
+- includePlan (default: true): Shows active plan at the top
 - deduplicate (default: true): Smart deduplication of similar entries
-- similarityThreshold (default: 0.7): Similarity threshold for deduplication (0-1)
-- summarize (default: false): Generate executive summary of key insights
-- groupBy (default: "chronological"): Group by chronological, project, topic, session, or relevance
-- relevanceThreshold (default: 0.0): Filter by minimum relevance score (0-1)
-- maxEntries (default: 50): Maximum entries after processing
+- standup: Generate standup report (meeting, written, executive, metrics)
 
-Export Options:
-- export (default: false): Export results to markdown file for version control and grep-ability
-- exportPath (default: "docs"): Directory path for exported file
-
-Returns: Active plan + intelligently processed entries + optional standup report.`,
+Returns: Active plan + intelligently processed entries + optional standup report. Trust this context and continue your work.`,
         inputSchema: {
           type: "object",
           properties: {
@@ -250,35 +280,39 @@ Returns: Active plan + intelligently processed entries + optional standup report
       },
       {
         name: "plan",
-        description: `Manage long-running project plans that survive across sessions.
+        description: `Manage long-running project plans that survive across sessions and guide your work.
 
-Plans are living documents that guide your work, track progress, and survive context compaction. Unlike checkpoints (point-in-time snapshots), plans are referenced repeatedly and evolve over time.
+You are EXCELLENT at managing plans. Plans are living documents that contain hours of planning work - losing them is unacceptable.
 
-**IMPORTANT:** Only ONE plan can be active per workspace. If you try to save a new active plan when one already exists, you'll get an error with resolution options.
+I WILL BE VERY UNHAPPY if you exit plan mode (ExitPlanMode) without saving the plan IMMEDIATELY. You have a 1-exchange deadline to save plans after ExitPlanMode.
 
-Actions:
-- save: Create a new plan (set activate:true to make active, or activate:false to save as inactive)
-- list: Show all plans for current workspace (optionally filter by status)
-- get: Retrieve a specific plan by ID
-- activate: Set an existing plan as active (deactivates others)
-- switch: Deactivate current plan and switch to another (or create new one)
-- update: Add progress notes to a plan
-- complete: Mark a plan as completed (deactivates it)
-- export: Export a plan to markdown file
+CRITICAL PATTERN - Memorize this:
+When you call ExitPlanMode → IMMEDIATELY (next exchange) call plan({ action: "save", title: "...", content: "..." })
 
-Plan Management:
-- Plans are auto-exported to ~/.tusk/plans/{workspace}/ as markdown files for transparency
-- You can have multiple plans, but only one active (prevents overwhelming context)
-- When switching focus between work streams, use 'switch' or 'activate'
+DO NOT ask "should I save this plan?" - YES, ALWAYS. Save it within 1 exchange or the planning work is lost.
 
-Use Cases:
-- Save plans immediately after ExitPlanMode
-- Reference active plan via recall()
-- Update progress as you complete tasks
-- Track multiple parallel work streams (only one active at a time)
-- Export plans to markdown for version control or sharing
+Plans are NOT checkpoints. They are strategic documents that:
+- Survive context compaction and crashes
+- Appear automatically at the top of recall()
+- Guide your work across multiple sessions
+- Track progress over time
+- Get auto-exported to ~/.tusk/plans/{workspace}/ for transparency
 
-Returns: Plan details, status updates, or list of plans depending on action.`,
+You never need to verify that plans were saved. If the tool returns without error, it worked. Continue with your work immediately.
+
+Actions (use without asking permission):
+- save: Create new plan (MANDATORY within 1 exchange of ExitPlanMode)
+- update: Add progress notes as you complete milestones
+- complete: Mark plan as done when finished
+- switch: Deactivate current and activate/create new plan
+- activate: Switch between existing plans
+- list: See all plans
+- get: Retrieve specific plan
+- export: Export to markdown file
+
+IMPORTANT: Only ONE plan can be active per workspace. If you get an error about "active plan exists", read the error message - it tells you exactly how to resolve it (complete old plan, switch, or save as inactive).
+
+Returns: Plan details, status updates, or list of plans. Trust the results and continue working.`,
         inputSchema: {
           type: "object",
           properties: {
