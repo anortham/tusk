@@ -98,12 +98,13 @@ const RecallSchema = z.object({
 });
 
 const PlanSchema = z.object({
-  action: z.enum(['save', 'list', 'get', 'activate', 'update', 'complete']).describe("Action to perform: save (new plan), list (all plans), get (specific plan), activate (set as active), update (add progress), complete (mark done)"),
+  action: z.enum(['save', 'list', 'get', 'activate', 'update', 'complete', 'export']).describe("Action to perform: save (new plan), list (all plans), get (specific plan), activate (set as active), update (add progress), complete (mark done), export (export to markdown file)"),
   title: z.string().optional().describe("Plan title/summary (required for 'save')"),
   content: z.string().optional().describe("Full plan content in markdown (required for 'save')"),
-  planId: z.string().optional().describe("Plan ID (required for 'get', 'activate', 'update', 'complete')"),
+  planId: z.string().optional().describe("Plan ID (required for 'get', 'activate', 'update', 'complete', 'export')"),
   progress: z.string().optional().describe("Progress update notes (required for 'update')"),
   status: z.enum(['active', 'completed', 'archived']).optional().describe("Filter plans by status (for 'list' action)"),
+  exportPath: z.string().optional().describe("Directory path for export (default: 'docs', used with 'export' action)"),
 });
 
 /**
@@ -258,12 +259,14 @@ Actions:
 - activate: Set a plan as active (shown in recall)
 - update: Add progress notes to a plan
 - complete: Mark a plan as completed
+- export: Export a plan to markdown file
 
 Use Cases:
 - Save plans immediately after ExitPlanMode
 - Reference active plan via recall()
 - Update progress as you complete tasks
 - Track project roadmaps across sessions
+- Export plans to markdown for version control or sharing
 
 Returns: Plan details, status updates, or list of plans depending on action.`,
         inputSchema: {
@@ -271,7 +274,7 @@ Returns: Plan details, status updates, or list of plans depending on action.`,
           properties: {
             action: {
               type: "string",
-              enum: ["save", "list", "get", "activate", "update", "complete"],
+              enum: ["save", "list", "get", "activate", "update", "complete", "export"],
               description: "Action to perform on plans",
             },
             title: {
@@ -284,7 +287,7 @@ Returns: Plan details, status updates, or list of plans depending on action.`,
             },
             planId: {
               type: "string",
-              description: "Plan ID (required for 'get', 'activate', 'update', 'complete')",
+              description: "Plan ID (required for 'get', 'activate', 'update', 'complete', 'export')",
             },
             progress: {
               type: "string",
@@ -294,6 +297,10 @@ Returns: Plan details, status updates, or list of plans depending on action.`,
               type: "string",
               enum: ["active", "completed", "archived"],
               description: "Filter plans by status (for 'list' action)",
+            },
+            exportPath: {
+              type: "string",
+              description: "Directory path for export (default: 'docs', used with 'export' action)",
             },
           },
           required: ["action"],
@@ -357,8 +364,13 @@ async function handleCheckpoint(args: any) {
     confidenceScore,
   };
 
-  // Save to journal
-  await saveEntry(entry);
+  // Create and properly close journal database instance
+  const journal = new JournalDB();
+  try {
+    await journal.saveCheckpoint(entry);
+  } finally {
+    journal.close();
+  }
 
   // Generate success response
   const gitStatus = getStatusSummary();
@@ -396,9 +408,13 @@ async function handleRecall(args: any) {
     standup, includePlan
   } = RecallSchema.parse(args);
 
-  // Handle workspace listing if requested
-  if (listWorkspaces) {
-    const workspaces = await getWorkspaceSummary();
+  // Create journal database instance (will be closed in finally block below)
+  const journalDB = new JournalDB();
+
+  try {
+    // Handle workspace listing if requested
+    if (listWorkspaces) {
+      const workspaces = await journalDB.getWorkspaceSummary();
     if (workspaces.length === 0) {
       return {
         content: [
@@ -441,14 +457,8 @@ No workspaces have been detected. Start by creating checkpoints in different pro
     };
   }
 
-  // Get entries using session-aware logic
-  let entries: JournalEntry[] = [];
-
-  // Import the journal database for session-aware queries
-  const { JournalDB } = await import("./src/core/journal-db.js");
-  const journalDB = new JournalDB();
-
-  try {
+    // Get entries using session-aware logic
+    let entries: JournalEntry[] = [];
     // Handle specific session ID request
     if (sessionId) {
       entries = await journalDB.getSessionById(sessionId, workspace || 'current');
@@ -497,23 +507,20 @@ No workspaces have been detected. Start by creating checkpoints in different pro
     }
     // Default behavior with search or recent entries
     else if (search) {
-      entries = await searchEntries(search, { workspace: workspace || 'current' });
+      entries = await journalDB.searchCheckpoints(search, { limit: maxEntries, workspace: workspace || 'current' });
     }
     else {
-      entries = await getRecentEntries({ days, from, to, project, workspace: workspace || 'current' });
+      entries = await journalDB.getRecentCheckpoints({ days, from, to, project, workspace: workspace || 'current' });
     }
-  } finally {
-    journalDB.close();
-  }
 
-  if (entries.length === 0) {
-    const filterDesc = [];
-    if (search) filterDesc.push(`search: "${search}"`);
-    if (project) filterDesc.push(`project: "${project}"`);
-    if (days !== 2) filterDesc.push(`${days} days`);
+    if (entries.length === 0) {
+      const filterDesc = [];
+      if (search) filterDesc.push(`search: "${search}"`);
+      if (project) filterDesc.push(`project: "${project}"`);
+      if (days !== 2) filterDesc.push(`${days} days`);
 
-    // Get workspace info for diagnostics
-    const currentWorkspace = getCurrentWorkspace();
+      // Get workspace info for diagnostics
+      const currentWorkspace = journalDB.getCurrentWorkspace();
     const workspaceScope = workspace || 'current';
 
     let workspaceInfo = '';
@@ -574,12 +581,9 @@ No journal entries found${filterDesc.length > 0 ? ` for ${filterDesc.join(", ")}
   // Format the entries for display
   const contextLines: string[] = [];
 
-  // Include active plan if requested (default: true)
-  if (includePlan !== false) {
-    const { JournalDB: JDB } = await import("./src/core/journal-db.js");
-    const planDB = new JDB();
-    try {
-      const activePlan = await planDB.getActivePlan();
+    // Include active plan if requested (default: true)
+    if (includePlan !== false) {
+      const activePlan = await journalDB.getActivePlan();
       if (activePlan) {
         contextLines.push(`⭐ **ACTIVE PLAN:** ${activePlan.title}`);
         contextLines.push("");
@@ -593,10 +597,7 @@ No journal entries found${filterDesc.length > 0 ? ` for ${filterDesc.join(", ")}
         contextLines.push("---");
         contextLines.push("");
       }
-    } finally {
-      planDB.close();
     }
-  }
 
   // Show processing stats
   const processingStats = [];
@@ -652,35 +653,35 @@ No journal entries found${filterDesc.length > 0 ? ` for ${filterDesc.join(", ")}
     contextLines.push("");
   }
 
-  // Add summary
-  const stats = await getJournalStats();
-  contextLines.push(`📊 **Journal Stats:** ${stats.totalEntries} total entries, ${stats.entriesThisWeek} this week, ${stats.entriesThisMonth} this month`);
+    // Add summary
+    const stats = await journalDB.getJournalStats();
+    contextLines.push(`📊 **Journal Stats:** ${stats.totalEntries} total entries, ${stats.entriesThisWeek} this week, ${stats.entriesThisMonth} this month`);
 
-  if (stats.projects.length > 0) {
-    contextLines.push(`🗂️ **Projects:** ${stats.projects.join(", ")}`);
-  }
+    if (stats.projects.length > 0) {
+      contextLines.push(`🗂️ **Projects:** ${stats.projects.join(", ")}`);
+    }
 
-  contextLines.push("");
-  contextLines.push("🎯 **Context restored!** Continue your work with this background knowledge.");
-
-  // Generate standup report if requested
-  if (standup) {
     contextLines.push("");
-    contextLines.push("---");
-    contextLines.push("");
-    const standupReport = await generateStandup({
-      style: standup,
-      days: days || 1,
-      includeMetrics: true,
-      includeFiles: false,
-      workspace: workspace || 'current'
-    });
-    contextLines.push(standupReport);
-  }
+    contextLines.push("🎯 **Context restored!** Continue your work with this background knowledge.");
 
-  // Export to markdown file if requested
-  let exportFilePath: string | null = null;
-  if (exportToFile) {
+    // Generate standup report if requested
+    if (standup) {
+      contextLines.push("");
+      contextLines.push("---");
+      contextLines.push("");
+      const standupReport = await generateStandup({
+        style: standup,
+        days: days || 1,
+        includeMetrics: true,
+        includeFiles: false,
+        workspace: workspace || 'current'
+      });
+      contextLines.push(standupReport);
+    }
+
+    // Export to markdown file if requested
+    let exportFilePath: string | null = null;
+    if (exportToFile) {
     try {
       // Generate filename based on query parameters
       const timestamp = new Date().toISOString().split('T')[0]!; // YYYY-MM-DD (always present)
@@ -720,16 +721,19 @@ No journal entries found${filterDesc.length > 0 ? ` for ${filterDesc.join(", ")}
       contextLines.push("");
       contextLines.push(`⚠️ **Export failed:** ${errorMsg}`);
     }
-  }
+    }
 
-  return {
-    content: [
-      {
-        type: "text",
-        text: contextLines.join("\n"),
-      },
-    ],
-  };
+    return {
+      content: [
+        {
+          type: "text",
+          text: contextLines.join("\n"),
+        },
+      ],
+    };
+  } finally {
+    journalDB.close();
+  }
 }
 
 /**
@@ -858,6 +862,21 @@ Your plan is now active and will appear in recall(). Use plan(action: "update") 
             type: "text",
             text: result.success
               ? `✅ ${result.message}\n\nCongratulations on completing your plan! 🎉`
+              : `❌ ${result.message}`,
+          }],
+        };
+      }
+
+      case 'export': {
+        if (!params.planId) {
+          throw new Error('planId is required for exporting a plan');
+        }
+        const result = await journal.exportPlan(params.planId, params.exportPath);
+        return {
+          content: [{
+            type: "text",
+            text: result.success
+              ? `✅ ${result.message}\n\n📄 **Exported to:** ${result.filePath}\n\nYour plan is now available as a markdown file for version control or sharing!`
               : `❌ ${result.message}`,
           }],
         };

@@ -109,9 +109,9 @@ async function backupTranscript(transcriptPath: string, trigger: string): Promis
     fs.mkdirSync(backupDir, { recursive: true });
 
     const timestamp = new Date().toISOString().replace(/[:T]/g, '-').slice(0, 19);
-    const backupPath = path.join(backupDir, `transcript-${timestamp}-${trigger}.txt`);
+    const backupPath = path.join(backupDir, `transcript-${timestamp}-${trigger}.md`);
 
-    // Copy transcript to backup location
+    // Copy transcript to backup location (likely markdown format from Claude Code)
     fs.copyFileSync(transcriptPath, backupPath);
 
     return backupPath;
@@ -124,6 +124,15 @@ async function main() {
   let claudeCodeSessionId: string | undefined;
 
   try {
+    // Ensure transcript backup directory exists up front
+    const tuskDir = path.join(os.homedir(), ".tusk");
+    const backupDir = path.join(tuskDir, "transcript-backups");
+    try {
+      fs.mkdirSync(backupDir, { recursive: true });
+    } catch {
+      // Directory creation failed but continue - will fail later if needed
+    }
+
     // Read JSON input from stdin if available
     let inputData: ClaudeCompactInput = {};
     try {

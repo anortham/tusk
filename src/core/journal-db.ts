@@ -985,6 +985,109 @@ export class JournalDB {
   }
 
   /**
+   * Export a plan to markdown file
+   */
+  async exportPlan(planId: string, exportPath?: string): Promise<{ success: boolean; message: string; filePath?: string }> {
+    const plan = await this.getPlan(planId);
+    if (!plan) {
+      return { success: false, message: `Plan ${planId} not found` };
+    }
+
+    try {
+      // Import necessary modules
+      const { writeFileSync, existsSync, mkdirSync } = await import('fs');
+      const { join, resolve } = await import('path');
+
+      // Generate filename from plan title
+      const sanitizedTitle = plan.title
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/gi, '-')
+        .replace(/^-+|-+$/g, '');
+      const filename = `plan-${sanitizedTitle}-${plan.id}.md`;
+
+      // Resolve export path (relative to current working directory)
+      const targetPath = exportPath || 'docs';
+      const exportDir = resolve(process.cwd(), targetPath);
+      const filePath = join(exportDir, filename);
+
+      // Create directory if it doesn't exist
+      if (!existsSync(exportDir)) {
+        mkdirSync(exportDir, { recursive: true });
+      }
+
+      // Format the plan as markdown
+      const markdownContent = this.formatPlanAsMarkdown(plan);
+
+      // Write to file
+      writeFileSync(filePath, markdownContent, 'utf-8');
+
+      return {
+        success: true,
+        message: `Plan "${plan.title}" exported successfully`,
+        filePath
+      };
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      return {
+        success: false,
+        message: `Export failed: ${errorMsg}`
+      };
+    }
+  }
+
+  /**
+   * Format plan as markdown with metadata
+   */
+  private formatPlanAsMarkdown(plan: any): string {
+    const lines: string[] = [];
+
+    // Title
+    lines.push(`# ${plan.title}`);
+    lines.push('');
+
+    // Metadata
+    lines.push('---');
+    lines.push(`**Plan ID:** ${plan.id}`);
+    lines.push(`**Status:** ${plan.status}`);
+    lines.push(`**Workspace:** ${this.workspaceName}`);
+    lines.push(`**Created:** ${new Date(plan.created_at).toLocaleString()}`);
+    lines.push(`**Updated:** ${new Date(plan.updated_at).toLocaleString()}`);
+
+    if (plan.completed_at) {
+      lines.push(`**Completed:** ${new Date(plan.completed_at).toLocaleString()}`);
+    }
+
+    if (plan.is_active) {
+      lines.push(`**Active:** Yes ⭐`);
+    }
+
+    lines.push('---');
+    lines.push('');
+
+    // Main content
+    lines.push('## Plan Content');
+    lines.push('');
+    lines.push(plan.content);
+    lines.push('');
+
+    // Progress notes if present
+    if (plan.progress_notes) {
+      lines.push('---');
+      lines.push('');
+      lines.push('## Progress Notes');
+      lines.push('');
+      lines.push(plan.progress_notes);
+      lines.push('');
+    }
+
+    // Footer
+    lines.push('---');
+    lines.push(`*Exported from Tusk on ${new Date().toLocaleString()}*`);
+
+    return lines.join('\n');
+  }
+
+  /**
    * Close the database connection
    */
   close(): void {
