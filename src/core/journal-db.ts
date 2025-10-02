@@ -853,26 +853,50 @@ export class JournalDB {
 
   /**
    * Save a new plan
+   * @param title Plan title/summary
+   * @param content Full plan content in markdown
+   * @param activate Whether to make this plan active (default: true)
+   * @throws Error if trying to save as active when an active plan already exists
    */
-  async savePlan(title: string, content: string): Promise<{ id: string; message: string }> {
+  async savePlan(title: string, content: string, activate: boolean = true): Promise<{ id: string; message: string; filePath?: string }> {
     const planId = this.generateId();
     const now = Date.now();
 
-    // Deactivate all other plans for this workspace first
-    this.db.run(
-      'UPDATE plans SET is_active = 0 WHERE workspace_id = ? AND is_active = 1',
-      [this.workspaceId]
-    );
+    // Check for existing active plan if trying to activate
+    if (activate) {
+      const existingActivePlan = await this.getActivePlan();
+      if (existingActivePlan) {
+        throw new Error(
+          `Cannot save new plan as active. Active plan already exists: "${existingActivePlan.title}" (ID: ${existingActivePlan.id})\n\n` +
+          `Choose one of these actions:\n` +
+          `  • plan({ action: "complete", planId: "${existingActivePlan.id}" }) - Mark current plan as complete\n` +
+          `  • plan({ action: "switch", planId: "${existingActivePlan.id}", newPlanTitle: "${title}", newPlanContent: "..." }) - Save new plan and switch to it\n` +
+          `  • plan({ action: "save", title: "${title}", content: "...", activate: false }) - Save new plan as inactive\n\n` +
+          `Or use activate(planId) to switch focus between existing plans.`
+        );
+      }
+
+      // Only deactivate others if we're explicitly activating AND no active plan exists
+      this.db.run(
+        'UPDATE plans SET is_active = 0 WHERE workspace_id = ?',
+        [this.workspaceId]
+      );
+    }
 
     // Insert the new plan
     this.db.run(`
       INSERT INTO plans (id, workspace_id, title, content, status, created_at, updated_at, is_active)
-      VALUES (?, ?, ?, ?, 'active', ?, ?, 1)
-    `, [planId, this.workspaceId, title, content, now, now]);
+      VALUES (?, ?, ?, ?, 'active', ?, ?, ?)
+    `, [planId, this.workspaceId, title, content, now, now, activate ? 1 : 0]);
 
+    // Auto-export plan to markdown file for transparency
+    const exportResult = await this.autoExportPlanToFile(planId);
+
+    const activeStatus = activate ? "saved and activated" : "saved (inactive)";
     return {
       id: planId,
-      message: `Plan "${title}" saved and activated for ${this.workspaceName}`
+      message: `Plan "${title}" ${activeStatus} for ${this.workspaceName}. ${exportResult.success ? `Exported to ${exportResult.filePath}` : ''}`,
+      filePath: exportResult.filePath
     };
   }
 
@@ -941,6 +965,9 @@ export class JournalDB {
       [Date.now(), planId, this.workspaceId]
     );
 
+    // Re-export to reflect activation status
+    await this.autoExportPlanToFile(planId);
+
     return { success: true, message: `Plan "${plan.title}" activated` };
   }
 
@@ -981,7 +1008,129 @@ export class JournalDB {
       ['completed', Date.now(), Date.now(), planId, this.workspaceId]
     );
 
+    // Re-export to reflect completion status
+    await this.autoExportPlanToFile(planId);
+
     return { success: true, message: `Plan "${plan.title}" marked as completed` };
+  }
+
+  /**
+   * Switch active plan (deactivate current, activate another, optionally save new plan first)
+   * @param currentPlanId ID of currently active plan to deactivate
+   * @param newPlanId ID of plan to activate (optional if creating new plan)
+   * @param newPlanTitle Title for new plan (optional, used with newPlanContent)
+   * @param newPlanContent Content for new plan (optional, used with newPlanTitle)
+   */
+  async switchActivePlan(
+    currentPlanId: string,
+    newPlanId?: string,
+    newPlanTitle?: string,
+    newPlanContent?: string
+  ): Promise<{ success: boolean; message: string; newPlanId?: string }> {
+    // Verify current plan exists
+    const currentPlan = await this.getPlan(currentPlanId);
+    if (!currentPlan) {
+      return { success: false, message: `Current plan ${currentPlanId} not found` };
+    }
+
+    // If creating a new plan while switching
+    if (newPlanTitle && newPlanContent) {
+      const planId = this.generateId();
+      const now = Date.now();
+
+      // Deactivate all plans
+      this.db.run(
+        'UPDATE plans SET is_active = 0 WHERE workspace_id = ?',
+        [this.workspaceId]
+      );
+
+      // Insert new active plan
+      this.db.run(`
+        INSERT INTO plans (id, workspace_id, title, content, status, created_at, updated_at, is_active)
+        VALUES (?, ?, ?, ?, 'active', ?, ?, 1)
+      `, [planId, this.workspaceId, newPlanTitle, newPlanContent, now, now]);
+
+      // Auto-export
+      await this.autoExportPlanToFile(planId);
+
+      return {
+        success: true,
+        message: `Switched from "${currentPlan.title}" to new plan "${newPlanTitle}"`,
+        newPlanId: planId
+      };
+    }
+
+    // Otherwise activate existing plan
+    if (newPlanId) {
+      const targetPlan = await this.getPlan(newPlanId);
+      if (!targetPlan) {
+        return { success: false, message: `Target plan ${newPlanId} not found` };
+      }
+
+      // Deactivate all, activate target
+      this.db.run(
+        'UPDATE plans SET is_active = 0 WHERE workspace_id = ?',
+        [this.workspaceId]
+      );
+
+      this.db.run(
+        'UPDATE plans SET is_active = 1, updated_at = ? WHERE id = ? AND workspace_id = ?',
+        [Date.now(), newPlanId, this.workspaceId]
+      );
+
+      // Re-export the newly activated plan
+      await this.autoExportPlanToFile(newPlanId);
+
+      return {
+        success: true,
+        message: `Switched from "${currentPlan.title}" to "${targetPlan.title}"`,
+        newPlanId: newPlanId
+      };
+    }
+
+    return { success: false, message: 'Must provide either newPlanId or newPlanTitle+newPlanContent' };
+  }
+
+  /**
+   * Auto-export plan to ~/.tusk/plans/{workspace}/ for transparency
+   */
+  private async autoExportPlanToFile(planId: string): Promise<{ success: boolean; filePath?: string }> {
+    const plan = await this.getPlan(planId);
+    if (!plan) {
+      return { success: false };
+    }
+
+    try {
+      const { writeFileSync, mkdirSync, existsSync } = await import('fs');
+      const { join } = await import('path');
+      const { homedir } = await import('os');
+
+      // Export to ~/.tusk/plans/{workspace}/
+      const plansDir = join(homedir(), '.tusk', 'plans', this.workspaceName);
+      if (!existsSync(plansDir)) {
+        mkdirSync(plansDir, { recursive: true });
+      }
+
+      // Sanitize filename
+      const sanitizedTitle = plan.title
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/gi, '-')
+        .replace(/^-+|-+$/g, '')
+        .substring(0, 50); // Limit length
+
+      const filename = `${sanitizedTitle}-${planId.substring(0, 8)}.md`;
+      const filePath = join(plansDir, filename);
+
+      // Format and write
+      const markdownContent = this.formatPlanAsMarkdown(plan);
+      writeFileSync(filePath, markdownContent, 'utf-8');
+
+      return { success: true, filePath };
+    } catch (error) {
+      // Silently fail - don't block plan save if export fails
+      console.error('Plan auto-export failed:', error);
+      return { success: false };
+    }
   }
 
   /**

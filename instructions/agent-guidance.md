@@ -27,11 +27,41 @@ plan({
 })
 ```
 
+**IMPORTANT:** Only ONE plan can be active per workspace. If you try to save when an active plan exists, you'll get a helpful error with these options:
+
+1. **Complete the current plan** (if it's finished):
+```
+plan({ action: "complete", planId: "current-id" })
+plan({ action: "save", title: "New plan", content: "..." })
+```
+
+2. **Switch to new plan** (if both are ongoing):
+```
+plan({
+  action: "switch",
+  planId: "current-id",
+  title: "New plan",
+  content: "Full content..."
+})
+```
+
+3. **Save as inactive** (to work on later):
+```
+plan({
+  action: "save",
+  title: "New plan",
+  content: "...",
+  activate: false
+})
+```
+
 Plans are NOT checkpoints. They are living documents that:
+- Auto-export to ~/.tusk/plans/{workspace}/ as markdown (for transparency!)
 - Appear automatically in recall()
 - Track progress over time
 - Survive context compaction
 - Guide your work across sessions
+- Support multiple parallel work streams (but only one active at a time)
 
 **Failure to save plans is professional negligence.**
 

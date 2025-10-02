@@ -727,4 +727,239 @@ describe("SQLite Journal - Multi-Workspace Support", () => {
       }
     });
   });
+
+  describe("Plan Management", () => {
+    test("saves plan and auto-exports to file", async () => {
+      const journal = createTestJournal();
+      const planTitle = "Test Architecture Plan";
+      const planContent = "## Overview\n\nDetailed architecture plan...";
+
+      const result = await journal.savePlan(planTitle, planContent);
+
+      expect(result.id).toBeDefined();
+      expect(result.message).toContain(planTitle);
+      expect(result.filePath).toBeDefined();
+
+      // Verify file was created
+      if (result.filePath) {
+        expect(existsSync(result.filePath)).toBe(true);
+      }
+
+      // Verify plan is active
+      const activePlan = await journal.getActivePlan();
+      expect(activePlan).not.toBeNull();
+      expect(activePlan.title).toBe(planTitle);
+      expect(activePlan.content).toBe(planContent);
+      expect(activePlan.is_active).toBe(1);
+
+      journal.close();
+    });
+
+    test("throws error when saving active plan while one exists", async () => {
+      const journal = createTestJournal();
+
+      // Save first plan
+      await journal.savePlan("First Plan", "Content 1");
+
+      // Try to save second plan as active - should throw
+      try {
+        await journal.savePlan("Second Plan", "Content 2");
+        throw new Error("Should have thrown conflict error");
+      } catch (error) {
+        expect((error as Error).message).toContain("Cannot save new plan as active");
+        expect((error as Error).message).toContain("First Plan");
+        expect((error as Error).message).toContain("complete");
+        expect((error as Error).message).toContain("switch");
+        expect((error as Error).message).toContain("activate: false");
+      }
+
+      journal.close();
+    });
+
+    test("allows saving inactive plan when active plan exists", async () => {
+      const journal = createTestJournal();
+
+      // Save first plan as active
+      const result1 = await journal.savePlan("Active Plan", "Content 1");
+
+      // Save second plan as inactive - should succeed
+      const result2 = await journal.savePlan("Inactive Plan", "Content 2", false);
+
+      expect(result2.id).toBeDefined();
+      expect(result2.message).toContain("inactive");
+
+      // Verify active plan is still the first one
+      const activePlan = await journal.getActivePlan();
+      expect(activePlan.id).toBe(result1.id);
+      expect(activePlan.title).toBe("Active Plan");
+
+      // Verify second plan exists but is inactive
+      const inactivePlan = await journal.getPlan(result2.id);
+      expect(inactivePlan).not.toBeNull();
+      expect(inactivePlan.title).toBe("Inactive Plan");
+      expect(inactivePlan.is_active).toBe(0);
+
+      journal.close();
+    });
+
+    test("switches between plans correctly", async () => {
+      const journal = createTestJournal();
+
+      // Create two plans
+      const plan1 = await journal.savePlan("Plan A", "Content A");
+      await journal.completePlan(plan1.id); // Complete to allow new active plan
+
+      const plan2 = await journal.savePlan("Plan B", "Content B");
+
+      // Create inactive plan
+      const plan3 = await journal.savePlan("Plan C", "Content C", false);
+
+      // Switch from plan2 to plan3
+      const switchResult = await journal.switchActivePlan(plan2.id, plan3.id);
+
+      expect(switchResult.success).toBe(true);
+      expect(switchResult.message).toContain("Plan B");
+      expect(switchResult.message).toContain("Plan C");
+
+      // Verify plan3 is now active
+      const activePlan = await journal.getActivePlan();
+      expect(activePlan.id).toBe(plan3.id);
+      expect(activePlan.title).toBe("Plan C");
+
+      // Verify plan2 is now inactive
+      const plan2Data = await journal.getPlan(plan2.id);
+      expect(plan2Data.is_active).toBe(0);
+
+      journal.close();
+    });
+
+    test("switches to new plan creation", async () => {
+      const journal = createTestJournal();
+
+      // Create first plan
+      const plan1 = await journal.savePlan("Original Plan", "Original Content");
+
+      // Switch to new plan
+      const switchResult = await journal.switchActivePlan(
+        plan1.id,
+        undefined,
+        "New Plan",
+        "New Content"
+      );
+
+      expect(switchResult.success).toBe(true);
+      expect(switchResult.newPlanId).toBeDefined();
+      expect(switchResult.message).toContain("Original Plan");
+      expect(switchResult.message).toContain("New Plan");
+
+      // Verify new plan is active
+      const activePlan = await journal.getActivePlan();
+      expect(activePlan.id).toBe(switchResult.newPlanId);
+      expect(activePlan.title).toBe("New Plan");
+      expect(activePlan.content).toBe("New Content");
+
+      // Verify original plan is inactive
+      const plan1Data = await journal.getPlan(plan1.id);
+      expect(plan1Data.is_active).toBe(0);
+
+      journal.close();
+    });
+
+    test("re-exports plan when activated", async () => {
+      const journal = createTestJournal();
+
+      // Create two inactive plans
+      const plan1 = await journal.savePlan("Plan 1", "Content 1", false);
+      const plan2 = await journal.savePlan("Plan 2", "Content 2", false);
+
+      // Activate plan1
+      const activateResult = await journal.activatePlan(plan1.id);
+
+      expect(activateResult.success).toBe(true);
+      expect(activateResult.message).toContain("Plan 1");
+
+      // Verify plan is active
+      const activePlan = await journal.getActivePlan();
+      expect(activePlan.id).toBe(plan1.id);
+
+      journal.close();
+    });
+
+    test("re-exports plan when completed", async () => {
+      const journal = createTestJournal();
+
+      // Create active plan
+      const plan = await journal.savePlan("Plan to Complete", "Content");
+
+      // Complete the plan
+      const completeResult = await journal.completePlan(plan.id);
+
+      expect(completeResult.success).toBe(true);
+      expect(completeResult.message).toContain("Plan to Complete");
+
+      // Verify plan is completed and inactive
+      const completedPlan = await journal.getPlan(plan.id);
+      expect(completedPlan.status).toBe("completed");
+      expect(completedPlan.is_active).toBe(0);
+      expect(completedPlan.completed_at).toBeDefined();
+
+      // Verify no active plan exists
+      const activePlan = await journal.getActivePlan();
+      expect(activePlan).toBeNull();
+
+      journal.close();
+    });
+
+    test("lists plans with correct status", async () => {
+      const journal = createTestJournal();
+
+      // Create plans with different statuses
+      const plan1 = await journal.savePlan("Active Plan", "Content 1");
+      const plan2 = await journal.savePlan("Inactive Plan", "Content 2", false);
+      await journal.completePlan(plan1.id);
+      const plan3 = await journal.savePlan("New Active Plan", "Content 3");
+
+      // List all plans
+      const allPlans = await journal.listPlans();
+      expect(allPlans.length).toBe(3);
+
+      // List completed plans
+      const completedPlans = await journal.listPlans("completed");
+      expect(completedPlans.length).toBe(1);
+      expect(completedPlans[0].title).toBe("Active Plan");
+
+      // List active status plans (both active and inactive ones with status='active')
+      const activePlans = await journal.listPlans("active");
+      expect(activePlans.length).toBe(2);
+
+      journal.close();
+    });
+
+    test("exports plan to custom path", async () => {
+      const journal = createTestJournal();
+
+      const plan = await journal.savePlan("Export Test Plan", "Content to export");
+
+      // Export to custom path
+      const customExportPath = join(TEST_CONFIG.TEST_TUSK_DIR, "custom-exports");
+      const exportResult = await journal.exportPlan(plan.id, customExportPath);
+
+      expect(exportResult.success).toBe(true);
+      expect(exportResult.filePath).toBeDefined();
+      expect(exportResult.filePath).toContain("custom-exports");
+
+      if (exportResult.filePath) {
+        expect(existsSync(exportResult.filePath)).toBe(true);
+
+        // Read the file and verify content
+        const { readFileSync } = await import("fs");
+        const content = readFileSync(exportResult.filePath, "utf-8");
+        expect(content).toContain("Export Test Plan");
+        expect(content).toContain("Content to export");
+        expect(content).toContain(`**Plan ID:** ${plan.id}`);
+      }
+
+      journal.close();
+    });
+  });
 });

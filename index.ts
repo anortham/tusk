@@ -98,10 +98,12 @@ const RecallSchema = z.object({
 });
 
 const PlanSchema = z.object({
-  action: z.enum(['save', 'list', 'get', 'activate', 'update', 'complete', 'export']).describe("Action to perform: save (new plan), list (all plans), get (specific plan), activate (set as active), update (add progress), complete (mark done), export (export to markdown file)"),
-  title: z.string().optional().describe("Plan title/summary (required for 'save')"),
-  content: z.string().optional().describe("Full plan content in markdown (required for 'save')"),
-  planId: z.string().optional().describe("Plan ID (required for 'get', 'activate', 'update', 'complete', 'export')"),
+  action: z.enum(['save', 'list', 'get', 'activate', 'switch', 'update', 'complete', 'export']).describe("Action to perform: save (new plan), list (all plans), get (specific plan), activate (set as active), switch (deactivate current + activate/create new), update (add progress), complete (mark done), export (export to markdown file)"),
+  title: z.string().optional().describe("Plan title/summary (required for 'save', optional for 'switch' to create new plan)"),
+  content: z.string().optional().describe("Full plan content in markdown (required for 'save', optional for 'switch' to create new plan)"),
+  planId: z.string().optional().describe("Plan ID (required for 'get', 'activate', 'update', 'complete', 'export', 'switch')"),
+  newPlanId: z.string().optional().describe("Target plan ID to switch to (for 'switch' action when switching to existing plan)"),
+  activate: z.boolean().optional().describe("Whether to activate the plan (default: true for 'save')"),
   progress: z.string().optional().describe("Progress update notes (required for 'update')"),
   status: z.enum(['active', 'completed', 'archived']).optional().describe("Filter plans by status (for 'list' action)"),
   exportPath: z.string().optional().describe("Directory path for export (default: 'docs', used with 'export' action)"),
@@ -252,20 +254,28 @@ Returns: Active plan + intelligently processed entries + optional standup report
 
 Plans are living documents that guide your work, track progress, and survive context compaction. Unlike checkpoints (point-in-time snapshots), plans are referenced repeatedly and evolve over time.
 
+**IMPORTANT:** Only ONE plan can be active per workspace. If you try to save a new active plan when one already exists, you'll get an error with resolution options.
+
 Actions:
-- save: Create a new plan (becomes active, deactivates others)
+- save: Create a new plan (set activate:true to make active, or activate:false to save as inactive)
 - list: Show all plans for current workspace (optionally filter by status)
 - get: Retrieve a specific plan by ID
-- activate: Set a plan as active (shown in recall)
+- activate: Set an existing plan as active (deactivates others)
+- switch: Deactivate current plan and switch to another (or create new one)
 - update: Add progress notes to a plan
-- complete: Mark a plan as completed
+- complete: Mark a plan as completed (deactivates it)
 - export: Export a plan to markdown file
+
+Plan Management:
+- Plans are auto-exported to ~/.tusk/plans/{workspace}/ as markdown files for transparency
+- You can have multiple plans, but only one active (prevents overwhelming context)
+- When switching focus between work streams, use 'switch' or 'activate'
 
 Use Cases:
 - Save plans immediately after ExitPlanMode
 - Reference active plan via recall()
 - Update progress as you complete tasks
-- Track project roadmaps across sessions
+- Track multiple parallel work streams (only one active at a time)
 - Export plans to markdown for version control or sharing
 
 Returns: Plan details, status updates, or list of plans depending on action.`,
@@ -274,20 +284,28 @@ Returns: Plan details, status updates, or list of plans depending on action.`,
           properties: {
             action: {
               type: "string",
-              enum: ["save", "list", "get", "activate", "update", "complete", "export"],
+              enum: ["save", "list", "get", "activate", "switch", "update", "complete", "export"],
               description: "Action to perform on plans",
             },
             title: {
               type: "string",
-              description: "Plan title/summary (required for 'save')",
+              description: "Plan title/summary (required for 'save', optional for 'switch' to create new plan)",
             },
             content: {
               type: "string",
-              description: "Full plan content in markdown (required for 'save')",
+              description: "Full plan content in markdown (required for 'save', optional for 'switch' to create new plan)",
             },
             planId: {
               type: "string",
-              description: "Plan ID (required for 'get', 'activate', 'update', 'complete', 'export')",
+              description: "Plan ID (required for 'get', 'activate', 'switch', 'update', 'complete', 'export')",
+            },
+            newPlanId: {
+              type: "string",
+              description: "Target plan ID to switch to (for 'switch' action when switching to existing plan)",
+            },
+            activate: {
+              type: "boolean",
+              description: "Whether to activate the plan (default: true for 'save')",
             },
             progress: {
               type: "string",
@@ -749,20 +767,51 @@ async function handlePlan(args: any) {
         if (!params.title || !params.content) {
           throw new Error('Title and content are required for saving a plan');
         }
-        const result = await journal.savePlan(params.title, params.content);
-        return {
-          content: [{
-            type: "text",
-            text: `✅ **Plan Saved Successfully**
+
+        try {
+          const activate = params.activate !== undefined ? params.activate : true;
+          const result = await journal.savePlan(params.title, params.content, activate);
+
+          const statusMsg = activate
+            ? "Your plan is now active and will appear in recall()."
+            : "Your plan is saved but inactive. Use plan(action: \"activate\", planId: \"...\") to work on it.";
+
+          const fileMsg = result.filePath
+            ? `\n📄 **Exported to:** ${result.filePath}`
+            : "";
+
+          return {
+            content: [{
+              type: "text",
+              text: `✅ **Plan Saved Successfully**
 
 📋 **${params.title}**
 🆔 Plan ID: ${result.id}
 
-${result.message}
+${result.message}${fileMsg}
 
-Your plan is now active and will appear in recall(). Use plan(action: "update") to track progress.`,
-          }],
-        };
+${statusMsg} Use plan(action: "update") to track progress.`,
+            }],
+          };
+        } catch (error) {
+          // Handle conflict error (active plan exists)
+          if (error instanceof Error && error.message.includes('Cannot save new plan as active')) {
+            return {
+              content: [{
+                type: "text",
+                text: `⚠️ **Cannot Save Plan as Active**
+
+${error.message}
+
+**Quick Solutions:**
+1. Complete the current plan first, then save this plan
+2. Use switch action to replace current plan with this one
+3. Save this plan as inactive to work on later`,
+              }],
+            };
+          }
+          throw error;
+        }
       }
 
       case 'list': {
@@ -833,6 +882,44 @@ Your plan is now active and will appear in recall(). Use plan(action: "update") 
             text: result.success
               ? `✅ ${result.message}\n\nThis plan will now appear in recall().`
               : `❌ ${result.message}`,
+          }],
+        };
+      }
+
+      case 'switch': {
+        if (!params.planId) {
+          throw new Error('planId (current plan) is required for switching plans');
+        }
+
+        // Switching to existing plan or creating new one
+        const result = await journal.switchActivePlan(
+          params.planId,
+          params.newPlanId,
+          params.title,
+          params.content
+        );
+
+        if (!result.success) {
+          return {
+            content: [{
+              type: "text",
+              text: `❌ ${result.message}`,
+            }],
+          };
+        }
+
+        const switchType = params.title && params.content
+          ? "created and switched to new plan"
+          : "switched to existing plan";
+
+        return {
+          content: [{
+            type: "text",
+            text: `✅ ${result.message}
+
+${switchType === "created and switched to new plan" ? `📋 **New Plan ID:** ${result.newPlanId}` : ''}
+
+The new active plan will now appear in recall(). The previous plan remains saved (inactive).`,
           }],
         };
       }

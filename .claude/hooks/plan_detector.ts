@@ -46,23 +46,51 @@ async function main() {
     // This makes the reminder visible to Claude, not just the user
     const reminderContext = `📋 **IMPORTANT: Save Your Plan Immediately!**
 
-You just exited plan mode and created a plan. You MUST save it now using the mcp__tusk__plan tool, or this planning work will be lost during context compaction.
+You just exited plan mode and created a plan. You MUST save it now using the plan tool, or this planning work will be lost during context compaction.
 
-**Save the plan with this exact pattern:**
+**If you already have an active plan:**
+You'll get an error when saving. Here's how to handle it:
 
+1. **Complete the current plan first** (if it's done):
 \`\`\`typescript
-mcp__tusk__plan({
+plan({ action: "complete", planId: "current-plan-id" })
+plan({ action: "save", title: "New plan title", content: "..." })
+\`\`\`
+
+2. **Switch to the new plan** (if both plans are ongoing):
+\`\`\`typescript
+plan({
+  action: "switch",
+  planId: "current-plan-id",
+  title: "New plan title",
+  content: "Full plan content..."
+})
+\`\`\`
+
+3. **Save as inactive** (to work on later):
+\`\`\`typescript
+plan({
+  action: "save",
+  title: "New plan title",
+  content: "...",
+  activate: false
+})
+\`\`\`
+
+**If no active plan exists, save normally:**
+\`\`\`typescript
+plan({
   action: "save",
   title: "Brief summary of your plan (one line)",
   content: "Full plan content from ExitPlanMode..."
 })
 \`\`\`
 
-**Critical reminder:** Plans are living documents that:
+**Plan benefits:**
+- Auto-exported to ~/.tusk/plans/{workspace}/ as markdown
 - Survive context compaction and crashes
-- Appear automatically at the top of recall()
-- Track your progress over time
-- Guide your work across sessions
+- Appear automatically in recall()
+- Track progress over time
 
 **DO NOT skip this step!** Save the plan in your very next action.`;
 
