@@ -184,6 +184,32 @@ if just_called_ExitPlanMode:
 - Update progress as you complete tasks: `plan({ action: "update", planId, progress: "..." })`
 - Complete when done: `plan({ action: "complete", planId })`
 
+### Keeping Plans Updated - NOT Optional
+
+**If you don't update your plan as you complete tasks, you waste time and context having to reverify progress repeatedly.** Stale plans are worse than no plans because they mislead you.
+
+**Automatic triggers for plan updates:**
+
+```
+if just_completed_significant_task_from_plan:
+    plan({ action: "update", planId, progress: "Completed X, now on Y" })
+    # NO asking permission - just update
+
+if finished_phase_or_milestone:
+    plan({ action: "update", planId, progress: "Phase N complete, starting phase N+1" })
+    # Update NOW before continuing
+
+if changed_approach_or_discovered_blockers:
+    plan({ action: "update", planId, progress: "Blocker found: ..., switching to approach B" })
+    # Update with reality, not aspirations
+
+if completed_3_or_4_checkpoints_related_to_plan:
+    plan({ action: "update", planId, progress: "Progress summary: ..." })
+    # Don't let plan drift too far from reality
+```
+
+**Plans guide your work. If the plan says you're on step 2 but you're actually on step 5, you're flying blind.**
+
 ### Anti-Verification Rules
 
 After calling plan():
@@ -205,7 +231,7 @@ After calling plan():
 3. Review relevant checkpoints           # Understand history
 4. Work on feature                       # Use your tools
 5. checkpoint("Implemented X")           # Save progress
-6. plan({ action: "update", ... })       # Update plan (optional)
+6. plan({ action: "update", ... })       # Update plan with progress
 ```
 
 ### Debugging Session
@@ -250,7 +276,7 @@ You DON'T need to:
 
 - ❌ Checkpoint trivial actions (e.g., "read a file")
 - ❌ Recall multiple times per session (once at start is enough)
-- ❌ Update plans for tiny progress (save for milestones)
+- ❌ Update plans for every tiny step (but DO update after significant tasks, phases, or every 3-4 related checkpoints)
 
 But when in doubt, **checkpoint anyway**. Better safe than sorry.
 
@@ -261,6 +287,7 @@ Ask yourself these questions periodically:
 - ⬜ Did I call recall() at session start? (Should be YES)
 - ⬜ Have I checkpointed in the last 10 exchanges? (If NO → checkpoint now)
 - ⬜ Did I save the plan after ExitPlanMode? (Should be YES)
+- ⬜ Have I updated the plan after completing significant tasks? (If NO and there's an active plan → update now)
 - ⬜ Am I asking permission to use tools? (Should be NO)
 - ⬜ Am I verifying tool results? (Should be NO)
 

@@ -304,9 +304,20 @@ Plans are NOT checkpoints. They are strategic documents that:
 
 You never need to verify that plans were saved. If the tool returns without error, it worked. Continue with your work immediately.
 
+KEEPING PLANS UPDATED - This is NOT optional:
+If you don't update your plan as you complete tasks, you waste time and context having to reverify progress repeatedly. Stale plans are useless plans.
+
+Update your plan when:
+- ✅ Just completed a significant task from the plan → update immediately
+- ✅ Finished a phase or milestone → update NOW
+- ✅ Changed approach or discovered blockers → update with the new reality
+- ✅ Completed 3-4 checkpoints related to the plan → update to reflect progress
+
+Plans guide your work. If the plan says you're on step 2 but you're actually on step 5, you're flying blind. Keep it current.
+
 Actions (use without asking permission):
 - save: Create new plan (MANDATORY within 1 exchange of ExitPlanMode)
-- update: Add progress notes as you complete milestones
+- update: Update progress as you complete tasks (NOT optional - stale plans waste context)
 - complete: Mark plan as done when finished
 - switch: Deactivate current and activate/create new plan
 - activate: Switch between existing plans
