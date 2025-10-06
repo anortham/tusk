@@ -12,10 +12,10 @@ const TRANSCRIPT_BACKUP_DIR = join(homedir(), ".tusk", "transcript-backups");
 
 /**
  * Parse transcript filename to extract metadata
- * Format: transcript-YYYY-MM-DD-HH-MM-SS-{trigger}.md
+ * Format: transcript-YYYY-MM-DD-HH-MM-SS-{trigger}.txt
  */
 export function parseTranscriptFilename(filename: string): TranscriptArchive | null {
-  const pattern = /^transcript-(\d{4})-(\d{2})-(\d{2})-(\d{2})-(\d{2})-(\d{2})-(auto|manual)\.md$/;
+  const pattern = /^transcript-(\d{4})-(\d{2})-(\d{2})-(\d{2})-(\d{2})-(\d{2})-(auto|manual)\.txt$/;
   const match = filename.match(pattern);
 
   if (!match) {
