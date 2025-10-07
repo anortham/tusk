@@ -26,8 +26,9 @@ bun run migrate.ts
 
 ## Architecture
 
-- **index.ts**: MCP server with 3 tools (checkpoint, recall, plan) + behavioral instructions
+- **index.ts**: MCP server with 3 tools (checkpoint, recall, plan) + behavioral instructions + auto-installer
 - **cli.ts**: Command-line interface with 4 commands (checkpoint, recall, standup, timeline)
+- **src/setup/auto-installer.ts**: Automatic Claude Code integration setup (hooks, commands, settings)
 - **src/core/journal-db.ts**: SQLite storage with multi-workspace support
 - **src/integrations/git.ts**: Git context capture
 - **src/reports/standup.ts**: Report formatters (integrated into recall)
@@ -58,5 +59,13 @@ bun run migrate.ts
 ## Integration
 
 - **Claude Desktop**: MCP server auto-registers 3 tools and behavioral instructions
-- **Claude Code**: CLI commands for post-work hooks (checkpoint, recall, standup, timeline)
+- **Claude Code**: Auto-installer sets up hooks, commands, and settings on MCP startup (no manual copying!)
 - **Direct CLI**: Manual journaling, standup generation, and timeline viewing
+
+## Auto-Installer
+
+On MCP startup, Tusk automatically installs Claude Code integration files to `.claude/`:
+- **10 hooks** (.ts) - Configured for 5 event types (SessionStart, PreCompact, Stop, UserPromptSubmit, PostToolUse)
+- **4 commands** (.md) - Slash commands: /checkpoint, /recall, /plan, /standup
+- **settings.json** - Hooks configuration + MCP tool permissions (cross-platform paths)
+- **Version tracking** - `.tusk-version` manifest prevents redundant installs

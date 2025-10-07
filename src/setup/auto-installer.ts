@@ -9,7 +9,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync, readdirSync, statSy
 import { join, dirname, resolve } from "path";
 import { fileURLToPath } from "url";
 
-const TUSK_VERSION = "1.0.0"; // Bump when hooks/commands change
+const TUSK_VERSION = "1.1.0"; // Bump when hooks/commands change
 
 export interface InstallationResult {
   installed: boolean;
@@ -36,6 +36,15 @@ interface ClaudeSettings {
     allow?: string[];
     deny?: string[];
     ask?: string[];
+  };
+  hooks?: {
+    [eventType: string]: Array<{
+      matcher?: string;
+      hooks: Array<{
+        type: string;
+        command: string;
+      }>;
+    }>;
   };
 }
 
@@ -151,7 +160,85 @@ function copyDirectoryFiles(
 }
 
 /**
- * Merge Tusk permissions into existing settings.json
+ * Generate hooks configuration for settings.json
+ * Uses cross-platform relative paths from project root
+ */
+function generateHooksConfig(targetDir: string): ClaudeSettings["hooks"] {
+  // Use forward slashes for cross-platform compatibility
+  const hooksPath = ".claude/hooks";
+
+  return {
+    SessionStart: [
+      {
+        hooks: [
+          {
+            type: "command",
+            command: `bun ${hooksPath}/conversation_start.ts`
+          }
+        ]
+      }
+    ],
+    PreCompact: [
+      {
+        hooks: [
+          {
+            type: "command",
+            command: `bun ${hooksPath}/pre_compact.ts`
+          }
+        ]
+      }
+    ],
+    Stop: [
+      {
+        hooks: [
+          {
+            type: "command",
+            command: `bun ${hooksPath}/stop.ts`
+          },
+          {
+            type: "command",
+            command: `bun ${hooksPath}/post_response.ts`
+          }
+        ]
+      }
+    ],
+    UserPromptSubmit: [
+      {
+        hooks: [
+          {
+            type: "command",
+            command: `bun ${hooksPath}/user_prompt_submit.ts`
+          },
+          {
+            type: "command",
+            command: `bun ${hooksPath}/enhanced_user_prompt_submit.ts`
+          },
+          {
+            type: "command",
+            command: `bun ${hooksPath}/exchange_monitor.ts`
+          }
+        ]
+      }
+    ],
+    PostToolUse: [
+      {
+        hooks: [
+          {
+            type: "command",
+            command: `bun ${hooksPath}/post_tool_use.ts`
+          },
+          {
+            type: "command",
+            command: `bun ${hooksPath}/plan_detector.ts`
+          }
+        ]
+      }
+    ]
+  };
+}
+
+/**
+ * Merge Tusk permissions and hooks into existing settings.json
  */
 function mergeSettings(targetDir: string): boolean {
   const settingsPath = join(targetDir, "settings.json");
@@ -188,6 +275,19 @@ function mergeSettings(targetDir: string): boolean {
   const existingAllow = existingSettings.permissions.allow || [];
   const mergedAllow = Array.from(new Set([...existingAllow, ...tuskPermissions.allow]));
   existingSettings.permissions.allow = mergedAllow;
+
+  // Merge hooks configuration
+  const hooksConfig = generateHooksConfig(targetDir);
+  if (!existingSettings.hooks) {
+    // No existing hooks, just set ours
+    existingSettings.hooks = hooksConfig;
+  } else {
+    // Merge with existing hooks - Tusk hooks take precedence
+    existingSettings.hooks = {
+      ...existingSettings.hooks,
+      ...hooksConfig
+    };
+  }
 
   // Write back
   writeFileSync(settingsPath, JSON.stringify(existingSettings, null, 2), "utf-8");
@@ -321,7 +421,7 @@ export function formatInstallationResult(result: InstallationResult, existingVer
     }
 
     if (result.settingsMerged) {
-      lines.push(`   ✅ Merged permissions into .claude/settings.json`);
+      lines.push(`   ✅ Configured permissions and hooks in .claude/settings.json`);
     }
 
     lines.push("");

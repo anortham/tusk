@@ -97,58 +97,61 @@ bun cli.ts timeline
 bun cli.ts timeline --days 30 --verbose
 ```
 
-### Claude Code Hook Integration
+### Claude Code Integration
 
-Tusk provides automatic checkpoint capture through Claude Code hooks. These hooks work cross-platform on Windows, macOS, and Linux.
+Tusk provides automatic checkpoint capture through Claude Code hooks. **Setup is completely automatic** - just configure the MCP server and restart Claude Code!
 
-#### Quick Setup
+#### Automatic Setup ✨
 
-**Step 1**: Copy hooks to your project:
-```bash
-# Copy hooks from tusk installation to your project
-cp -r /path/to/tusk/.claude ./
+When you configure Tusk as an MCP server and start Claude Code, Tusk automatically:
+- ✅ Installs hooks to `.claude/hooks/` in your project
+- ✅ Installs slash commands to `.claude/commands/`
+- ✅ Configures hooks in `.claude/settings.json` with proper event types
+- ✅ Sets up permissions for Tusk MCP tools
+- ✅ Tracks installation version to prevent unnecessary updates
 
-# Or create .claude/hooks directory and copy manually
-mkdir -p .claude/hooks
-cp /path/to/tusk/.claude/hooks/* .claude/hooks/
-```
+**No manual copying required!** Just configure the MCP server (see step 2 above) and open Claude Code in any project.
 
-**Step 2**: Configure hooks in Claude Code settings:
+#### What Gets Auto-Installed
 
-**macOS**: `~/Library/Application Support/Claude/claude_desktop_config.json`
-**Windows**: `%APPDATA%\Claude\claude_desktop_config.json`
-**Linux**: `~/.config/claude/claude_desktop_config.json`
+**Hooks** (10 TypeScript files in `.claude/hooks/`):
+- `conversation_start.ts` - Fires on SessionStart
+- `pre_compact.ts` - Fires before context compaction (PreCompact)
+- `stop.ts` + `post_response.ts` - Fire on session Stop
+- `user_prompt_submit.ts` + `enhanced_user_prompt_submit.ts` + `exchange_monitor.ts` - Fire on UserPromptSubmit
+- `post_tool_use.ts` + `plan_detector.ts` - Fire after tool usage (PostToolUse)
+- `hook-logger.ts` - Shared logging utility
 
-```json
-{
-  "hooks": {
-    "user_prompt_submit": {
-      "command": ".claude/hooks/user_prompt_submit.ts"
-    },
-    "stop": {
-      "command": ".claude/hooks/stop.ts"
-    },
-    "post_tool_use": {
-      "command": ".claude/hooks/post_tool_use.ts"
-    },
-    "pre_compact": {
-      "command": ".claude/hooks/pre_compact.ts"
-    }
-  }
-}
-```
+**Commands** (4 markdown files in `.claude/commands/`):
+- `/checkpoint` - Save progress checkpoint
+- `/recall` - Restore context from previous sessions
+- `/plan` - Manage long-running project plans
+- `/standup` - Generate standup reports
 
-#### Cross-Platform Notes
+**Settings** (`.claude/settings.json`):
+- Hook event type mappings (SessionStart, PreCompact, Stop, UserPromptSubmit, PostToolUse)
+- Permissions for Tusk MCP tools
+- Cross-platform relative paths
+
+#### Cross-Platform Support
 
 **All Platforms** (Windows, macOS, Linux):
+- Hooks use cross-platform relative paths (`.claude/hooks/`)
 - Bun executes `.ts` files directly with the shebang line
-- Hooks automatically detect tusk CLI location relative to the hook directory
-- No need to modify paths when copying hooks between projects
+- No manual path configuration needed
 - Ensure Bun is in your system PATH
-- Hook files should be executable on Unix systems: `chmod +x .claude/hooks/*.ts`
+- Hook files auto-configured for all Claude Code event types
 - Hooks log minimal activity to `~/.tusk/hooks.log` with daily rotation
 
-#### Manual Integration
+#### Version Tracking
+
+Tusk tracks installation version in `.claude/.tusk-version`:
+- Prevents redundant installations on every restart
+- Auto-updates when Tusk version changes
+- Skips files modified by users
+- Safe to delete to force reinstall
+
+#### Manual Integration (Optional)
 
 If you prefer manual checkpointing, add to your project's `CLAUDE.md`:
 
