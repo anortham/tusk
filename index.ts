@@ -109,15 +109,17 @@ const RecallSchema = z.object({
 });
 
 const PlanSchema = z.object({
-  action: z.enum(['save', 'list', 'get', 'activate', 'switch', 'update', 'complete', 'export']).describe("Action to perform: save (new plan), list (all plans), get (specific plan), activate (set as active), switch (deactivate current + activate/create new), update (add progress), complete (mark done), export (export to markdown file)"),
+  action: z.enum(['save', 'list', 'get', 'activate', 'switch', 'update', 'complete', 'export', 'add-task', 'check-task', 'uncheck-task']).describe("Action to perform: save (new plan), list (all plans), get (specific plan), activate (set as active), switch (deactivate current + activate/create new), update (add progress), complete (mark done), export (export to markdown file), add-task (add sub-task), check-task (mark task complete), uncheck-task (mark task incomplete)"),
   title: z.string().optional().describe("Plan title/summary (required for 'save', optional for 'switch' to create new plan)"),
   content: z.string().optional().describe("Full plan content in markdown (required for 'save', optional for 'switch' to create new plan)"),
-  planId: z.string().optional().describe("Plan ID (required for 'get', 'activate', 'update', 'complete', 'export', 'switch')"),
+  planId: z.string().optional().describe("Plan ID (required for 'get', 'activate', 'update', 'complete', 'export', 'switch', 'add-task', 'check-task', 'uncheck-task')"),
   newPlanId: z.string().optional().describe("Target plan ID to switch to (for 'switch' action when switching to existing plan)"),
   activate: z.boolean().optional().describe("Whether to activate the plan (default: true for 'save')"),
   progress: z.string().optional().describe("Progress update notes (required for 'update')"),
   status: z.enum(['active', 'completed', 'archived']).optional().describe("Filter plans by status (for 'list' action)"),
   exportPath: z.string().optional().describe("Directory path for export (default: 'docs', used with 'export' action)"),
+  taskDescription: z.string().optional().describe("Task description (required for 'add-task' action)"),
+  taskId: z.string().optional().describe("Task ID (required for 'check-task' and 'uncheck-task' actions)"),
 });
 
 /**
@@ -284,7 +286,7 @@ Returns: Active plan + intelligently processed entries + optional standup report
       },
       {
         name: "plan",
-        description: `Manage long-running project plans that survive across sessions and guide your work.
+        description: `Manage long-running project plans with sub-tasks that survive across sessions and guide your work.
 
 You are EXCELLENT at managing plans. Plans are living documents that contain hours of planning work - losing them is unacceptable.
 
@@ -299,7 +301,8 @@ Plans are NOT checkpoints. They are strategic documents that:
 - Survive context compaction and crashes
 - Appear automatically at the top of recall()
 - Guide your work across multiple sessions
-- Track progress over time
+- Track progress over time with staleness indicators (🟢 fresh, 🟡 aging, 🔴 stale)
+- Support hierarchical sub-tasks for tracking multiple workstreams
 - Get auto-exported to ~/.tusk/plans/{workspace}/ for transparency
 
 You never need to verify that plans were saved. If the tool returns without error, it worked. Continue with your work immediately.
@@ -311,7 +314,7 @@ Update your plan when:
 - ✅ Just completed a significant task from the plan → update immediately
 - ✅ Finished a phase or milestone → update NOW
 - ✅ Changed approach or discovered blockers → update with the new reality
-- ✅ Completed 3-4 checkpoints related to the plan → update to reflect progress
+- ✅ Completed 3-4 checkpoints related to the plan → update to reflect progress (you'll get reminders!)
 
 Plans guide your work. If the plan says you're on step 2 but you're actually on step 5, you're flying blind. Keep it current.
 
@@ -324,6 +327,9 @@ Actions (use without asking permission):
 - list: See all plans
 - get: Retrieve specific plan
 - export: Export to markdown file
+- add-task: Add a sub-task to track parallel work
+- check-task: Mark a sub-task as complete
+- uncheck-task: Mark a sub-task as incomplete
 
 IMPORTANT: Only ONE plan can be active per workspace. If you get an error about "active plan exists", read the error message - it tells you exactly how to resolve it (complete old plan, switch, or save as inactive).
 
@@ -333,7 +339,7 @@ Returns: Plan details, status updates, or list of plans. Trust the results and c
           properties: {
             action: {
               type: "string",
-              enum: ["save", "list", "get", "activate", "switch", "update", "complete", "export"],
+              enum: ["save", "list", "get", "activate", "switch", "update", "complete", "export", "add-task", "check-task", "uncheck-task"],
               description: "Action to perform on plans",
             },
             title: {
@@ -368,6 +374,14 @@ Returns: Plan details, status updates, or list of plans. Trust the results and c
             exportPath: {
               type: "string",
               description: "Directory path for export (default: 'docs', used with 'export' action)",
+            },
+            taskDescription: {
+              type: "string",
+              description: "Task description (required for 'add-task' action)",
+            },
+            taskId: {
+              type: "string",
+              description: "Task ID (required for 'check-task' and 'uncheck-task' actions)",
             },
           },
           required: ["action"],
@@ -433,8 +447,28 @@ async function handleCheckpoint(args: any) {
 
   // Create and properly close journal database instance
   const journal = new JournalDB();
+  let planUpdateReminder = "";
+
   try {
     await journal.saveCheckpoint(entry);
+
+    // Check for plan update reminder
+    const activePlan = await journal.getActivePlan();
+    if (activePlan) {
+      try {
+        const stalenessInfo = await journal.getPlanStalenessInfo(activePlan.id);
+
+        if (stalenessInfo.checkpointsSinceUpdate >= 3) {
+          if (stalenessInfo.checkpointsSinceUpdate >= 8) {
+            planUpdateReminder = `\n\n⚠️  **Plan Update Overdue:** ${stalenessInfo.checkpointsSinceUpdate} checkpoints since last plan update.\n💡 Consider: plan({ action: "update", planId: "${activePlan.id}", progress: "..." })`;
+          } else {
+            planUpdateReminder = `\n\n💡 **Reminder:** ${stalenessInfo.checkpointsSinceUpdate} checkpoints since last plan update. Consider updating your plan.`;
+          }
+        }
+      } catch (error) {
+        // Silently fail on staleness check - don't block checkpoint save
+      }
+    }
   } finally {
     journal.close();
   }
@@ -457,7 +491,7 @@ ${tags && tags.length > 0 ? `🏷️ **Tags:** ${tags.join(", ")}` : ""}
 
 Your progress is now safely captured and will survive Claude sessions! 🐘
 
-💡 **Next:** Use recall() when starting your next session to restore this context.`,
+💡 **Next:** Use recall() when starting your next session to restore this context.${planUpdateReminder}`,
       },
     ],
   };
@@ -652,15 +686,66 @@ No journal entries found${filterDesc.length > 0 ? ` for ${filterDesc.join(", ")}
     if (includePlan !== false) {
       const activePlan = await journalDB.getActivePlan();
       if (activePlan) {
-        contextLines.push(`⭐ **ACTIVE PLAN:** ${activePlan.title}`);
+        // Get staleness info
+        const stalenessInfo = await journalDB.getPlanStalenessInfo(activePlan.id);
+
+        // Staleness indicator emoji
+        const stalenessEmoji = {
+          fresh: '🟢',
+          aging: '🟡',
+          stale: '🔴'
+        }[stalenessInfo.staleness];
+
+        contextLines.push(`⭐ **ACTIVE PLAN:** ${activePlan.title} ${stalenessEmoji}`);
         contextLines.push("");
+
+        // Show staleness warning if not fresh
+        if (stalenessInfo.staleness !== 'fresh') {
+          const daysAgo = Math.floor(stalenessInfo.daysSinceUpdate);
+          contextLines.push(
+            `📅 Last updated: ${daysAgo} day${daysAgo !== 1 ? 's' : ''} ago ` +
+            `(${stalenessInfo.checkpointsSinceUpdate} checkpoint${stalenessInfo.checkpointsSinceUpdate !== 1 ? 's' : ''} since)`
+          );
+
+          if (stalenessInfo.staleness === 'stale') {
+            contextLines.push(`⚠️  **Plan may be stale** - consider updating with recent progress`);
+          }
+          contextLines.push("");
+        }
+
+        // Show plan content
         contextLines.push(activePlan.content);
         contextLines.push("");
+
+        // Show sub-tasks if present
+        if (activePlan.sub_tasks) {
+          try {
+            const subTasks = JSON.parse(activePlan.sub_tasks);
+            if (subTasks.length > 0) {
+              const completed = subTasks.filter((t: any) => t.completed).length;
+              const total = subTasks.length;
+
+              contextLines.push(`**Sub-tasks:** ${completed}/${total} completed`);
+              contextLines.push("");
+
+              subTasks.forEach((task: any) => {
+                const checkbox = task.completed ? '✅' : '☐';
+                contextLines.push(`${checkbox} ${task.description}`);
+              });
+              contextLines.push("");
+            }
+          } catch (error) {
+            // Invalid JSON, skip sub-tasks display
+          }
+        }
+
+        // Show progress notes if present
         if (activePlan.progress_notes) {
           contextLines.push(`**Progress Notes:**`);
           contextLines.push(activePlan.progress_notes);
           contextLines.push("");
         }
+
         contextLines.push("---");
         contextLines.push("");
       }
@@ -1013,6 +1098,51 @@ The new active plan will now appear in recall(). The previous plan remains saved
             type: "text",
             text: result.success
               ? `✅ ${result.message}\n\n📄 **Exported to:** ${result.filePath}\n\nYour plan is now available as a markdown file for version control or sharing!`
+              : `❌ ${result.message}`,
+          }],
+        };
+      }
+
+      case 'add-task': {
+        if (!params.planId || !params.taskDescription) {
+          throw new Error('planId and taskDescription are required for adding a task');
+        }
+        const result = await journal.addPlanSubTask(params.planId, params.taskDescription);
+        return {
+          content: [{
+            type: "text",
+            text: result.success
+              ? `✅ ${result.message}\n🆔 **Task ID:** ${result.taskId}\n\n💡 Use check-task to mark it complete when done.`
+              : `❌ ${result.message}`,
+          }],
+        };
+      }
+
+      case 'check-task': {
+        if (!params.planId || !params.taskId) {
+          throw new Error('planId and taskId are required for checking a task');
+        }
+        const result = await journal.togglePlanSubTask(params.planId, params.taskId, true);
+        return {
+          content: [{
+            type: "text",
+            text: result.success
+              ? `✅ ${result.message}\n\nTask marked complete! Check recall() to see updated progress.`
+              : `❌ ${result.message}`,
+          }],
+        };
+      }
+
+      case 'uncheck-task': {
+        if (!params.planId || !params.taskId) {
+          throw new Error('planId and taskId are required for unchecking a task');
+        }
+        const result = await journal.togglePlanSubTask(params.planId, params.taskId, false);
+        return {
+          content: [{
+            type: "text",
+            text: result.success
+              ? `☐ ${result.message}\n\nTask marked incomplete.`
               : `❌ ${result.message}`,
           }],
         };

@@ -140,6 +140,10 @@ export class JournalDB {
     // Add session tracking columns to existing tables (backward compatibility)
     this.addSessionTrackingColumns();
 
+    // Add plan enhancement columns (backward compatibility)
+    this.addPlanStalenessColumns();
+    this.addPlanSubTasksColumn();
+
     // Create standalone standups table
     this.db.run(`
       CREATE TABLE IF NOT EXISTS standups (
@@ -165,6 +169,9 @@ export class JournalDB {
         content TEXT NOT NULL,
         status TEXT DEFAULT 'active',
         progress_notes TEXT,
+        sub_tasks TEXT,
+        checkpoint_count_at_last_update INTEGER DEFAULT 0,
+        last_updated_checkpoint_id TEXT,
         created_at INTEGER NOT NULL,
         updated_at INTEGER NOT NULL,
         completed_at INTEGER,
@@ -194,6 +201,35 @@ export class JournalDB {
         // We can safely ignore SQLITE_ERROR when column already exists
       }
     });
+  }
+
+  /**
+   * Add staleness tracking columns to existing plans table for backward compatibility
+   */
+  private addPlanStalenessColumns(): void {
+    const columnsToAdd = [
+      { name: 'checkpoint_count_at_last_update', type: 'INTEGER DEFAULT 0' },
+      { name: 'last_updated_checkpoint_id', type: 'TEXT' }
+    ];
+
+    columnsToAdd.forEach(column => {
+      try {
+        this.db.run(`ALTER TABLE plans ADD COLUMN ${column.name} ${column.type}`);
+      } catch (error) {
+        // Column already exists or other error - this is expected for existing installations
+      }
+    });
+  }
+
+  /**
+   * Add sub-tasks column to existing plans table for backward compatibility
+   */
+  private addPlanSubTasksColumn(): void {
+    try {
+      this.db.run(`ALTER TABLE plans ADD COLUMN sub_tasks TEXT`);
+    } catch (error) {
+      // Column already exists - this is expected for existing installations
+    }
   }
 
   /**
@@ -784,6 +820,57 @@ export class JournalDB {
   }
 
   /**
+   * Get count of checkpoints since a given timestamp
+   */
+  async getCheckpointCountSinceTimestamp(timestamp: string): Promise<number> {
+    const query = `
+      SELECT COUNT(*) as count
+      FROM checkpoints
+      WHERE workspace_id = ? AND timestamp > ?
+    `;
+    const result = this.db.prepare(query).get(this.workspaceId, timestamp) as { count: number };
+    return result.count;
+  }
+
+  /**
+   * Get staleness information for a plan
+   */
+  async getPlanStalenessInfo(planId: string): Promise<{
+    checkpointsSinceUpdate: number;
+    staleness: 'fresh' | 'aging' | 'stale';
+    daysSinceUpdate: number;
+  }> {
+    const plan = await this.getPlan(planId);
+    if (!plan) {
+      throw new Error(`Plan ${planId} not found`);
+    }
+
+    // Get current total checkpoint count
+    const currentCount = await this.getCheckpointCountSinceTimestamp(new Date(0).toISOString());
+
+    // Calculate checkpoints since last update
+    const countAtLastUpdate = plan.checkpoint_count_at_last_update || 0;
+    const checkpointsSinceUpdate = currentCount - countAtLastUpdate;
+
+    // Calculate days since update
+    const daysSinceUpdate = (Date.now() - plan.updated_at) / (1000 * 60 * 60 * 24);
+
+    // Determine staleness level
+    let staleness: 'fresh' | 'aging' | 'stale' = 'fresh';
+    if (checkpointsSinceUpdate >= 8) {
+      staleness = 'stale';
+    } else if (checkpointsSinceUpdate >= 3) {
+      staleness = 'aging';
+    }
+
+    return {
+      checkpointsSinceUpdate,
+      staleness,
+      daysSinceUpdate
+    };
+  }
+
+  /**
    * Get filtered entries by confidence score and entry type
    */
   async getHighQualityEntries(options: {
@@ -883,11 +970,14 @@ export class JournalDB {
       );
     }
 
+    // Get current checkpoint count for staleness tracking
+    const currentCheckpointCount = await this.getCheckpointCountSinceTimestamp(new Date(0).toISOString());
+
     // Insert the new plan
     this.db.run(`
-      INSERT INTO plans (id, workspace_id, title, content, status, created_at, updated_at, is_active)
-      VALUES (?, ?, ?, ?, 'active', ?, ?, ?)
-    `, [planId, this.workspaceId, title, content, now, now, activate ? 1 : 0]);
+      INSERT INTO plans (id, workspace_id, title, content, status, created_at, updated_at, is_active, checkpoint_count_at_last_update)
+      VALUES (?, ?, ?, ?, 'active', ?, ?, ?, ?)
+    `, [planId, this.workspaceId, title, content, now, now, activate ? 1 : 0, currentCheckpointCount]);
 
     // Auto-export plan to markdown file for transparency
     const exportResult = await this.autoExportPlanToFile(planId);
@@ -986,9 +1076,12 @@ export class JournalDB {
       ? `${existingProgress}\n\n[${timestamp}] ${progressNotes}`
       : `[${timestamp}] ${progressNotes}`;
 
+    // Get current checkpoint count to reset staleness tracking
+    const currentCheckpointCount = await this.getCheckpointCountSinceTimestamp(new Date(0).toISOString());
+
     this.db.run(
-      'UPDATE plans SET progress_notes = ?, updated_at = ? WHERE id = ? AND workspace_id = ?',
-      [newProgress, Date.now(), planId, this.workspaceId]
+      'UPDATE plans SET progress_notes = ?, updated_at = ?, checkpoint_count_at_last_update = ? WHERE id = ? AND workspace_id = ?',
+      [newProgress, Date.now(), currentCheckpointCount, planId, this.workspaceId]
     );
 
     return { success: true, message: `Progress updated for "${plan.title}"` };
@@ -1015,6 +1108,73 @@ export class JournalDB {
   }
 
   /**
+   * Add a sub-task to a plan
+   */
+  async addPlanSubTask(planId: string, description: string): Promise<{ success: boolean; taskId: string; message: string }> {
+    const plan = await this.getPlan(planId);
+    if (!plan) {
+      return { success: false, taskId: '', message: `Plan ${planId} not found` };
+    }
+
+    // Parse existing sub-tasks
+    const subTasks: any[] = plan.sub_tasks ? JSON.parse(plan.sub_tasks) : [];
+
+    // Create new task
+    const newTask = {
+      id: this.generateId().substring(0, 8),
+      description,
+      completed: false,
+      checkpointIds: [],
+      createdAt: Date.now()
+    };
+
+    subTasks.push(newTask);
+
+    // Update plan
+    this.db.run(
+      'UPDATE plans SET sub_tasks = ?, updated_at = ? WHERE id = ? AND workspace_id = ?',
+      [JSON.stringify(subTasks), Date.now(), planId, this.workspaceId]
+    );
+
+    return { success: true, taskId: newTask.id, message: `Task added to "${plan.title}"` };
+  }
+
+  /**
+   * Toggle a sub-task completion status
+   */
+  async togglePlanSubTask(planId: string, taskId: string, completed: boolean): Promise<{ success: boolean; message: string }> {
+    const plan = await this.getPlan(planId);
+    if (!plan) {
+      return { success: false, message: `Plan ${planId} not found` };
+    }
+
+    // Parse existing sub-tasks
+    const subTasks: any[] = plan.sub_tasks ? JSON.parse(plan.sub_tasks) : [];
+    const task = subTasks.find((t: any) => t.id === taskId);
+
+    if (!task) {
+      return { success: false, message: `Task ${taskId} not found in plan` };
+    }
+
+    // Update task completion status
+    task.completed = completed;
+    if (completed) {
+      task.completedAt = Date.now();
+    } else {
+      delete task.completedAt;
+    }
+
+    // Update plan
+    this.db.run(
+      'UPDATE plans SET sub_tasks = ?, updated_at = ? WHERE id = ? AND workspace_id = ?',
+      [JSON.stringify(subTasks), Date.now(), planId, this.workspaceId]
+    );
+
+    const statusText = completed ? 'completed' : 'incomplete';
+    return { success: true, message: `Task marked as ${statusText}` };
+  }
+
+  /**
    * Switch active plan (deactivate current, activate another, optionally save new plan first)
    * @param currentPlanId ID of currently active plan to deactivate
    * @param newPlanId ID of plan to activate (optional if creating new plan)
@@ -1038,6 +1198,9 @@ export class JournalDB {
       const planId = this.generateId();
       const now = Date.now();
 
+      // Get current checkpoint count for staleness tracking
+      const currentCheckpointCount = await this.getCheckpointCountSinceTimestamp(new Date(0).toISOString());
+
       // Deactivate all plans
       this.db.run(
         'UPDATE plans SET is_active = 0 WHERE workspace_id = ?',
@@ -1046,9 +1209,9 @@ export class JournalDB {
 
       // Insert new active plan
       this.db.run(`
-        INSERT INTO plans (id, workspace_id, title, content, status, created_at, updated_at, is_active)
-        VALUES (?, ?, ?, ?, 'active', ?, ?, 1)
-      `, [planId, this.workspaceId, newPlanTitle, newPlanContent, now, now]);
+        INSERT INTO plans (id, workspace_id, title, content, status, created_at, updated_at, is_active, checkpoint_count_at_last_update)
+        VALUES (?, ?, ?, ?, 'active', ?, ?, 1, ?)
+      `, [planId, this.workspaceId, newPlanTitle, newPlanContent, now, now, currentCheckpointCount]);
 
       // Auto-export
       await this.autoExportPlanToFile(planId);

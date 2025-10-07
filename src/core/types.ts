@@ -92,5 +92,37 @@ export const DEFAULT_RELEVANCE_WEIGHTS: RelevanceWeights = {
   uniqueness: 0.15,
 };
 
+// Plan management types
+export interface PlanSubTask {
+  id: string;
+  description: string;
+  completed: boolean;
+  checkpointIds: string[];  // Associated checkpoint IDs
+  createdAt: number;
+  completedAt?: number;
+}
+
+export interface Plan {
+  id: string;
+  workspace_id: string;
+  title: string;
+  content: string;
+  status: 'active' | 'completed' | 'archived';
+  progress_notes?: string;
+  sub_tasks?: string;  // JSON serialized PlanSubTask[]
+  checkpoint_count_at_last_update?: number;
+  last_updated_checkpoint_id?: string;
+  created_at: number;
+  updated_at: number;
+  completed_at?: number;
+  is_active: boolean;
+}
+
+export interface PlanStalenessInfo {
+  checkpointsSinceUpdate: number;
+  staleness: 'fresh' | 'aging' | 'stale';
+  daysSinceUpdate: number;
+}
+
 // Type aliases for backward compatibility
 export type JournalEntry = CheckpointEntry;
