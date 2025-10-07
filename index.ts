@@ -33,6 +33,7 @@ import {
   JournalDB,
 } from "./src/utils/journal.js";
 import { generateStandup } from "./src/reports/standup.js";
+import { autoSetupClaudeIntegration, formatInstallationResult } from "./src/setup/auto-installer.js";
 
 // Load behavioral instructions from layered instruction files
 const __filename = fileURLToPath(import.meta.url);
@@ -1368,6 +1369,37 @@ function formatTimeAgo(timestamp: string): string {
  * Start the MCP server
  */
 async function main() {
+  // Auto-setup Claude integration files before starting server
+  try {
+    const cwd = process.cwd();
+    const setupResult = await autoSetupClaudeIntegration(cwd);
+
+    // Read existing version for logging
+    const journalDB = new JournalDB({ cwd });
+    const claudeDir = join(cwd, ".claude");
+    let existingVersion: string | null = null;
+
+    if (existsSync(join(claudeDir, ".tusk-version"))) {
+      try {
+        const versionFile = readFileSync(join(claudeDir, ".tusk-version"), "utf-8");
+        const versionData = JSON.parse(versionFile);
+        existingVersion = versionData.version;
+      } catch {
+        // Ignore parse errors
+      }
+    }
+    journalDB.close();
+
+    // Log setup results
+    const setupMessage = formatInstallationResult(setupResult, existingVersion);
+    if (setupMessage) {
+      console.error(setupMessage);
+    }
+  } catch (error) {
+    // Don't let setup errors prevent server startup
+    console.error("⚠️  Tusk auto-setup failed:", error instanceof Error ? error.message : String(error));
+  }
+
   const transport = new StdioServerTransport();
   await server.connect(transport);
 

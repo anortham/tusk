@@ -92,4 +92,6 @@ temp/
 config.local.json
 .env.local
 .claude/settings.local.json
+.claude/settings.json
+.claude/.tusk-version
 .julie/
