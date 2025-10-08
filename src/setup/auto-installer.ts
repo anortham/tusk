@@ -9,7 +9,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync, readdirSync, statSy
 import { join, dirname, resolve } from "path";
 import { fileURLToPath } from "url";
 
-const TUSK_VERSION = "1.1.0"; // Bump when hooks/commands change
+const TUSK_VERSION = "1.1.1"; // Bump when hooks/commands change
 
 export interface InstallationResult {
   installed: boolean;
@@ -161,11 +161,11 @@ function copyDirectoryFiles(
 
 /**
  * Generate hooks configuration for settings.json
- * Uses cross-platform relative paths from project root
+ * Uses absolute paths to ensure hooks work regardless of CWD
  */
 function generateHooksConfig(targetDir: string): ClaudeSettings["hooks"] {
-  // Use forward slashes for cross-platform compatibility
-  const hooksPath = ".claude/hooks";
+  // Use absolute path to hooks directory
+  const hooksPath = join(targetDir, "hooks");
 
   return {
     SessionStart: [
