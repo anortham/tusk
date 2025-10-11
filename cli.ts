@@ -11,6 +11,9 @@ import { getGitContext } from "./src/integrations/git.js";
 import { generateStandup } from "./src/reports/standup.js";
 import type { StandupStyle } from "./src/reports/standup.js";
 import { showTimeline } from "./src/timeline/timeline-viewer.js";
+import { autoSetupClaudeIntegration, formatInstallationResult } from "./src/setup/auto-installer.js";
+import { existsSync, readFileSync } from "fs";
+import { join } from "path";
 
 // Parse command line arguments
 const [, , command, ...args] = process.argv;
@@ -36,6 +39,10 @@ async function main() {
       case 'timeline':
       case 'tl':
         await handleTimelineCLI(args);
+        break;
+
+      case 'setup':
+        await handleSetupCLI(args);
         break;
 
       case 'help':
@@ -501,6 +508,114 @@ async function handleTimelineCLI(args: string[]) {
   }
 }
 
+async function handleSetupCLI(args: string[]) {
+  // Parse optional arguments
+  let checkOnly = false;
+  let force = false;
+
+  for (const arg of args) {
+    if (arg === '--check') {
+      checkOnly = true;
+    } else if (arg === '--force') {
+      force = true;
+    }
+  }
+
+  const cwd = process.cwd();
+  console.log(`📁 Workspace: ${cwd}`);
+  console.log('');
+
+  // Check current status if requested
+  if (checkOnly) {
+    const claudeDir = join(cwd, '.claude');
+    const versionFile = join(claudeDir, '.tusk-version');
+
+    if (!existsSync(versionFile)) {
+      console.log('❌ Tusk integration not installed');
+      console.log('');
+      console.log('Run without --check to install:');
+      console.log('  bun cli.ts setup');
+      process.exit(1);
+    }
+
+    try {
+      const versionData = JSON.parse(readFileSync(versionFile, 'utf-8'));
+      console.log('✅ Tusk integration installed');
+      console.log(`📦 Version: ${versionData.version}`);
+      console.log(`📅 Installed: ${new Date(versionData.installedAt).toLocaleString()}`);
+      console.log('');
+      console.log('Files:');
+      console.log(`   • ${versionData.files.hooks.length} hooks`);
+      console.log(`   • ${versionData.files.commands.length} commands`);
+      if (versionData.files.settings) {
+        console.log(`   • settings.json configured`);
+      }
+      return;
+    } catch (error) {
+      console.log('⚠️  Version file exists but is invalid');
+      console.log('');
+      console.log('Run with --force to reinstall:');
+      console.log('  bun cli.ts setup --force');
+      process.exit(1);
+    }
+  }
+
+  // Remove version file if force reinstall
+  if (force) {
+    const versionFile = join(cwd, '.claude', '.tusk-version');
+    if (existsSync(versionFile)) {
+      const { unlinkSync } = await import('fs');
+      unlinkSync(versionFile);
+      console.log('🔄 Force reinstall requested');
+      console.log('');
+    }
+  }
+
+  // Run the installer
+  try {
+    // Read existing version if present
+    const claudeDir = join(cwd, '.claude');
+    let existingVersion: string | null = null;
+
+    if (existsSync(join(claudeDir, '.tusk-version'))) {
+      try {
+        const versionFile = readFileSync(join(claudeDir, '.tusk-version'), 'utf-8');
+        const versionData = JSON.parse(versionFile);
+        existingVersion = versionData.version;
+      } catch {
+        // Ignore parse errors
+      }
+    }
+
+    const result = await autoSetupClaudeIntegration(cwd);
+    const message = formatInstallationResult(result, existingVersion);
+
+    if (message) {
+      console.log(message);
+    }
+
+    if (result.errors.length > 0) {
+      console.log('');
+      console.log('⚠️  Setup completed with errors. Please check the messages above.');
+      process.exit(1);
+    }
+
+    if (result.needsRestart) {
+      console.log('');
+      console.log('💡 **Next Steps:**');
+      console.log('   1. Restart Claude Code to activate the hooks and commands');
+      console.log('   2. Hooks will automatically checkpoint your work');
+      console.log('   3. Use /checkpoint, /recall, /plan slash commands');
+    } else if (!result.installed) {
+      console.log('');
+      console.log('✨ Your workspace is already up to date!');
+    }
+  } catch (error) {
+    console.error('❌ Setup failed:', error instanceof Error ? error.message : String(error));
+    process.exit(1);
+  }
+}
+
 function formatTimeAgo(timestamp: string): string {
   const now = new Date();
   const then = new Date(timestamp);
@@ -522,6 +637,7 @@ Usage:
   bun cli.ts <command> [options]
 
 Commands:
+  setup             Install Tusk integration files to current workspace
   checkpoint, cp    Save work progress
   recall, rc        Restore context from previous work
   standup, su       Generate standup reports
@@ -529,6 +645,11 @@ Commands:
   help             Show this help
 
 Examples:
+  # Setup (run once per workspace)
+  bun cli.ts setup
+  bun cli.ts setup --check      # Check if already installed
+  bun cli.ts setup --force      # Force reinstall
+
   # Save a checkpoint
   bun cli.ts checkpoint "Fixed auth timeout bug"
   bun cli.ts cp "Added user dashboard" "feature,ui"
@@ -554,6 +675,10 @@ Examples:
   bun cli.ts tl --days 30
   bun cli.ts timeline --date 2025-10-01
   bun cli.ts timeline --verbose
+
+Setup Options:
+  --check          Check if Tusk integration is installed
+  --force          Force reinstall even if already installed
 
 Checkpoint Options:
   description       Progress description (required)

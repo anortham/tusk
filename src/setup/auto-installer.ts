@@ -9,7 +9,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync, readdirSync, statSy
 import { join, dirname, resolve } from "path";
 import { fileURLToPath } from "url";
 
-const TUSK_VERSION = "1.1.1"; // Bump when hooks/commands change
+const TUSK_VERSION = "1.1.2"; // Bump when hooks/commands change
 
 export interface InstallationResult {
   installed: boolean;
@@ -162,10 +162,20 @@ function copyDirectoryFiles(
 /**
  * Generate hooks configuration for settings.json
  * Uses absolute paths to ensure hooks work regardless of CWD
+ * Normalizes paths to forward slashes for cross-platform compatibility
  */
 function generateHooksConfig(targetDir: string): ClaudeSettings["hooks"] {
   // Use absolute path to hooks directory
-  const hooksPath = join(targetDir, "hooks");
+  const hooksDir = join(targetDir, "hooks");
+
+  // Helper to create hook command with proper path handling
+  const hookCommand = (scriptName: string): string => {
+    const scriptPath = join(hooksDir, scriptName);
+    // Normalize to forward slashes (works on both Windows and Unix)
+    // and quote the path to handle spaces
+    const normalizedPath = scriptPath.replace(/\\/g, '/');
+    return `bun "${normalizedPath}"`;
+  };
 
   return {
     SessionStart: [
@@ -173,7 +183,7 @@ function generateHooksConfig(targetDir: string): ClaudeSettings["hooks"] {
         hooks: [
           {
             type: "command",
-            command: `bun ${hooksPath}/conversation_start.ts`
+            command: hookCommand("conversation_start.ts")
           }
         ]
       }
@@ -183,7 +193,7 @@ function generateHooksConfig(targetDir: string): ClaudeSettings["hooks"] {
         hooks: [
           {
             type: "command",
-            command: `bun ${hooksPath}/pre_compact.ts`
+            command: hookCommand("pre_compact.ts")
           }
         ]
       }
@@ -193,11 +203,11 @@ function generateHooksConfig(targetDir: string): ClaudeSettings["hooks"] {
         hooks: [
           {
             type: "command",
-            command: `bun ${hooksPath}/stop.ts`
+            command: hookCommand("stop.ts")
           },
           {
             type: "command",
-            command: `bun ${hooksPath}/post_response.ts`
+            command: hookCommand("post_response.ts")
           }
         ]
       }
@@ -207,15 +217,15 @@ function generateHooksConfig(targetDir: string): ClaudeSettings["hooks"] {
         hooks: [
           {
             type: "command",
-            command: `bun ${hooksPath}/user_prompt_submit.ts`
+            command: hookCommand("user_prompt_submit.ts")
           },
           {
             type: "command",
-            command: `bun ${hooksPath}/enhanced_user_prompt_submit.ts`
+            command: hookCommand("enhanced_user_prompt_submit.ts")
           },
           {
             type: "command",
-            command: `bun ${hooksPath}/exchange_monitor.ts`
+            command: hookCommand("exchange_monitor.ts")
           }
         ]
       }
@@ -225,11 +235,11 @@ function generateHooksConfig(targetDir: string): ClaudeSettings["hooks"] {
         hooks: [
           {
             type: "command",
-            command: `bun ${hooksPath}/post_tool_use.ts`
+            command: hookCommand("post_tool_use.ts")
           },
           {
             type: "command",
-            command: `bun ${hooksPath}/plan_detector.ts`
+            command: hookCommand("plan_detector.ts")
           }
         ]
       }
